@@ -165,6 +165,8 @@ button {
 }
 
 .sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   overflow: hidden;
   background: #efeeea;
@@ -226,8 +228,38 @@ button {
   color: #8b8983;
 }
 
+.tree-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tree-action-button {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(43, 42, 38, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.68);
+  color: #55534e;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tree-action-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.tree-action-button:active:not(:disabled) {
+  background: rgba(40, 120, 95, 0.1);
+  color: #165a44;
+}
+
+.tree-action-button:disabled {
+  color: #aaa8a1;
+}
+
 .navigation {
-  height: calc(100% - 78px);
   padding: 0 8px 20px;
   overflow: auto;
 }

@@ -11,7 +11,7 @@
     "run": "bash scripts/run.sh",
     "start": "electron .",
     "test": "node --test",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js && node --check src/chm.js",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js && node --check src/chm.js && node --check src/navigation.js",
     "clean": "bash scripts/clean.sh",
     "package:mac": "bash scripts/package-macos.sh",
     "package:mac:arm64": "bash scripts/package-macos.sh arm64",

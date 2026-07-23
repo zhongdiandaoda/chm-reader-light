@@ -53,6 +53,10 @@
               <span class="sr-only">搜索目录</span>
               <input id="search-navigation" type="search" placeholder="搜索目录" autocomplete="off" disabled>
             </label>
+            <div class="tree-actions" aria-label="目录展开操作">
+              <button class="tree-action-button" id="expand-all" type="button" disabled>展开全部</button>
+              <button class="tree-action-button" id="collapse-all" type="button" disabled>收起全部</button>
+            </div>
           </div>
           <nav class="navigation" id="navigation" aria-label="CHM 章节">
             <div class="sidebar-placeholder">
@@ -96,6 +100,7 @@
         </section>
       </main>
     </div>
+    <script src="./navigation.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>

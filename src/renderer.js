@@ -9,6 +9,8 @@ const elements = {
   search: document.querySelector('#search-navigation'),
   back: document.querySelector('#go-back'),
   forward: document.querySelector('#go-forward'),
+  expandAll: document.querySelector('#expand-all'),
+  collapseAll: document.querySelector('#collapse-all'),
   zoomReset: document.querySelector('#zoom-reset'),
 };
 
@@ -52,6 +54,7 @@ function createTreeItem(item, level) {
 
   listItem.className = `tree-item${level === 1 ? ' expanded' : ''}`;
   listItem.dataset.title = item.title.toLocaleLowerCase();
+  if (item.path) listItem.dataset.topicPath = item.path;
   listItem.setAttribute('role', 'treeitem');
   listItem.setAttribute('aria-level', String(level));
   if (hasChildren) listItem.setAttribute('aria-expanded', String(level === 1));
@@ -96,6 +99,23 @@ function createTreeItem(item, level) {
   return listItem;
 }
 
+function setTreeItemExpanded(item, expanded) {
+  const hasChildren = item.querySelector(':scope > ul');
+  if (!hasChildren) return;
+
+  item.classList.toggle('expanded', expanded);
+  item.setAttribute('aria-expanded', String(expanded));
+  const title = item.dataset.title || '目录';
+  const disclosure = item.querySelector(':scope > .tree-row .disclosure');
+  disclosure?.setAttribute('aria-label', `${expanded ? '折叠' : '展开'} ${title}`);
+}
+
+function setAllTreeItemsExpanded(expanded) {
+  elements.navigation
+    .querySelectorAll('.tree-item')
+    .forEach((item) => setTreeItemExpanded(item, expanded));
+}
+
 async function navigateTo(topicPath, addToHistory = true, activeRow = null) {
   const url = await window.chmReader.createBookUrl(topicPath);
   if (!url) return;
@@ -106,12 +126,45 @@ async function navigateTo(topicPath, addToHistory = true, activeRow = null) {
     historyIndex = history.length - 1;
   }
 
-  document.querySelector('.tree-row.active')?.classList.remove('active');
-  activeRow?.classList.add('active');
-  activeRow?.scrollIntoView({ block: 'nearest' });
+  if (activeRow) {
+    activateNavigationRow(activeRow);
+  }
 
   loadContent(url);
   updateHistoryButtons();
+}
+
+function activateNavigationRow(row, options = {}) {
+  document.querySelector('.tree-row.active')?.classList.remove('active');
+  row.classList.add('active');
+  row.scrollIntoView({ block: options.block || 'nearest' });
+}
+
+function revealTopicInNavigation(topicPath) {
+  if (!topicPath) return;
+
+  const item = [...elements.navigation.querySelectorAll('.tree-item')]
+    .find((candidate) => candidate.dataset.topicPath === topicPath);
+  if (!item) return;
+
+  let parent = item.parentElement?.closest('.tree-item');
+  while (parent) {
+    setTreeItemExpanded(parent, true);
+    parent = parent.parentElement?.closest('.tree-item');
+  }
+
+  const row = item.querySelector(':scope > .tree-row');
+  if (row) activateNavigationRow(row, { block: 'center' });
+}
+
+function syncNavigationWithFrame() {
+  if (!currentBook || !elements.contentFrame.src.startsWith('chm://book/')) return;
+
+  const topicPath = window.chmNavigation.findTopicPathByUrl(
+    currentBook.contents,
+    elements.contentFrame.src,
+  );
+  revealTopicInNavigation(topicPath);
 }
 
 function loadContent(url) {
@@ -146,6 +199,8 @@ function applyBook(book) {
   historyIndex = -1;
   elements.bookTitle.textContent = book.name;
   elements.search.disabled = book.contents.length === 0;
+  elements.expandAll.disabled = book.contents.length === 0;
+  elements.collapseAll.disabled = book.contents.length === 0;
   elements.search.value = '';
   renderNavigation(book.contents);
   updateHistoryButtons();
@@ -246,6 +301,9 @@ document.querySelector('#toggle-sidebar').addEventListener('click', () => {
 });
 elements.back.addEventListener('click', () => moveHistory(-1));
 elements.forward.addEventListener('click', () => moveHistory(1));
+elements.expandAll.addEventListener('click', () => setAllTreeItemsExpanded(true));
+elements.collapseAll.addEventListener('click', () => setAllTreeItemsExpanded(false));
+elements.contentFrame.addEventListener('load', syncNavigationWithFrame);
 elements.search.addEventListener('input', (event) => filterNavigation(event.target.value));
 document.querySelector('#zoom-out').addEventListener('click', () => setZoom(zoom - 0.1));
 document.querySelector('#zoom-in').addEventListener('click', () => setZoom(zoom + 0.1));
