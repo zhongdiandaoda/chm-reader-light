@@ -37,8 +37,21 @@
     return null;
   }
 
+  function getTopicPathsInReadingOrder(items) {
+    const topicPaths = [];
+
+    function visit(item) {
+      if (item.path) topicPaths.push(item.path);
+      (item.children || []).forEach(visit);
+    }
+
+    items.forEach(visit);
+    return topicPaths;
+  }
+
   const api = {
     findTopicPathByUrl,
+    getTopicPathsInReadingOrder,
     normalizeTopicReference,
   };
 

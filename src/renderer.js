@@ -9,14 +9,18 @@ const elements = {
   search: document.querySelector('#search-navigation'),
   back: document.querySelector('#go-back'),
   forward: document.querySelector('#go-forward'),
+  previousPage: document.querySelector('#previous-page'),
+  nextPage: document.querySelector('#next-page'),
   expandAll: document.querySelector('#expand-all'),
   collapseAll: document.querySelector('#collapse-all'),
   zoomReset: document.querySelector('#zoom-reset'),
 };
 
 let currentBook;
+let currentTopicPath;
 let history = [];
 let historyIndex = -1;
+let readingOrder = [];
 let zoom = 1;
 
 function setLoading(isLoading) {
@@ -120,18 +124,27 @@ async function navigateTo(topicPath, addToHistory = true, activeRow = null) {
   const url = await window.chmReader.createBookUrl(topicPath);
   if (!url) return;
 
+  const navigationRow = activeRow || findNavigationRow(topicPath);
   if (addToHistory) {
     history = history.slice(0, historyIndex + 1);
-    history.push({ topicPath, row: activeRow });
+    history.push({ topicPath, row: navigationRow });
     historyIndex = history.length - 1;
   }
 
-  if (activeRow) {
-    activateNavigationRow(activeRow);
+  currentTopicPath = topicPath;
+  if (navigationRow) {
+    activateNavigationRow(navigationRow);
   }
 
   loadContent(url);
   updateHistoryButtons();
+  updatePageButtons();
+}
+
+function findNavigationRow(topicPath) {
+  const item = [...elements.navigation.querySelectorAll('.tree-item')]
+    .find((candidate) => candidate.dataset.topicPath === topicPath);
+  return item?.querySelector(':scope > .tree-row') || null;
 }
 
 function activateNavigationRow(row, options = {}) {
@@ -164,7 +177,9 @@ function syncNavigationWithFrame() {
     currentBook.contents,
     elements.contentFrame.src,
   );
+  currentTopicPath = topicPath || currentTopicPath;
   revealTopicInNavigation(topicPath);
+  updatePageButtons();
 }
 
 function loadContent(url) {
@@ -182,6 +197,12 @@ function updateHistoryButtons() {
   elements.forward.disabled = historyIndex >= history.length - 1;
 }
 
+function updatePageButtons() {
+  const currentIndex = readingOrder.indexOf(currentTopicPath);
+  elements.previousPage.disabled = currentIndex <= 0;
+  elements.nextPage.disabled = currentIndex < 0 || currentIndex >= readingOrder.length - 1;
+}
+
 function moveHistory(offset) {
   const nextIndex = historyIndex + offset;
   if (nextIndex < 0 || nextIndex >= history.length) return;
@@ -191,12 +212,22 @@ function moveHistory(offset) {
   navigateTo(entry.topicPath, false, entry.row);
 }
 
+function movePage(offset) {
+  const currentIndex = readingOrder.indexOf(currentTopicPath);
+  const nextTopicPath = readingOrder[currentIndex + offset];
+  if (!nextTopicPath) return;
+
+  navigateTo(nextTopicPath, true);
+}
+
 function applyBook(book) {
   if (!book) return;
 
   currentBook = book;
+  currentTopicPath = null;
   history = [];
   historyIndex = -1;
+  readingOrder = window.chmNavigation.getTopicPathsInReadingOrder(book.contents);
   elements.bookTitle.textContent = book.name;
   elements.search.disabled = book.contents.length === 0;
   elements.expandAll.disabled = book.contents.length === 0;
@@ -204,6 +235,7 @@ function applyBook(book) {
   elements.search.value = '';
   renderNavigation(book.contents);
   updateHistoryButtons();
+  updatePageButtons();
 
   const firstTopic = findFirstTopic(book.contents);
   if (firstTopic) {
@@ -301,6 +333,8 @@ document.querySelector('#toggle-sidebar').addEventListener('click', () => {
 });
 elements.back.addEventListener('click', () => moveHistory(-1));
 elements.forward.addEventListener('click', () => moveHistory(1));
+elements.previousPage.addEventListener('click', () => movePage(-1));
+elements.nextPage.addEventListener('click', () => movePage(1));
 elements.expandAll.addEventListener('click', () => setAllTreeItemsExpanded(true));
 elements.collapseAll.addEventListener('click', () => setAllTreeItemsExpanded(false));
 elements.contentFrame.addEventListener('load', syncNavigationWithFrame);

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   findTopicPathByUrl,
+  getTopicPathsInReadingOrder,
   normalizeTopicReference,
 } = require('../src/navigation');
 
@@ -36,4 +37,39 @@ test('findTopicPathByUrl matches nested topics by the current iframe page', () =
 
 test('findTopicPathByUrl returns null when no topic matches', () => {
   assert.equal(findTopicPathByUrl([], 'chm://book/missing.htm'), null);
+});
+
+test('getTopicPathsInReadingOrder traverses nested topics and skips groups without pages', () => {
+  const items = [{
+    title: 'Introduction',
+    path: 'intro.htm',
+    children: [],
+  }, {
+    title: 'Guide',
+    children: [{
+      title: 'Install',
+      path: 'guide/install.htm',
+      children: [],
+    }, {
+      title: 'Configure',
+      path: 'guide/configure.htm',
+      children: [],
+    }],
+  }, {
+    title: 'Reference',
+    path: 'reference.htm',
+    children: [{
+      title: 'API',
+      path: 'reference/api.htm',
+      children: [],
+    }],
+  }];
+
+  assert.deepEqual(getTopicPathsInReadingOrder(items), [
+    'intro.htm',
+    'guide/install.htm',
+    'guide/configure.htm',
+    'reference.htm',
+    'reference/api.htm',
+  ]);
 });
