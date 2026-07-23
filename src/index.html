@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; frame-src chm:">
+    <title>CHM Reader</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="toolbar">
+        <div class="window-drag-region" aria-hidden="true"></div>
+        <div class="toolbar-left">
+          <button class="icon-button" id="toggle-sidebar" type="button" aria-label="显示或隐藏目录" title="显示或隐藏目录">
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <rect x="2.5" y="3" width="15" height="14" rx="2"></rect>
+              <path d="M7 3v14"></path>
+            </svg>
+          </button>
+          <button class="open-button" id="open-book" type="button">
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M2.5 6.5h5l1.5 2h8.5v7.2a1.8 1.8 0 0 1-1.8 1.8H4.3a1.8 1.8 0 0 1-1.8-1.8V6.5Z"></path>
+              <path d="M3.5 6.5V4.3c0-1 .8-1.8 1.8-1.8h3.2l1.6 2h4.6c1 0 1.8.8 1.8 1.8v2"></path>
+            </svg>
+            打开 CHM
+          </button>
+        </div>
+        <div class="toolbar-title" id="book-title">CHM Reader</div>
+        <div class="toolbar-right">
+          <button class="icon-button" id="go-back" type="button" aria-label="后退" title="后退" disabled>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
+          </button>
+          <button class="icon-button" id="go-forward" type="button" aria-label="前进" title="前进" disabled>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4.5 5 5.5-5 5.5"></path></svg>
+          </button>
+          <span class="toolbar-separator" aria-hidden="true"></span>
+          <button class="text-button" id="zoom-out" type="button" aria-label="缩小正文" title="缩小正文">A−</button>
+          <button class="text-button" id="zoom-reset" type="button" aria-label="重置正文缩放" title="重置正文缩放">100%</button>
+          <button class="text-button text-button-large" id="zoom-in" type="button" aria-label="放大正文" title="放大正文">A+</button>
+        </div>
+      </header>
+
+      <main class="reader-layout" id="reader-layout">
+        <aside class="sidebar" id="sidebar" aria-label="文档目录">
+          <div class="sidebar-header">
+            <div class="eyebrow">内容</div>
+            <label class="search-box">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="8.5" cy="8.5" r="5"></circle>
+                <path d="m12.2 12.2 4 4"></path>
+              </svg>
+              <span class="sr-only">搜索目录</span>
+              <input id="search-navigation" type="search" placeholder="搜索目录" autocomplete="off" disabled>
+            </label>
+          </div>
+          <nav class="navigation" id="navigation" aria-label="CHM 章节">
+            <div class="sidebar-placeholder">
+              <svg viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M10 8.5h19a5 5 0 0 1 5 5v26H15a5 5 0 0 1-5-5v-26Z"></path>
+                <path d="M15 39.5a5 5 0 0 1 5-5h18V13h-4"></path>
+                <path d="M17 17h10M17 23h10"></path>
+              </svg>
+              <p>打开 CHM 文件后<br>目录将在这里显示</p>
+            </div>
+          </nav>
+        </aside>
+
+        <div class="resize-handle" id="resize-handle" role="separator" aria-orientation="vertical" aria-label="调整目录宽度" tabindex="0"></div>
+
+        <section class="content-pane" aria-label="文档正文">
+          <div class="empty-state" id="empty-state">
+            <div class="book-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64">
+                <path d="M13 9h27a7 7 0 0 1 7 7v39H20a7 7 0 0 1-7-7V9Z"></path>
+                <path d="M20 55a7 7 0 0 1 7-7h24V16h-4"></path>
+                <path d="M23 21h14M23 29h14M23 37h9"></path>
+              </svg>
+            </div>
+            <h1>阅读你的 CHM 文档</h1>
+            <p>打开本地文件，目录与内容会在同一个窗口中呈现。</p>
+            <button class="primary-button" id="empty-open-book" type="button">选择 CHM 文件</button>
+            <div class="shortcut-hint"><kbd>⌘</kbd><kbd>O</kbd><span>快速打开</span></div>
+          </div>
+          <div class="loading-state" id="loading-state" hidden aria-live="polite">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>正在解析文档...</p>
+          </div>
+          <iframe
+            id="content-frame"
+            title="CHM 文档内容"
+            sandbox="allow-same-origin"
+            referrerpolicy="no-referrer"
+            hidden
+          ></iframe>
+        </section>
+      </main>
+    </div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

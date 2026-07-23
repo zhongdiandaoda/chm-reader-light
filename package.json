@@ -1,0 +1,33 @@
+{
+  "name": "chm-reader",
+  "version": "0.1.0",
+  "description": "A focused CHM reader for macOS",
+  "main": "src/main.js",
+  "author": "liuqi.9867",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "doctor": "bash scripts/doctor.sh",
+    "run": "bash scripts/run.sh",
+    "start": "electron .",
+    "test": "node --test",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js && node --check src/chm.js",
+    "clean": "bash scripts/clean.sh",
+    "package:mac": "bash scripts/package-macos.sh",
+    "package:mac:arm64": "bash scripts/package-macos.sh arm64",
+    "package:mac:x64": "bash scripts/package-macos.sh x64",
+    "install:mac": "bash scripts/install-macos.sh",
+    "install:mac:arm64": "bash scripts/install-macos.sh arm64",
+    "install:mac:x64": "bash scripts/install-macos.sh x64"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.0.4",
+    "electron": "43.2.0"
+  },
+  "dependencies": {
+    "cheerio": "1.2.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
