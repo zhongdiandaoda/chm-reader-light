@@ -1,4 +1,19 @@
 const elements = {
+  libraryToolbar: document.querySelector('#library-toolbar'),
+  readerToolbar: document.querySelector('#reader-toolbar'),
+  libraryView: document.querySelector('#library-view'),
+  libraryContent: document.querySelector('#library-content'),
+  libraryEmpty: document.querySelector('#library-empty'),
+  libraryGrid: document.querySelector('#library-grid'),
+  libraryCount: document.querySelector('#library-count'),
+  libraryHeading: document.querySelector('#library-heading'),
+  collectionList: document.querySelector('#collection-list'),
+  addCollection: document.querySelector('#add-collection'),
+  viewGrid: document.querySelector('#view-grid'),
+  viewList: document.querySelector('#view-list'),
+  addBook: document.querySelector('#add-book'),
+  emptyAddBook: document.querySelector('#empty-add-book'),
+  backToLibrary: document.querySelector('#back-to-library'),
   bookTitle: document.querySelector('#book-title'),
   contentFrame: document.querySelector('#content-frame'),
   emptyState: document.querySelector('#empty-state'),
@@ -22,6 +37,182 @@ let history = [];
 let historyIndex = -1;
 let readingOrder = [];
 let zoom = 1;
+
+let library = { collections: [], books: [] };
+let selectedCollectionId = null; // null = 全部
+let libraryLayout = 'grid';
+
+function showView(view) {
+  document.body.dataset.view = view;
+  const isReader = view === 'reader';
+  elements.libraryToolbar.hidden = isReader;
+  elements.readerToolbar.hidden = !isReader;
+  elements.libraryView.hidden = isReader;
+  elements.readerLayout.hidden = !isReader;
+}
+
+function booksInSelectedCollection() {
+  if (selectedCollectionId === null) return library.books;
+  return library.books.filter((book) => book.collectionId === selectedCollectionId);
+}
+
+function setLibraryLayout(layout) {
+  libraryLayout = layout;
+  elements.libraryContent.dataset.layout = layout;
+  elements.viewGrid.setAttribute('aria-pressed', String(layout === 'grid'));
+  elements.viewList.setAttribute('aria-pressed', String(layout === 'list'));
+}
+
+function selectCollection(id) {
+  selectedCollectionId = id;
+  renderLibrary(library);
+}
+
+function renderLibrary(nextLibrary) {
+  library = {
+    collections: Array.isArray(nextLibrary?.collections) ? nextLibrary.collections : [],
+    books: Array.isArray(nextLibrary?.books) ? nextLibrary.books : [],
+  };
+  if (selectedCollectionId !== null
+    && !library.collections.some((collection) => collection.id === selectedCollectionId)) {
+    selectedCollectionId = null;
+  }
+
+  renderCollectionList();
+  renderBooks();
+}
+
+function renderCollectionList() {
+  elements.collectionList.replaceChildren();
+  elements.collectionList.append(
+    createCollectionItem({ id: null, name: '全部' }, library.books.length, false),
+  );
+  library.collections.forEach((collection) => {
+    const count = library.books.filter((book) => book.collectionId === collection.id).length;
+    elements.collectionList.append(createCollectionItem(collection, count, true));
+  });
+}
+
+function createCollectionItem(collection, count, removable) {
+  const item = document.createElement('div');
+  item.className = 'collection-item';
+  item.classList.toggle('active', selectedCollectionId === collection.id);
+
+  const select = document.createElement('button');
+  select.className = 'collection-select';
+  select.type = 'button';
+  select.addEventListener('click', () => selectCollection(collection.id));
+
+  const label = document.createElement('span');
+  label.className = 'collection-label';
+  label.textContent = collection.name;
+
+  const badge = document.createElement('span');
+  badge.className = 'collection-count';
+  badge.textContent = String(count);
+
+  select.append(label, badge);
+  item.append(select);
+
+  if (removable) {
+    const remove = document.createElement('button');
+    remove.className = 'collection-remove';
+    remove.type = 'button';
+    remove.textContent = '×';
+    remove.title = '删除书库';
+    remove.setAttribute('aria-label', `删除书库 ${collection.name}`);
+    remove.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      const message = count > 0
+        ? `删除书库“${collection.name}”后，其中的 ${count} 个文档会移动到“全部”（不会删除源文件）。`
+        : `删除书库“${collection.name}”？`;
+      // eslint-disable-next-line no-alert
+      if (!window.confirm(message)) return;
+      const updated = await window.chmReader.removeCollection(collection.id);
+      renderLibrary(updated);
+    });
+    item.append(remove);
+  }
+
+  return item;
+}
+
+function renderBooks() {
+  const books = booksInSelectedCollection();
+  const activeName = selectedCollectionId === null
+    ? '全部'
+    : library.collections.find((collection) => collection.id === selectedCollectionId)?.name || '书库';
+
+  elements.libraryHeading.textContent = activeName;
+  elements.libraryGrid.replaceChildren();
+  elements.libraryEmpty.hidden = books.length > 0;
+  elements.libraryCount.textContent = books.length ? `${books.length} 本文档` : '';
+
+  books.forEach((entry) => elements.libraryGrid.append(createLibraryCard(entry)));
+}
+
+function createLibraryCard(entry) {
+  const card = document.createElement('div');
+  card.className = 'library-card';
+  card.dataset.id = entry.id;
+  card.setAttribute('role', 'listitem');
+
+  const open = document.createElement('button');
+  open.className = 'library-card-open';
+  open.type = 'button';
+  open.title = entry.name;
+  open.innerHTML = `
+    <span class="library-cover" aria-hidden="true">
+      <svg viewBox="0 0 64 64">
+        <path d="M13 9h27a7 7 0 0 1 7 7v39H20a7 7 0 0 1-7-7V9Z"></path>
+        <path d="M20 55a7 7 0 0 1 7-7h24V16h-4"></path>
+        <path d="M23 21h14M23 29h14M23 37h9"></path>
+      </svg>
+    </span>
+    <span class="library-name"></span>`;
+  open.querySelector('.library-name').textContent = entry.name;
+  open.addEventListener('click', () => openLibraryBook(entry.id));
+
+  const remove = document.createElement('button');
+  remove.className = 'library-card-remove';
+  remove.type = 'button';
+  remove.setAttribute('aria-label', `从书库移除 ${entry.name}`);
+  remove.title = '从书库移除';
+  remove.textContent = '×';
+  remove.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    const updated = await window.chmReader.removeLibraryBook(entry.id);
+    renderLibrary(updated);
+  });
+
+  card.append(open, remove);
+  return card;
+}
+
+async function openLibraryBook(id) {
+  showView('reader');
+  elements.bookTitle.textContent = '正在打开...';
+  setLoading(true);
+  const book = await window.chmReader.openLibraryBook(id);
+  if (!book) showView('library');
+}
+
+async function requestCreateCollection() {
+  // eslint-disable-next-line no-alert
+  const name = window.prompt('新书库名称', '新书库');
+  if (name === null) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const updated = await window.chmReader.createCollection(trimmed);
+  const created = updated.collections[updated.collections.length - 1];
+  renderLibrary(updated);
+  if (created) selectCollection(created.id);
+}
+
+async function loadLibrary() {
+  const nextLibrary = await window.chmReader.listLibrary();
+  renderLibrary(nextLibrary);
+}
 
 function setLoading(isLoading) {
   elements.loadingState.hidden = !isLoading;
@@ -288,16 +479,9 @@ function setZoom(nextZoom) {
   elements.zoomReset.textContent = `${Math.round(zoom * 100)}%`;
 }
 
-async function requestOpenBook() {
-  setLoading(true);
-  const book = await window.chmReader.openBook();
-  if (!book && !currentBook) {
-    setLoading(false);
-    elements.emptyState.hidden = false;
-  } else if (!book) {
-    setLoading(false);
-    elements.contentFrame.hidden = false;
-  }
+async function requestImportBooks() {
+  const updated = await window.chmReader.importBooks(selectedCollectionId);
+  if (updated) renderLibrary(updated);
 }
 
 function initializeResizing() {
@@ -326,8 +510,12 @@ function initializeResizing() {
   });
 }
 
-document.querySelector('#open-book').addEventListener('click', requestOpenBook);
-document.querySelector('#empty-open-book').addEventListener('click', requestOpenBook);
+elements.addBook.addEventListener('click', requestImportBooks);
+elements.emptyAddBook.addEventListener('click', requestImportBooks);
+elements.addCollection.addEventListener('click', requestCreateCollection);
+elements.viewGrid.addEventListener('click', () => setLibraryLayout('grid'));
+elements.viewList.addEventListener('click', () => setLibraryLayout('list'));
+elements.backToLibrary.addEventListener('click', () => showView('library'));
 document.querySelector('#toggle-sidebar').addEventListener('click', () => {
   elements.readerLayout.classList.toggle('sidebar-hidden');
 });
@@ -344,12 +532,15 @@ document.querySelector('#zoom-in').addEventListener('click', () => setZoom(zoom 
 elements.zoomReset.addEventListener('click', () => setZoom(1));
 
 window.chmReader.onBookOpened(applyBook);
+window.chmReader.onLibraryUpdated(renderLibrary);
+window.chmReader.onShowLibrary(() => showView('library'));
 window.chmReader.onFocusSearch(() => {
-  if (!elements.search.disabled) {
-    elements.readerLayout.classList.remove('sidebar-hidden');
-    elements.search.focus();
-    elements.search.select();
-  }
+  if (document.body.dataset.view !== 'reader' || elements.search.disabled) return;
+  elements.readerLayout.classList.remove('sidebar-hidden');
+  elements.search.focus();
+  elements.search.select();
 });
 initializeResizing();
 setZoom(1);
+setLibraryLayout('grid');
+loadLibrary();
