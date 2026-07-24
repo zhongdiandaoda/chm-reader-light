@@ -9,56 +9,64 @@
   </head>
   <body data-view="library">
     <div class="app-shell">
-      <header class="toolbar" id="library-toolbar">
-        <div class="window-drag-region" aria-hidden="true"></div>
-        <div class="toolbar-left">
-          <span class="library-heading" id="library-heading">书库</span>
+      <header class="app-header" id="library-toolbar">
+        <div class="titlebar">
+          <div class="window-drag-region" aria-hidden="true"></div>
+          <div class="titlebar-title">CHM Reader</div>
         </div>
-        <div class="toolbar-title" id="library-count"></div>
-        <div class="toolbar-right">
-          <div class="view-toggle" role="group" aria-label="切换展示方式">
-            <button class="icon-button" id="view-grid" type="button" aria-label="平铺展示" title="平铺展示" aria-pressed="true">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <span class="library-heading" id="library-heading">书库</span>
+            <span class="toolbar-meta" id="library-count"></span>
+          </div>
+          <div class="toolbar-right">
+            <div class="view-toggle" role="group" aria-label="切换展示方式">
+              <button class="icon-button" id="view-grid" type="button" aria-label="平铺展示" title="平铺展示" aria-pressed="true">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="3" y="3" width="6" height="6" rx="1.4"></rect>
+                  <rect x="11" y="3" width="6" height="6" rx="1.4"></rect>
+                  <rect x="3" y="11" width="6" height="6" rx="1.4"></rect>
+                  <rect x="11" y="11" width="6" height="6" rx="1.4"></rect>
+                </svg>
+              </button>
+              <button class="icon-button" id="view-list" type="button" aria-label="列表展示" title="列表展示" aria-pressed="false">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M7 5h10M7 10h10M7 15h10"></path>
+                  <path d="M3.5 5h.01M3.5 10h.01M3.5 15h.01"></path>
+                </svg>
+              </button>
+            </div>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="open-button" id="add-book" type="button">
               <svg viewBox="0 0 20 20" aria-hidden="true">
-                <rect x="3" y="3" width="6" height="6" rx="1.4"></rect>
-                <rect x="11" y="3" width="6" height="6" rx="1.4"></rect>
-                <rect x="3" y="11" width="6" height="6" rx="1.4"></rect>
-                <rect x="11" y="11" width="6" height="6" rx="1.4"></rect>
+                <path d="M10 4.5v11"></path>
+                <path d="M4.5 10h11"></path>
               </svg>
-            </button>
-            <button class="icon-button" id="view-list" type="button" aria-label="列表展示" title="列表展示" aria-pressed="false">
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M7 5h10M7 10h10M7 15h10"></path>
-                <path d="M3.5 5h.01M3.5 10h.01M3.5 15h.01"></path>
-              </svg>
+              添加 CHM
             </button>
           </div>
-          <span class="toolbar-separator" aria-hidden="true"></span>
-          <button class="open-button" id="add-book" type="button">
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 4.5v11"></path>
-              <path d="M4.5 10h11"></path>
-            </svg>
-            添加 CHM
-          </button>
         </div>
       </header>
 
-      <header class="toolbar" id="reader-toolbar" hidden>
-        <div class="window-drag-region" aria-hidden="true"></div>
-        <div class="toolbar-left">
-          <button class="open-button" id="back-to-library" type="button">
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
-            书库
-          </button>
-          <button class="icon-button" id="toggle-sidebar" type="button" aria-label="显示或隐藏目录" title="显示或隐藏目录">
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <rect x="2.5" y="3" width="15" height="14" rx="2"></rect>
-              <path d="M7 3v14"></path>
-            </svg>
-          </button>
+      <header class="app-header" id="reader-toolbar" hidden>
+        <div class="titlebar">
+          <div class="window-drag-region" aria-hidden="true"></div>
+          <div class="titlebar-title" id="book-title">CHM Reader</div>
         </div>
-        <div class="toolbar-title" id="book-title">CHM Reader</div>
-        <div class="toolbar-right">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <button class="open-button" id="back-to-library" type="button">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
+              书库
+            </button>
+            <button class="icon-button" id="toggle-sidebar" type="button" aria-label="显示或隐藏目录" title="显示或隐藏目录">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <rect x="2.5" y="3" width="15" height="14" rx="2"></rect>
+                <path d="M7 3v14"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="toolbar-right">
           <button class="icon-button" id="previous-page" type="button" aria-label="上一页" title="上一页" disabled>
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 13.5 5.5-5 5.5 5"></path><path d="M10 6.5v8"></path></svg>
           </button>
@@ -76,6 +84,7 @@
           <button class="text-button" id="zoom-out" type="button" aria-label="缩小正文" title="缩小正文">A−</button>
           <button class="text-button" id="zoom-reset" type="button" aria-label="重置正文缩放" title="重置正文缩放">100%</button>
           <button class="text-button text-button-large" id="zoom-in" type="button" aria-label="放大正文" title="放大正文">A+</button>
+          </div>
         </div>
       </header>
 
