@@ -1,4 +1,4 @@
-# CHM Reader
+# CHMReaderLight
 
 一个面向 macOS 的轻量 CHM 阅读器。进入应用后先看到书库（已添加的 CHM 文件列表），点击某本文档才进入阅读页面：左侧展示可搜索、可折叠的目录树，右侧展示文档正文，随时可返回书库。
 
@@ -75,7 +75,7 @@ npm run package:mac:x64
 
 ## macOS 安装
 
-安装当前机器架构的包到 `/Applications/CHMReader.app`。如果应用已存在，脚本会自动升级到最新打包版本：
+安装当前机器架构的包到 `/Applications/CHMReaderLight.app`。如果应用已存在，脚本会自动升级到最新打包版本：
 
 ```bash
 npm run install:mac
@@ -88,7 +88,7 @@ npm run install:mac:arm64
 npm run install:mac:x64
 ```
 
-如果 `/Applications` 没有写入权限，可以先打包，再手动复制 `dist/CHMReader-darwin-*/CHMReader.app` 到应用程序目录。
+如果 `/Applications` 没有写入权限，可以先打包，再手动复制 `dist/CHMReaderLight-darwin-*/CHMReaderLight.app` 到应用程序目录。
 
 ## 脚本清单
 
@@ -97,7 +97,7 @@ npm run install:mac:x64
 - `npm run package:mac`：按当前机器架构打包 macOS 应用。
 - `npm run package:mac:arm64`：打包 Apple Silicon 应用。
 - `npm run package:mac:x64`：打包 Intel 应用。
-- `npm run install:mac`：打包并安装到 `/Applications/CHMReader.app`，若已存在则升级覆盖。
+- `npm run install:mac`：打包并安装到 `/Applications/CHMReaderLight.app`，若已存在则升级覆盖。
 - `npm run clean`：清理 `dist/` 打包产物。
 
 ## 实现说明

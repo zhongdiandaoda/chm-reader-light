@@ -13,7 +13,13 @@ const os = require('node:os');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
-const { extractBook, resolveBookResource } = require('./chm');
+const {
+  decodeMarkup,
+  extractBook,
+  highlightSearchMatches,
+  resolveBookResource,
+  searchBookContents,
+} = require('./chm');
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'chm',
@@ -26,6 +32,7 @@ protocol.registerSchemesAsPrivileged([{
 
 let mainWindow;
 let bookRoot;
+let bookSearchIndex = [];
 let pendingFile;
 
 function getLibraryDir() {
@@ -201,6 +208,15 @@ function createBookUrl(topicPath) {
   return `chm://book/${encodedPath}${hash}`;
 }
 
+function addSearchHighlightStyles(markup) {
+  const styles = `<style>
+    .chm-search-match { background: #f7df83; color: inherit; border-radius: 2px; padding: 0 1px; }
+    .chm-search-current { background: #f2a93b; box-shadow: 0 0 0 2px rgba(210, 125, 20, 0.28); animation: chm-search-pulse 650ms ease-out; }
+    @keyframes chm-search-pulse { from { box-shadow: 0 0 0 6px rgba(210, 125, 20, 0.38); } to { box-shadow: 0 0 0 2px rgba(210, 125, 20, 0.28); } }
+  </style>`;
+  return /<\/head>/i.test(markup) ? markup.replace(/<\/head>/i, `${styles}</head>`) : `${styles}${markup}`;
+}
+
 async function openBook(chmPath, displayName) {
   if (!chmPath || path.extname(chmPath).toLowerCase() !== '.chm') {
     throw new Error('请选择有效的 .chm 文件');
@@ -212,6 +228,7 @@ async function openBook(chmPath, displayName) {
     const metadata = await extractBook(chmPath, nextRoot, await locateExtractor());
     const previousRoot = bookRoot;
     bookRoot = nextRoot;
+    bookSearchIndex = metadata.searchIndex;
 
     if (previousRoot) {
       fs.promises.rm(previousRoot, { recursive: true, force: true }).catch(() => {});
@@ -222,10 +239,11 @@ async function openBook(chmPath, displayName) {
       filePath: chmPath,
       contents: metadata.contents,
       defaultPage: createBookUrl(metadata.defaultPage),
+      searchablePageCount: metadata.searchIndex.length,
     };
 
     mainWindow?.setRepresentedFilename(chmPath);
-    mainWindow?.setTitle(`${result.name} - CHM Reader`);
+    mainWindow?.setTitle(`${result.name} - CHMReaderLight`);
     mainWindow?.webContents.send('book:opened', result);
     return result;
   } catch (error) {
@@ -292,6 +310,19 @@ function registerBookProtocol() {
         'Content-Security-Policy',
         "default-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; font-src chm: data:; media-src chm:; frame-src chm:",
       );
+      const searchQuery = requestUrl.searchParams.get('search');
+      const isHtml = ['.htm', '.html'].includes(path.extname(filePath).toLowerCase());
+      if (isHtml && searchQuery) {
+        const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match'), 10) || 0);
+        const markup = decodeMarkup(await fs.promises.readFile(filePath));
+        const highlighted = highlightSearchMatches(markup, searchQuery, selectedIndex);
+        headers.set('Content-Type', 'text/html; charset=utf-8');
+        return new Response(addSearchHighlightStyles(highlighted.markup), {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
@@ -310,6 +341,7 @@ ipcMain.handle('library:remove', (_, id) => removeBook(id));
 ipcMain.handle('collection:create', (_, name) => createCollection(name));
 ipcMain.handle('collection:remove', (_, id) => removeCollection(id));
 ipcMain.handle('book:url', (_, topicPath) => createBookUrl(topicPath));
+ipcMain.handle('book:search', (_, query) => searchBookContents(bookSearchIndex, query));
 ipcMain.handle('external:open', (_, url) => {
   if (/^https?:\/\//i.test(url)) return shell.openExternal(url);
   return undefined;

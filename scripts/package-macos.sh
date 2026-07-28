@@ -30,7 +30,7 @@ if [[ "${SKIP_CHECKS:-0}" != "1" ]]; then
   npm run check
 fi
 
-./node_modules/.bin/electron-packager . CHMReader \
+./node_modules/.bin/electron-packager . CHMReaderLight \
   --platform=darwin \
   --arch="$arch" \
   --out=dist \
@@ -38,4 +38,4 @@ fi
   --app-bundle-id=com.liuqi.chmreader \
   --app-category-type=public.app-category.reference
 
-printf "\n已生成: %s\n" "$root_dir/dist/CHMReader-darwin-$arch/CHMReader.app"
+printf "\n已生成: %s\n" "$root_dir/dist/CHMReaderLight-darwin-$arch/CHMReaderLight.app"

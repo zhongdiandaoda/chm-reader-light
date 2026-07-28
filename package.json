@@ -1,5 +1,5 @@
 {
-  "name": "chm-reader",
+  "name": "chm-reader-light",
   "version": "0.1.0",
   "description": "A focused CHM reader for macOS",
   "main": "src/main.js",

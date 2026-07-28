@@ -22,6 +22,17 @@ const elements = {
   readerLayout: document.querySelector('#reader-layout'),
   resizeHandle: document.querySelector('#resize-handle'),
   search: document.querySelector('#search-navigation'),
+  searchScopeTrigger: document.querySelector('#search-scope-trigger'),
+  searchScopeMenu: document.querySelector('#search-scope-menu'),
+  searchScopeLabel: document.querySelector('#search-scope-label'),
+  searchBody: document.querySelector('#search-body'),
+  searchDirectory: document.querySelector('#search-directory'),
+  searchStatus: document.querySelector('#search-status'),
+  searchMatchNavigation: document.querySelector('#search-match-navigation'),
+  searchToolbarSeparator: document.querySelector('#search-toolbar-separator'),
+  searchPrevious: document.querySelector('#search-previous'),
+  searchNext: document.querySelector('#search-next'),
+  searchMatchPosition: document.querySelector('#search-match-position'),
   back: document.querySelector('#go-back'),
   forward: document.querySelector('#go-forward'),
   previousPage: document.querySelector('#previous-page'),
@@ -37,6 +48,13 @@ let history = [];
 let historyIndex = -1;
 let readingOrder = [];
 let zoom = 1;
+let searchRequestId = 0;
+let searchState = {
+  scope: 'body',
+  query: '',
+  resultsByPath: new Map(),
+  currentMatchIndex: 0,
+};
 
 let library = { collections: [], books: [] };
 let selectedCollectionId = null; // null = 全部
@@ -238,6 +256,7 @@ function renderNavigation(items) {
   tree.setAttribute('role', 'tree');
   tree.append(...items.map((item) => createTreeItem(item, 1)));
   elements.navigation.append(tree);
+  applySearchStateToNavigation();
 }
 
 function createTreeItem(item, level) {
@@ -245,6 +264,7 @@ function createTreeItem(item, level) {
   const row = document.createElement('div');
   const disclosure = document.createElement('button');
   const link = document.createElement('button');
+  const count = document.createElement('span');
   const hasChildren = item.children.length > 0;
 
   listItem.className = `tree-item${level === 1 ? ' expanded' : ''}`;
@@ -264,6 +284,8 @@ function createTreeItem(item, level) {
   link.type = 'button';
   link.textContent = item.title;
   link.title = item.title;
+  count.className = 'tree-search-count';
+  count.hidden = true;
 
   if (hasChildren) {
     disclosure.addEventListener('click', () => {
@@ -281,7 +303,7 @@ function createTreeItem(item, level) {
     link.disabled = true;
   }
 
-  row.append(disclosure, link);
+  row.append(disclosure, link, count);
   listItem.append(row);
 
   if (hasChildren) {
@@ -311,7 +333,23 @@ function setAllTreeItemsExpanded(expanded) {
     .forEach((item) => setTreeItemExpanded(item, expanded));
 }
 
-async function navigateTo(topicPath, addToHistory = true, activeRow = null) {
+function getTopicSearchResult(topicPath) {
+  const pagePath = topicPath?.split('#', 1)[0]?.toLocaleLowerCase();
+  return searchState.resultsByPath.get(pagePath) || null;
+}
+
+function createSearchUrl(url, topicPath, matchIndex) {
+  const result = getTopicSearchResult(topicPath);
+  if (searchState.scope !== 'body' || !searchState.query || !result) return url;
+
+  const searchUrl = new URL(url);
+  searchUrl.searchParams.set('search', searchState.query);
+  searchUrl.searchParams.set('match', String(matchIndex));
+  searchUrl.hash = 'chm-search-current';
+  return searchUrl.toString();
+}
+
+async function navigateTo(topicPath, addToHistory = true, activeRow = null, matchIndex = 0) {
   const url = await window.chmReader.createBookUrl(topicPath);
   if (!url) return;
 
@@ -323,13 +361,18 @@ async function navigateTo(topicPath, addToHistory = true, activeRow = null) {
   }
 
   currentTopicPath = topicPath;
+  const searchResult = getTopicSearchResult(topicPath);
+  searchState.currentMatchIndex = searchResult
+    ? Math.min(Math.max(0, matchIndex), searchResult.count - 1)
+    : 0;
   if (navigationRow) {
     activateNavigationRow(navigationRow);
   }
 
-  loadContent(url);
+  loadContent(createSearchUrl(url, topicPath, searchState.currentMatchIndex));
   updateHistoryButtons();
   updatePageButtons();
+  updateSearchMatchNavigation();
 }
 
 function findNavigationRow(topicPath) {
@@ -418,12 +461,26 @@ function applyBook(book) {
   currentTopicPath = null;
   history = [];
   historyIndex = -1;
+  searchState = {
+    scope: 'body',
+    query: '',
+    resultsByPath: new Map(),
+    currentMatchIndex: 0,
+  };
   readingOrder = window.chmNavigation.getTopicPathsInReadingOrder(book.contents);
   elements.bookTitle.textContent = book.name;
-  elements.search.disabled = book.contents.length === 0;
+  elements.search.disabled = book.contents.length === 0 && book.searchablePageCount === 0;
   elements.expandAll.disabled = book.contents.length === 0;
   elements.collapseAll.disabled = book.contents.length === 0;
   elements.search.value = '';
+  elements.searchBody.setAttribute('aria-checked', 'true');
+  elements.searchDirectory.setAttribute('aria-checked', 'false');
+  elements.searchScopeLabel.textContent = '正文';
+  elements.search.placeholder = '搜索正文';
+  elements.searchScopeMenu.hidden = true;
+  elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
+  updateSearchStatus();
+  updateSearchMatchNavigation();
   renderNavigation(book.contents);
   updateHistoryButtons();
   updatePageButtons();
@@ -449,25 +506,135 @@ function findFirstTopic(items) {
   return null;
 }
 
-function filterNavigation(query) {
-  const normalizedQuery = query.trim().toLocaleLowerCase();
+function updateSearchMatchNavigation() {
+  const result = getTopicSearchResult(currentTopicPath);
+  const hasCurrentPageMatches = searchState.scope === 'body'
+    && Boolean(searchState.query)
+    && Boolean(result);
+  elements.searchMatchNavigation.hidden = !hasCurrentPageMatches;
+  elements.searchToolbarSeparator.hidden = !hasCurrentPageMatches;
+  elements.searchPrevious.disabled = !hasCurrentPageMatches || result.count < 2;
+  elements.searchNext.disabled = !hasCurrentPageMatches || result.count < 2;
+  elements.searchMatchPosition.value = hasCurrentPageMatches
+    ? `${searchState.currentMatchIndex + 1} / ${result.count}`
+    : '0 / 0';
+}
+
+function applySearchStateToNavigation() {
   const topLevelItems = [...elements.navigation.querySelectorAll('.tree > .tree-item')];
+  const hasQuery = Boolean(searchState.query);
 
-  function filterItem(item) {
-    const childItems = [...item.querySelectorAll(':scope > ul > .tree-item')];
-    const childMatches = childItems.map(filterItem).some(Boolean);
-    const ownMatch = !normalizedQuery || item.dataset.title.includes(normalizedQuery);
+  function applyBodySearch(item) {
+    const childCount = [...item.querySelectorAll(':scope > ul > .tree-item')]
+      .map(applyBodySearch)
+      .reduce((total, count) => total + count, 0);
+    const ownCount = getTopicSearchResult(item.dataset.topicPath)?.count || 0;
+    const total = ownCount + childCount;
+    const count = item.querySelector(':scope > .tree-row .tree-search-count');
+    count.hidden = total === 0;
+    count.textContent = total ? `(${total})` : '';
+    item.classList.toggle('search-match', ownCount > 0);
+    item.classList.toggle('filtered-out', total === 0);
+    if (total && childCount) setTreeItemExpanded(item, true);
+    return total;
+  }
+
+  function applyDirectorySearch(item) {
+    const childMatches = [...item.querySelectorAll(':scope > ul > .tree-item')]
+      .map(applyDirectorySearch)
+      .some(Boolean);
+    const ownMatch = item.dataset.title.includes(searchState.query.toLocaleLowerCase());
     const matches = ownMatch || childMatches;
-
+    item.classList.toggle('search-match', ownMatch);
     item.classList.toggle('filtered-out', !matches);
-    if (normalizedQuery && childMatches) {
-      item.classList.add('expanded');
-      item.setAttribute('aria-expanded', 'true');
-    }
+    item.querySelector(':scope > .tree-row .tree-search-count').hidden = true;
+    if (childMatches) setTreeItemExpanded(item, true);
     return matches;
   }
 
-  topLevelItems.forEach(filterItem);
+  topLevelItems.forEach((item) => {
+    if (!hasQuery) {
+      item.classList.remove('search-match', 'filtered-out');
+      item.querySelector(':scope > .tree-row .tree-search-count').hidden = true;
+      return;
+    }
+    if (searchState.scope === 'body') applyBodySearch(item);
+    else applyDirectorySearch(item);
+  });
+
+  if (hasQuery) {
+    elements.navigation.querySelector('.tree-item.search-match > .tree-row')
+      ?.scrollIntoView({ block: 'center' });
+  }
+}
+
+function updateSearchStatus() {
+  if (!searchState.query) {
+    elements.searchStatus.textContent = '';
+    return;
+  }
+
+  if (searchState.scope === 'directory') {
+    const matches = elements.navigation.querySelectorAll('.tree-item.search-match').length;
+    elements.searchStatus.textContent = `目录中找到 ${matches} 项`;
+    return;
+  }
+
+  const results = [...searchState.resultsByPath.values()];
+  const count = results.reduce((total, result) => total + result.count, 0);
+  elements.searchStatus.textContent = `正文中找到 ${count} 处，涉及 ${results.length} 个章节`;
+}
+
+function moveSearchMatch(offset) {
+  const result = getTopicSearchResult(currentTopicPath);
+  if (!result || result.count < 2) return;
+  const nextMatch = (searchState.currentMatchIndex + offset + result.count) % result.count;
+  navigateTo(currentTopicPath, false, findNavigationRow(currentTopicPath), nextMatch);
+}
+
+function setSearchScope(scope) {
+  searchState.scope = scope;
+  elements.searchBody.setAttribute('aria-checked', String(scope === 'body'));
+  elements.searchDirectory.setAttribute('aria-checked', String(scope === 'directory'));
+  elements.searchScopeLabel.textContent = scope === 'body' ? '正文' : '目录';
+  elements.search.placeholder = scope === 'body' ? '搜索正文' : '搜索目录';
+  elements.searchScopeMenu.hidden = true;
+  elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
+  searchNavigation(elements.search.value);
+}
+
+async function searchNavigation(query) {
+  const normalizedQuery = query.trim();
+  const requestId = ++searchRequestId;
+  searchState.query = normalizedQuery;
+  searchState.currentMatchIndex = 0;
+
+  if (!normalizedQuery) {
+    searchState.resultsByPath = new Map();
+    renderNavigation(currentBook?.contents || []);
+    updateSearchStatus();
+    updateSearchMatchNavigation();
+    if (currentTopicPath) navigateTo(currentTopicPath, false, findNavigationRow(currentTopicPath));
+    return;
+  }
+
+  if (searchState.scope === 'directory') {
+    searchState.resultsByPath = new Map();
+    renderNavigation(currentBook?.contents || []);
+    updateSearchStatus();
+    updateSearchMatchNavigation();
+    return;
+  }
+
+  const results = await window.chmReader.searchBook(normalizedQuery);
+  if (requestId !== searchRequestId) return;
+  searchState.resultsByPath = new Map(results.map((result) => [result.path.toLocaleLowerCase(), result]));
+  renderNavigation(currentBook?.contents || []);
+  updateSearchStatus();
+  updateSearchMatchNavigation();
+  if (getTopicSearchResult(currentTopicPath)) {
+    navigateTo(currentTopicPath, false, findNavigationRow(currentTopicPath));
+  }
 }
 
 function setZoom(nextZoom) {
@@ -526,7 +693,34 @@ elements.nextPage.addEventListener('click', () => movePage(1));
 elements.expandAll.addEventListener('click', () => setAllTreeItemsExpanded(true));
 elements.collapseAll.addEventListener('click', () => setAllTreeItemsExpanded(false));
 elements.contentFrame.addEventListener('load', syncNavigationWithFrame);
-elements.search.addEventListener('input', (event) => filterNavigation(event.target.value));
+elements.search.addEventListener('input', (event) => {
+  searchNavigation(event.target.value);
+});
+elements.search.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  moveSearchMatch(event.shiftKey ? -1 : 1);
+});
+elements.searchScopeTrigger.addEventListener('click', () => {
+  const isOpen = !elements.searchScopeMenu.hidden;
+  elements.searchScopeMenu.hidden = isOpen;
+  elements.searchScopeTrigger.setAttribute('aria-expanded', String(!isOpen));
+});
+elements.searchBody.addEventListener('click', () => setSearchScope('body'));
+elements.searchDirectory.addEventListener('click', () => setSearchScope('directory'));
+elements.searchPrevious.addEventListener('click', () => moveSearchMatch(-1));
+elements.searchNext.addEventListener('click', () => moveSearchMatch(1));
+document.addEventListener('pointerdown', (event) => {
+  if (elements.searchScopeMenu.hidden || event.target.closest('.search-box')) return;
+  elements.searchScopeMenu.hidden = true;
+  elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || elements.searchScopeMenu.hidden) return;
+  elements.searchScopeMenu.hidden = true;
+  elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
+  elements.searchScopeTrigger.focus();
+});
 document.querySelector('#zoom-out').addEventListener('click', () => setZoom(zoom - 0.1));
 document.querySelector('#zoom-in').addEventListener('click', () => setZoom(zoom + 0.1));
 elements.zoomReset.addEventListener('click', () => setZoom(1));

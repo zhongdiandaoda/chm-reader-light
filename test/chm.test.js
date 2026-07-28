@@ -4,9 +4,13 @@ const path = require('node:path');
 
 const {
   decodeMarkup,
+  extractSearchableText,
   findBookMetadata,
+  getSearchMatchCount,
+  highlightSearchMatches,
   parseContents,
   resolveBookResource,
+  searchBookContents,
 } = require('../src/chm');
 
 test('parseContents builds a nested navigation tree from HHC markup', () => {
@@ -124,4 +128,52 @@ test('decodeMarkup falls back to GB18030 for legacy Chinese contents', () => {
     decodeMarkup(Buffer.concat([prefix, chineseTitle, suffix])),
     '<param name="Name" value="配置">',
   );
+});
+
+test('searchBookContents finds normalized body text without case sensitivity', () => {
+  const index = [{
+    path: 'guide/install.htm',
+    title: 'Installation Guide',
+    text: extractSearchableText(`
+      <html><head><title>Install</title><style>.hidden { display: none; }</style></head>
+      <body><h1>Install CHM Reader</h1><p>Use Homebrew to install the reader.</p>
+      <script>window.unrelated = true;</script></body></html>
+    `),
+  }];
+
+  const results = searchBookContents(index, 'hOmEbReW');
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].path, 'guide/install.htm');
+  assert.equal(results[0].title, 'Installation Guide');
+  assert.match(results[0].excerpt, /Use Homebrew to install the reader\./);
+});
+
+test('searchBookContents returns the number of matches for each matching page', () => {
+  const index = [{
+    path: 'network.htm',
+    title: '网络配置',
+    text: 'VXLAN 配置需要 VXLAN 网络和 vxlan 接口。',
+  }];
+
+  assert.equal(getSearchMatchCount(index[0].text, 'vxlan'), 3);
+  assert.deepEqual(searchBookContents(index, 'vxlan'), [{
+    path: 'network.htm',
+    title: '网络配置',
+    count: 3,
+    excerpt: 'VXLAN 配置需要 VXLAN 网络和 vxlan 接口。',
+  }]);
+});
+
+test('highlightSearchMatches marks all matches and identifies the selected match', () => {
+  const result = highlightSearchMatches(
+    '<html><body><p>VXLAN 配置与 vxlan 网络。</p><script>const vxlan = 1;</script></body></html>',
+    'vxlan',
+    1,
+  );
+
+  assert.equal(result.count, 2);
+  assert.match(result.markup, /<mark class="chm-search-match">VXLAN<\/mark>/);
+  assert.match(result.markup, /<mark class="chm-search-match chm-search-current" id="chm-search-current">vxlan<\/mark>/);
+  assert.doesNotMatch(result.markup, /<mark[^>]*>vxlan<\/mark> = 1/);
 });

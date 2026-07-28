@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; frame-src chm:">
-    <title>CHM Reader</title>
+    <title>CHMReaderLight</title>
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body data-view="library">
@@ -12,7 +12,7 @@
       <header class="app-header" id="library-toolbar">
         <div class="titlebar">
           <div class="window-drag-region" aria-hidden="true"></div>
-          <div class="titlebar-title">CHM Reader</div>
+          <div class="titlebar-title">CHMReaderLight</div>
         </div>
         <div class="toolbar">
           <div class="toolbar-left">
@@ -51,7 +51,7 @@
       <header class="app-header" id="reader-toolbar" hidden>
         <div class="titlebar">
           <div class="window-drag-region" aria-hidden="true"></div>
-          <div class="titlebar-title" id="book-title">CHM Reader</div>
+          <div class="titlebar-title" id="book-title">CHMReaderLight</div>
         </div>
         <div class="toolbar">
           <div class="toolbar-left">
@@ -67,23 +67,29 @@
             </button>
           </div>
           <div class="toolbar-right">
-          <button class="icon-button" id="previous-page" type="button" aria-label="上一页" title="上一页" disabled>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 13.5 5.5-5 5.5 5"></path><path d="M10 6.5v8"></path></svg>
-          </button>
-          <button class="icon-button" id="next-page" type="button" aria-label="下一页" title="下一页" disabled>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 6.5 5.5 5 5.5-5"></path><path d="M10 13.5v-8"></path></svg>
-          </button>
-          <span class="toolbar-separator" aria-hidden="true"></span>
-          <button class="icon-button" id="go-back" type="button" aria-label="后退" title="后退" disabled>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
-          </button>
-          <button class="icon-button" id="go-forward" type="button" aria-label="前进" title="前进" disabled>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4.5 5 5.5-5 5.5"></path></svg>
-          </button>
-          <span class="toolbar-separator" aria-hidden="true"></span>
-          <button class="text-button" id="zoom-out" type="button" aria-label="缩小正文" title="缩小正文">A−</button>
-          <button class="text-button" id="zoom-reset" type="button" aria-label="重置正文缩放" title="重置正文缩放">100%</button>
-          <button class="text-button text-button-large" id="zoom-in" type="button" aria-label="放大正文" title="放大正文">A+</button>
+            <div class="toolbar-search-navigation" id="search-match-navigation" hidden aria-label="当前页面搜索结果">
+              <button class="toolbar-search-button" id="search-previous" type="button" disabled>上一个命中</button>
+              <output id="search-match-position">0 / 0</output>
+              <button class="toolbar-search-button" id="search-next" type="button" disabled>下一个命中</button>
+            </div>
+            <span class="toolbar-separator search-toolbar-separator" id="search-toolbar-separator" hidden aria-hidden="true"></span>
+            <button class="icon-button" id="previous-page" type="button" aria-label="上一页" title="上一页" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 13.5 5.5-5 5.5 5"></path><path d="M10 6.5v8"></path></svg>
+            </button>
+            <button class="icon-button" id="next-page" type="button" aria-label="下一页" title="下一页" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 6.5 5.5 5 5.5-5"></path><path d="M10 13.5v-8"></path></svg>
+            </button>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="icon-button" id="go-back" type="button" aria-label="后退" title="后退" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
+            </button>
+            <button class="icon-button" id="go-forward" type="button" aria-label="前进" title="前进" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4.5 5.5 5 5.5-5"></path></svg>
+            </button>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="text-button" id="zoom-out" type="button" aria-label="缩小正文" title="缩小正文">A−</button>
+            <button class="text-button" id="zoom-reset" type="button" aria-label="重置正文缩放" title="重置正文缩放">100%</button>
+            <button class="text-button text-button-large" id="zoom-in" type="button" aria-label="放大正文" title="放大正文">A+</button>
           </div>
         </div>
       </header>
@@ -120,14 +126,22 @@
         <aside class="sidebar" id="sidebar" aria-label="文档目录">
           <div class="sidebar-header">
             <div class="eyebrow">内容</div>
-            <label class="search-box">
-              <svg viewBox="0 0 20 20" aria-hidden="true">
+            <div class="search-box">
+              <button class="search-scope-trigger" id="search-scope-trigger" type="button" aria-label="选择搜索范围" aria-expanded="false" aria-controls="search-scope-menu">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
                 <circle cx="8.5" cy="8.5" r="5"></circle>
                 <path d="m12.2 12.2 4 4"></path>
-              </svg>
-              <span class="sr-only">搜索目录</span>
-              <input id="search-navigation" type="search" placeholder="搜索目录" autocomplete="off" disabled>
-            </label>
+                </svg>
+              </button>
+              <span class="sr-only">搜索目录和正文</span>
+              <input id="search-navigation" type="search" placeholder="搜索目录和正文" autocomplete="off" disabled>
+              <span class="search-scope-label" id="search-scope-label">正文</span>
+              <div class="search-scope-menu" id="search-scope-menu" role="menu" hidden>
+                <button id="search-body" type="button" role="menuitemradio" aria-checked="true">正文</button>
+                <button id="search-directory" type="button" role="menuitemradio" aria-checked="false">目录</button>
+              </div>
+            </div>
+            <div class="search-status" id="search-status" aria-live="polite"></div>
             <div class="tree-actions" aria-label="目录展开操作">
               <button class="tree-action-button" id="expand-all" type="button" disabled>展开全部</button>
               <button class="tree-action-button" id="collapse-all" type="button" disabled>收起全部</button>
