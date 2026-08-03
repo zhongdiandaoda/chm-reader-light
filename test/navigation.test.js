@@ -35,6 +35,27 @@ test('findTopicPathByUrl matches nested topics by the current iframe page', () =
   );
 });
 
+test('findTopicPathByUrl prefers exact hash matches before page-only matches', () => {
+  const items = [{
+    title: 'Root',
+    path: 'root.htm',
+    children: [{
+      title: 'Overview',
+      path: 'guide/api.htm#overview',
+      children: [],
+    }, {
+      title: 'Methods',
+      path: 'guide/api.htm#methods',
+      children: [],
+    }],
+  }];
+
+  assert.equal(
+    findTopicPathByUrl(items, 'chm://book/guide/api.htm#methods'),
+    'guide/api.htm#methods',
+  );
+});
+
 test('findTopicPathByUrl returns null when no topic matches', () => {
   assert.equal(findTopicPathByUrl([], 'chm://book/missing.htm'), null);
 });

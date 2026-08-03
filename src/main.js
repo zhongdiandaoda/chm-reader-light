@@ -17,6 +17,7 @@ const {
   decodeMarkup,
   extractBook,
   highlightSearchMatches,
+  injectContentNavigationBridge,
   resolveBookResource,
   searchBookContents,
 } = require('./chm');
@@ -315,23 +316,31 @@ function registerBookProtocol() {
       const filePath = resolveBookResource(bookRoot, requestUrl.pathname);
       const response = await net.fetch(pathToFileURL(filePath).toString());
       const headers = new Headers(response.headers);
-      headers.set(
-        'Content-Security-Policy',
-        "default-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; font-src chm: data:; media-src chm:; frame-src chm:",
-      );
       const searchQuery = requestUrl.searchParams.get('search');
       const isHtml = ['.htm', '.html'].includes(path.extname(filePath).toLowerCase());
-      if (isHtml && searchQuery) {
-        const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match'), 10) || 0);
-        const markup = decodeMarkup(await fs.promises.readFile(filePath));
-        const highlighted = highlightSearchMatches(markup, searchQuery, selectedIndex);
+      if (isHtml) {
+        const scriptNonce = randomUUID();
+        headers.set(
+          'Content-Security-Policy',
+          `default-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; script-src 'nonce-${scriptNonce}'; font-src chm: data:; media-src chm:; frame-src chm:`,
+        );
+        let markup = decodeMarkup(await fs.promises.readFile(filePath));
+        if (searchQuery) {
+          const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match'), 10) || 0);
+          markup = addSearchHighlightStyles(highlightSearchMatches(markup, searchQuery, selectedIndex).markup);
+        }
+        markup = injectContentNavigationBridge(markup, scriptNonce);
         headers.set('Content-Type', 'text/html; charset=utf-8');
-        return new Response(addSearchHighlightStyles(highlighted.markup), {
+        return new Response(markup, {
           status: response.status,
           statusText: response.statusText,
           headers,
         });
       }
+      headers.set(
+        'Content-Security-Policy',
+        "default-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; font-src chm: data:; media-src chm:; frame-src chm:",
+      );
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,

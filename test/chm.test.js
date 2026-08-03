@@ -8,6 +8,7 @@ const {
   findBookMetadata,
   getSearchMatchCount,
   highlightSearchMatches,
+  injectContentNavigationBridge,
   parseContents,
   resolveBookResource,
   searchBookContents,
@@ -176,4 +177,17 @@ test('highlightSearchMatches marks all matches and identifies the selected match
   assert.match(result.markup, /<mark class="chm-search-match">VXLAN<\/mark>/);
   assert.match(result.markup, /<mark class="chm-search-match chm-search-current" id="chm-search-current">vxlan<\/mark>/);
   assert.doesNotMatch(result.markup, /<mark[^>]*>vxlan<\/mark> = 1/);
+});
+
+test('injectContentNavigationBridge posts iframe navigation changes to parent', () => {
+  const markup = injectContentNavigationBridge(
+    '<html><head><title>Guide</title></head><body><a href="#next">Next</a></body></html>',
+    'test-nonce',
+  );
+
+  assert.match(markup, /<script nonce="test-nonce">/);
+  assert.match(markup, /type: 'chm-reader:navigated'/);
+  assert.match(markup, /href: window\.location\.href/);
+  assert.match(markup, /window\.addEventListener\('hashchange', notifyNavigation\)/);
+  assert.match(markup, /<\/script><\/head>/);
 });

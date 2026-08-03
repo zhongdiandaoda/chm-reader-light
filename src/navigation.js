@@ -21,20 +21,47 @@
       .toLocaleLowerCase();
   }
 
-  function findTopicPathByUrl(items, url) {
-    const targetPath = normalizeTopicReference(url);
-    if (!targetPath) return null;
+  function normalizeTopicReferenceWithHash(value) {
+    const normalizedPath = normalizeTopicReference(value);
+    if (!normalizedPath) return null;
 
+    let hash = '';
+    try {
+      hash = new URL(value).hash;
+    } catch {
+      const hashIndex = String(value).indexOf('#');
+      hash = hashIndex >= 0 ? String(value).slice(hashIndex) : '';
+    }
+
+    return `${normalizedPath}${decodeURIComponent(hash).toLocaleLowerCase()}`;
+  }
+
+  function findTopicPath(items, matches) {
     for (const item of items) {
-      if (normalizeTopicReference(item.path) === targetPath) {
-        return item.path;
-      }
+      if (matches(item)) return item.path;
 
-      const childPath = findTopicPathByUrl(item.children || [], url);
+      const childPath = findTopicPath(item.children || [], matches);
       if (childPath) return childPath;
     }
 
     return null;
+  }
+
+  function findTopicPathByUrl(items, url) {
+    const targetPath = normalizeTopicReference(url);
+    if (!targetPath) return null;
+
+    const targetWithHash = normalizeTopicReferenceWithHash(url);
+    const exactPath = findTopicPath(
+      items,
+      (item) => normalizeTopicReferenceWithHash(item.path) === targetWithHash,
+    );
+    if (exactPath) return exactPath;
+
+    return findTopicPath(
+      items,
+      (item) => normalizeTopicReference(item.path) === targetPath,
+    );
   }
 
   function getTopicPathsInReadingOrder(items) {
@@ -53,6 +80,7 @@
     findTopicPathByUrl,
     getTopicPathsInReadingOrder,
     normalizeTopicReference,
+    normalizeTopicReferenceWithHash,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

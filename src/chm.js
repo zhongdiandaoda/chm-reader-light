@@ -151,6 +151,45 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function injectContentNavigationBridge(markup, nonce) {
+  const bridge = `<script nonce="${escapeHtml(nonce)}">
+(function () {
+  function notifyNavigation() {
+    try {
+      window.parent.postMessage({
+        type: 'chm-reader:navigated',
+        href: window.location.href
+      }, '*');
+    } catch (_) {}
+  }
+
+  window.addEventListener('hashchange', notifyNavigation);
+  window.addEventListener('popstate', notifyNavigation);
+  document.addEventListener('click', function (event) {
+    var target = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+    if (!target) return;
+    window.setTimeout(notifyNavigation, 0);
+    window.setTimeout(notifyNavigation, 80);
+  }, true);
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', notifyNavigation, { once: true });
+  } else {
+    notifyNavigation();
+  }
+  window.addEventListener('load', notifyNavigation, { once: true });
+}());
+</script>`;
+
+  if (/<\/head>/i.test(markup)) {
+    return markup.replace(/<\/head>/i, `${bridge}</head>`);
+  }
+  if (/<\/body>/i.test(markup)) {
+    return markup.replace(/<\/body>/i, `${bridge}</body>`);
+  }
+  return `${bridge}${markup}`;
+}
+
 function highlightSearchMatches(markup, query, selectedIndex = 0) {
   const pattern = createSearchPattern(query);
   if (!pattern) return { markup, count: 0 };
@@ -261,6 +300,7 @@ module.exports = {
   findBookMetadata,
   getSearchMatchCount,
   highlightSearchMatches,
+  injectContentNavigationBridge,
   normalizeSearchText,
   normalizeTopicPath,
   parseContents,

@@ -491,16 +491,28 @@ function revealTopicInNavigation(topicPath) {
   if (row) activateNavigationRow(row, { block: 'center' });
 }
 
-function syncNavigationWithFrame() {
-  if (!currentBook || !elements.contentFrame.src.startsWith('chm://book/')) return;
+function syncNavigationWithUrl(url) {
+  if (!currentBook || typeof url !== 'string' || !url.startsWith('chm://book/')) return;
 
   const topicPath = window.chmNavigation.findTopicPathByUrl(
     currentBook.contents,
-    elements.contentFrame.src,
+    url,
   );
   currentTopicPath = topicPath || currentTopicPath;
   revealTopicInNavigation(topicPath);
   updatePageButtons();
+}
+
+function getContentFrameUrl() {
+  try {
+    return elements.contentFrame.contentWindow?.location.href || elements.contentFrame.src;
+  } catch {
+    return elements.contentFrame.src;
+  }
+}
+
+function syncNavigationWithFrame() {
+  syncNavigationWithUrl(getContentFrameUrl());
 }
 
 function loadContent(url) {
@@ -825,6 +837,10 @@ elements.refreshTree.addEventListener('click', () => {
   setTreeActionsMenuOpen(false);
 });
 elements.contentFrame.addEventListener('load', syncNavigationWithFrame);
+window.addEventListener('message', (event) => {
+  if (event.data?.type !== 'chm-reader:navigated') return;
+  syncNavigationWithUrl(event.data.href);
+});
 elements.search.addEventListener('input', (event) => {
   searchNavigation(event.target.value);
 });
