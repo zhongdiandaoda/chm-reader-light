@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('chmReader', {
   removeCollection: (id) => ipcRenderer.invoke('collection:remove', id),
   createBookUrl: (topicPath) => ipcRenderer.invoke('book:url', topicPath),
   searchBook: (query) => ipcRenderer.invoke('book:search', query),
+  setTextEncoding: (encoding) => ipcRenderer.invoke('book:encoding', encoding),
   openExternal: (url) => ipcRenderer.invoke('external:open', url),
   onBookOpened: (callback) => {
     const listener = (_, book) => callback(book);

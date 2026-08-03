@@ -52,6 +52,7 @@ const elements = {
   collapseAll: document.querySelector('#collapse-all'),
   refreshTree: document.querySelector('#refresh-tree'),
   zoomReset: document.querySelector('#zoom-reset'),
+  textEncoding: document.querySelector('#text-encoding'),
 };
 
 const {
@@ -66,6 +67,7 @@ let historyIndex = -1;
 let readingOrder = [];
 let zoom = 1;
 let searchRequestId = 0;
+let pendingTopicPathAfterEncoding = null;
 let searchState = {
   scope: 'body',
   query: '',
@@ -568,6 +570,7 @@ function applyBook(book) {
   };
   readingOrder = window.chmNavigation.getTopicPathsInReadingOrder(book.contents);
   elements.bookTitle.textContent = book.name;
+  elements.textEncoding.value = book.textEncoding || 'auto';
   elements.search.disabled = book.contents.length === 0 && book.searchablePageCount === 0;
   elements.expandAll.disabled = book.contents.length === 0;
   elements.collapseAll.disabled = book.contents.length === 0;
@@ -585,10 +588,14 @@ function applyBook(book) {
   updateHistoryButtons();
   updatePageButtons();
 
-  const firstTopic = findFirstTopic(book.contents);
-  if (firstTopic) {
-    const firstRow = elements.navigation.querySelector('.tree-row');
-    navigateTo(firstTopic, true, firstRow);
+  const restoreTopic = pendingTopicPathAfterEncoding && readingOrder.includes(pendingTopicPathAfterEncoding)
+    ? pendingTopicPathAfterEncoding
+    : null;
+  pendingTopicPathAfterEncoding = null;
+
+  const initialTopic = restoreTopic || findFirstTopic(book.contents);
+  if (initialTopic) {
+    navigateTo(initialTopic, true, findNavigationRow(initialTopic));
   } else if (book.defaultPage) {
     loadContent(book.defaultPage);
   } else {
@@ -893,6 +900,20 @@ document.addEventListener('keydown', (event) => {
 document.querySelector('#zoom-out').addEventListener('click', () => setZoom(zoom - 0.1));
 document.querySelector('#zoom-in').addEventListener('click', () => setZoom(zoom + 0.1));
 elements.zoomReset.addEventListener('click', () => setZoom(1));
+elements.textEncoding.addEventListener('change', async () => {
+  const previousEncoding = currentBook?.textEncoding || 'auto';
+  pendingTopicPathAfterEncoding = currentTopicPath;
+  elements.textEncoding.disabled = true;
+  try {
+    await window.chmReader.setTextEncoding(elements.textEncoding.value);
+  } catch (error) {
+    pendingTopicPathAfterEncoding = null;
+    elements.textEncoding.value = previousEncoding;
+    window.alert(`无法切换文本编码：${error.message || error}`);
+  } finally {
+    elements.textEncoding.disabled = false;
+  }
+});
 
 window.chmReader.onBookOpened(applyBook);
 window.chmReader.onLibraryUpdated(renderLibrary);

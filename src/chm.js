@@ -94,7 +94,11 @@ function listFiles(root) {
     .map((entry) => path.join(entry.parentPath, entry.name));
 }
 
-function decodeMarkup(buffer) {
+function decodeMarkup(buffer, textEncoding = null) {
+  if (textEncoding) {
+    return new TextDecoder(textEncoding).decode(buffer);
+  }
+
   const preview = buffer.subarray(0, 2048).toString('latin1');
   const declaredCharset = preview.match(/charset\s*=\s*["']?([\w-]+)/i)?.[1];
 
@@ -230,14 +234,14 @@ function getTopicTitles(items, titles = new Map()) {
   return titles;
 }
 
-async function createSearchIndex(root, files, contents) {
+async function createSearchIndex(root, files, contents, textEncoding = null) {
   const titles = getTopicTitles(contents);
   const htmlFiles = files.filter((file) => ['.htm', '.html'].includes(path.extname(file).toLowerCase()));
 
   const entries = await Promise.all(htmlFiles.map(async (file) => {
     try {
       const relativePath = path.relative(root, file).split(path.sep).join('/');
-      const markup = decodeMarkup(await fs.promises.readFile(file));
+      const markup = decodeMarkup(await fs.promises.readFile(file), textEncoding);
       const $ = cheerio.load(markup);
       const pageTitle = $('title').first().text().trim();
       return {
@@ -274,22 +278,26 @@ function searchBookContents(index, query) {
     });
 }
 
-async function extractBook(chmPath, destination, extractor = 'extract_chmLib') {
-  await fs.promises.mkdir(destination, { recursive: true });
-  await execFileAsync(extractor, [chmPath, destination]);
-
-  const files = listFiles(destination);
-  const metadata = findBookMetadata(destination, files);
+async function readExtractedBook(root, textEncoding = null) {
+  const files = listFiles(root);
+  const metadata = findBookMetadata(root, files);
   const contents = metadata.contentsFile
-    ? parseContents(decodeMarkup(await fs.promises.readFile(metadata.contentsFile)))
+    ? parseContents(decodeMarkup(await fs.promises.readFile(metadata.contentsFile), textEncoding))
     : [];
-  const searchIndex = await createSearchIndex(destination, files, contents);
+  const searchIndex = await createSearchIndex(root, files, contents, textEncoding);
 
   return {
     ...metadata,
     contents,
     searchIndex,
   };
+}
+
+async function extractBook(chmPath, destination, extractor = 'extract_chmLib', options = {}) {
+  await fs.promises.mkdir(destination, { recursive: true });
+  await execFileAsync(extractor, [chmPath, destination]);
+
+  return readExtractedBook(destination, options.textEncoding || null);
 }
 
 module.exports = {
@@ -304,6 +312,7 @@ module.exports = {
   normalizeSearchText,
   normalizeTopicPath,
   parseContents,
+  readExtractedBook,
   resolveBookResource,
   searchBookContents,
 };

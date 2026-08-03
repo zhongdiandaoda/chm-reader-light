@@ -11,3 +11,19 @@ test('content iframe allows the injected navigation bridge to run', () => {
   assert.match(sandbox, /\ballow-same-origin\b/);
   assert.match(sandbox, /\ballow-scripts\b/);
 });
+
+test('reader toolbar places text encoding picker after zoom controls', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'src', 'index.html'), 'utf-8');
+  const readerToolbar = html.match(/<header class="app-header" id="reader-toolbar"[\s\S]*?<\/header>/)?.[0] || '';
+  const toolbarRight = readerToolbar.match(/<div class="toolbar-right">[\s\S]*?<\/div>\s*<\/div>\s*<\/header>/)?.[0] || '';
+
+  const zoomInIndex = toolbarRight.indexOf('id="zoom-in"');
+  const encodingIndex = toolbarRight.indexOf('id="text-encoding"');
+
+  assert.ok(zoomInIndex >= 0, 'reader toolbar should include zoom-in control');
+  assert.ok(encodingIndex > zoomInIndex, 'text encoding picker should sit to the right of zoom controls');
+  assert.match(toolbarRight, /<select id="text-encoding"[^>]*aria-label="文本编码"/);
+  assert.match(toolbarRight, /<option value="auto">默认编码<\/option>/);
+  assert.match(toolbarRight, /<option value="gbk">简体中文 \(GBK\)<\/option>/);
+  assert.match(toolbarRight, /<option value="gb18030">简体中文 \(GB18030\)<\/option>/);
+});

@@ -18,6 +18,7 @@ const {
   extractBook,
   highlightSearchMatches,
   injectContentNavigationBridge,
+  readExtractedBook,
   resolveBookResource,
   searchBookContents,
 } = require('./chm');
@@ -37,6 +38,9 @@ protocol.registerSchemesAsPrivileged([{
 let mainWindow;
 let bookRoot;
 let bookSearchIndex = [];
+let bookTextEncoding = null;
+let currentBookPath = null;
+let currentBookName = null;
 let pendingFile;
 
 function getLibraryDir() {
@@ -218,6 +222,23 @@ function createBookUrl(topicPath) {
   return `chm://book/${encodedPath}${hash}`;
 }
 
+function createBookResult(name, chmPath, metadata) {
+  return {
+    name,
+    filePath: chmPath,
+    contents: metadata.contents,
+    defaultPage: createBookUrl(metadata.defaultPage),
+    searchablePageCount: metadata.searchIndex.length,
+    textEncoding: bookTextEncoding,
+  };
+}
+
+function normalizeTextEncoding(encoding) {
+  if (!encoding || encoding === 'auto') return null;
+  new TextDecoder(encoding);
+  return encoding;
+}
+
 function addSearchHighlightStyles(markup) {
   const styles = `<style>
     .chm-search-match { background: #f7df83; color: inherit; border-radius: 2px; padding: 0 1px; }
@@ -235,22 +256,20 @@ async function openBook(chmPath, displayName) {
   const name = displayName || path.basename(chmPath, path.extname(chmPath));
   const nextRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'chm-reader-'));
   try {
-    const metadata = await extractBook(chmPath, nextRoot, await locateExtractor());
+    const metadata = await extractBook(chmPath, nextRoot, await locateExtractor(), {
+      textEncoding: bookTextEncoding,
+    });
     const previousRoot = bookRoot;
     bookRoot = nextRoot;
     bookSearchIndex = metadata.searchIndex;
+    currentBookPath = chmPath;
+    currentBookName = name;
 
     if (previousRoot) {
       fs.promises.rm(previousRoot, { recursive: true, force: true }).catch(() => {});
     }
 
-    const result = {
-      name,
-      filePath: chmPath,
-      contents: metadata.contents,
-      defaultPage: createBookUrl(metadata.defaultPage),
-      searchablePageCount: metadata.searchIndex.length,
-    };
+    const result = createBookResult(name, chmPath, metadata);
 
     mainWindow?.setRepresentedFilename(chmPath);
     mainWindow?.setTitle(`${result.name} - CHMReaderLight`);
@@ -279,6 +298,17 @@ async function openLibraryBook(id) {
     });
     return null;
   }
+}
+
+async function setBookTextEncoding(encoding) {
+  bookTextEncoding = normalizeTextEncoding(encoding);
+  if (!bookRoot || !currentBookPath) return { textEncoding: bookTextEncoding };
+
+  const metadata = await readExtractedBook(bookRoot, bookTextEncoding);
+  bookSearchIndex = metadata.searchIndex;
+  const result = createBookResult(currentBookName, currentBookPath, metadata);
+  mainWindow?.webContents.send('book:opened', result);
+  return result;
 }
 
 async function selectAndImportBooks(collectionId = null) {
@@ -324,7 +354,7 @@ function registerBookProtocol() {
           'Content-Security-Policy',
           `default-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; script-src 'nonce-${scriptNonce}'; font-src chm: data:; media-src chm:; frame-src chm:`,
         );
-        let markup = decodeMarkup(await fs.promises.readFile(filePath));
+        let markup = decodeMarkup(await fs.promises.readFile(filePath), bookTextEncoding);
         if (searchQuery) {
           const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match'), 10) || 0);
           markup = addSearchHighlightStyles(highlightSearchMatches(markup, searchQuery, selectedIndex).markup);
@@ -361,6 +391,7 @@ ipcMain.handle('collection:rename', (_, id, name) => renameCollection(id, name))
 ipcMain.handle('collection:remove', (_, id) => removeCollection(id));
 ipcMain.handle('book:url', (_, topicPath) => createBookUrl(topicPath));
 ipcMain.handle('book:search', (_, query) => searchBookContents(bookSearchIndex, query));
+ipcMain.handle('book:encoding', (_, encoding) => setBookTextEncoding(encoding));
 ipcMain.handle('external:open', (_, url) => {
   if (/^https?:\/\//i.test(url)) return shell.openExternal(url);
   return undefined;
