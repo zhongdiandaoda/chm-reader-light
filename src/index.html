@@ -4,55 +4,155 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; frame-src chm:">
-    <title>CHM Reader</title>
+    <title>CHMReaderLight</title>
     <link rel="stylesheet" href="./styles.css">
   </head>
-  <body>
+  <body data-view="library">
     <div class="app-shell">
-      <header class="toolbar">
-        <div class="window-drag-region" aria-hidden="true"></div>
-        <div class="toolbar-left">
-          <button class="icon-button" id="toggle-sidebar" type="button" aria-label="显示或隐藏目录" title="显示或隐藏目录">
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <rect x="2.5" y="3" width="15" height="14" rx="2"></rect>
-              <path d="M7 3v14"></path>
-            </svg>
-          </button>
-          <button class="open-button" id="open-book" type="button">
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M2.5 6.5h5l1.5 2h8.5v7.2a1.8 1.8 0 0 1-1.8 1.8H4.3a1.8 1.8 0 0 1-1.8-1.8V6.5Z"></path>
-              <path d="M3.5 6.5V4.3c0-1 .8-1.8 1.8-1.8h3.2l1.6 2h4.6c1 0 1.8.8 1.8 1.8v2"></path>
-            </svg>
-            打开 CHM
-          </button>
+      <header class="app-header" id="library-toolbar">
+        <div class="titlebar">
+          <div class="window-drag-region" aria-hidden="true"></div>
+          <div class="titlebar-title">CHMReaderLight</div>
         </div>
-        <div class="toolbar-title" id="book-title">CHM Reader</div>
-        <div class="toolbar-right">
-          <button class="icon-button" id="go-back" type="button" aria-label="后退" title="后退" disabled>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
-          </button>
-          <button class="icon-button" id="go-forward" type="button" aria-label="前进" title="前进" disabled>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4.5 5 5.5-5 5.5"></path></svg>
-          </button>
-          <span class="toolbar-separator" aria-hidden="true"></span>
-          <button class="text-button" id="zoom-out" type="button" aria-label="缩小正文" title="缩小正文">A−</button>
-          <button class="text-button" id="zoom-reset" type="button" aria-label="重置正文缩放" title="重置正文缩放">100%</button>
-          <button class="text-button text-button-large" id="zoom-in" type="button" aria-label="放大正文" title="放大正文">A+</button>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <span class="library-heading" id="library-heading">书库</span>
+            <span class="toolbar-meta" id="library-count"></span>
+          </div>
+          <div class="toolbar-right">
+            <div class="view-toggle" role="group" aria-label="切换展示方式">
+              <button class="icon-button" id="view-grid" type="button" aria-label="平铺展示" title="平铺展示" aria-pressed="true">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="3" y="3" width="6" height="6" rx="1.4"></rect>
+                  <rect x="11" y="3" width="6" height="6" rx="1.4"></rect>
+                  <rect x="3" y="11" width="6" height="6" rx="1.4"></rect>
+                  <rect x="11" y="11" width="6" height="6" rx="1.4"></rect>
+                </svg>
+              </button>
+              <button class="icon-button" id="view-list" type="button" aria-label="列表展示" title="列表展示" aria-pressed="false">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M7 5h10M7 10h10M7 15h10"></path>
+                  <path d="M3.5 5h.01M3.5 10h.01M3.5 15h.01"></path>
+                </svg>
+              </button>
+            </div>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="open-button" id="add-book" type="button">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M10 4.5v11"></path>
+                <path d="M4.5 10h11"></path>
+              </svg>
+              添加 CHM
+            </button>
+          </div>
         </div>
       </header>
 
-      <main class="reader-layout" id="reader-layout">
+      <header class="app-header" id="reader-toolbar" hidden>
+        <div class="titlebar">
+          <div class="window-drag-region" aria-hidden="true"></div>
+          <div class="titlebar-title" id="book-title">CHMReaderLight</div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <button class="open-button" id="back-to-library" type="button">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
+              书库
+            </button>
+            <button class="icon-button" id="toggle-sidebar" type="button" aria-label="显示或隐藏目录" title="显示或隐藏目录">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <rect x="2.5" y="3" width="15" height="14" rx="2"></rect>
+                <path d="M7 3v14"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="toolbar-right">
+            <div class="toolbar-search-navigation" id="search-match-navigation" hidden aria-label="当前页面搜索结果">
+              <button class="toolbar-search-button" id="search-previous" type="button" disabled>上一个命中</button>
+              <output id="search-match-position">0 / 0</output>
+              <button class="toolbar-search-button" id="search-next" type="button" disabled>下一个命中</button>
+            </div>
+            <span class="toolbar-separator search-toolbar-separator" id="search-toolbar-separator" hidden aria-hidden="true"></span>
+            <button class="icon-button" id="previous-page" type="button" aria-label="上一页" title="上一页" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 13.5 5.5-5 5.5 5"></path><path d="M10 6.5v8"></path></svg>
+            </button>
+            <button class="icon-button" id="next-page" type="button" aria-label="下一页" title="下一页" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 6.5 5.5 5 5.5-5"></path><path d="M10 13.5v-8"></path></svg>
+            </button>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="icon-button" id="go-back" type="button" aria-label="后退" title="后退" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
+            </button>
+            <button class="icon-button" id="go-forward" type="button" aria-label="前进" title="前进" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4.5 5 5.5-5 5.5"></path></svg>
+            </button>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="text-button" id="zoom-out" type="button" aria-label="缩小正文" title="缩小正文">A−</button>
+            <button class="text-button" id="zoom-reset" type="button" aria-label="重置正文缩放" title="重置正文缩放">100%</button>
+            <button class="text-button text-button-large" id="zoom-in" type="button" aria-label="放大正文" title="放大正文">A+</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="library-view" id="library-view" aria-label="书库">
+        <aside class="collection-sidebar" aria-label="书库列表">
+          <div class="collection-header">
+            <span class="eyebrow">书库</span>
+            <button class="icon-button" id="add-collection" type="button" aria-label="新建书库" title="新建书库">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4.5v11"></path><path d="M4.5 10h11"></path></svg>
+            </button>
+          </div>
+          <nav class="collection-list" id="collection-list" aria-label="书库分组"></nav>
+        </aside>
+        <div class="library-content" id="library-content">
+          <div class="library-empty" id="library-empty" hidden>
+            <div class="book-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64">
+                <path d="M13 9h27a7 7 0 0 1 7 7v39H20a7 7 0 0 1-7-7V9Z"></path>
+                <path d="M20 55a7 7 0 0 1 7-7h24V16h-4"></path>
+                <path d="M23 21h14M23 29h14M23 37h9"></path>
+              </svg>
+            </div>
+            <h1>这个书库还是空的</h1>
+            <p>添加本地 CHM 文件，它们会被加入到当前书库中，随时打开阅读。</p>
+            <button class="primary-button" id="empty-add-book" type="button">添加 CHM 文件</button>
+            <div class="shortcut-hint"><kbd>⌘</kbd><kbd>O</kbd><span>快速添加</span></div>
+          </div>
+          <div class="library-grid" id="library-grid" role="list"></div>
+        </div>
+      </section>
+
+      <main class="reader-layout" id="reader-layout" hidden>
         <aside class="sidebar" id="sidebar" aria-label="文档目录">
           <div class="sidebar-header">
-            <div class="eyebrow">内容</div>
-            <label class="search-box">
-              <svg viewBox="0 0 20 20" aria-hidden="true">
+            <div class="sidebar-heading">
+              <div class="eyebrow">内容</div>
+              <button class="sidebar-menu-trigger" id="tree-menu-trigger" type="button" aria-label="目录操作" title="目录操作" aria-expanded="false" aria-controls="tree-actions-menu">
+                <span aria-hidden="true">⋯</span>
+              </button>
+              <div class="tree-actions-menu" id="tree-actions-menu" role="menu" hidden>
+                <div class="tree-actions-menu-title">目录操作</div>
+                <button id="expand-all" type="button" role="menuitem" disabled>展开全部</button>
+                <button id="collapse-all" type="button" role="menuitem" disabled>收起全部</button>
+                <button id="refresh-tree" type="button" role="menuitem" disabled>刷新目录</button>
+              </div>
+            </div>
+            <div class="search-box">
+              <button class="search-scope-trigger" id="search-scope-trigger" type="button" aria-label="选择搜索范围" aria-expanded="false" aria-controls="search-scope-menu">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
                 <circle cx="8.5" cy="8.5" r="5"></circle>
                 <path d="m12.2 12.2 4 4"></path>
-              </svg>
-              <span class="sr-only">搜索目录</span>
-              <input id="search-navigation" type="search" placeholder="搜索目录" autocomplete="off" disabled>
-            </label>
+                </svg>
+              </button>
+              <span class="sr-only">搜索正文</span>
+              <input id="search-navigation" type="search" placeholder="搜索正文" autocomplete="off" disabled>
+              <span class="search-scope-label" id="search-scope-label">正文</span>
+              <div class="search-scope-menu" id="search-scope-menu" role="menu" hidden>
+                <button id="search-body" type="button" role="menuitemradio" aria-checked="true">正文</button>
+                <button id="search-directory" type="button" role="menuitemradio" aria-checked="false">目录</button>
+              </div>
+            </div>
+            <div class="search-status" id="search-status" aria-live="polite"></div>
           </div>
           <nav class="navigation" id="navigation" aria-label="CHM 章节">
             <div class="sidebar-placeholder">
@@ -69,7 +169,7 @@
         <div class="resize-handle" id="resize-handle" role="separator" aria-orientation="vertical" aria-label="调整目录宽度" tabindex="0"></div>
 
         <section class="content-pane" aria-label="文档正文">
-          <div class="empty-state" id="empty-state">
+          <div class="empty-state" id="empty-state" hidden>
             <div class="book-mark" aria-hidden="true">
               <svg viewBox="0 0 64 64">
                 <path d="M13 9h27a7 7 0 0 1 7 7v39H20a7 7 0 0 1-7-7V9Z"></path>
@@ -77,10 +177,8 @@
                 <path d="M23 21h14M23 29h14M23 37h9"></path>
               </svg>
             </div>
-            <h1>阅读你的 CHM 文档</h1>
-            <p>打开本地文件，目录与内容会在同一个窗口中呈现。</p>
-            <button class="primary-button" id="empty-open-book" type="button">选择 CHM 文件</button>
-            <div class="shortcut-hint"><kbd>⌘</kbd><kbd>O</kbd><span>快速打开</span></div>
+            <h1>这本文档没有正文</h1>
+            <p>该 CHM 文件未包含可显示的页面。</p>
           </div>
           <div class="loading-state" id="loading-state" hidden aria-live="polite">
             <div class="spinner" aria-hidden="true"></div>
@@ -89,13 +187,30 @@
           <iframe
             id="content-frame"
             title="CHM 文档内容"
-            sandbox="allow-same-origin"
+            sandbox="allow-same-origin allow-scripts"
             referrerpolicy="no-referrer"
             hidden
           ></iframe>
         </section>
       </main>
     </div>
+    <div class="modal-backdrop" id="collection-dialog" hidden>
+      <form class="modal" id="collection-form" role="dialog" aria-modal="true" aria-labelledby="collection-dialog-title">
+        <h2 id="collection-dialog-title">新建书库</h2>
+        <label for="collection-name">书库名称</label>
+        <input id="collection-name" type="text" maxlength="40" autocomplete="off" required>
+        <div class="modal-actions">
+          <button class="text-button" id="collection-cancel" type="button">取消</button>
+          <button class="primary-button" id="collection-create" type="submit">创建</button>
+        </div>
+      </form>
+    </div>
+    <div class="context-menu" id="collection-context-menu" role="menu" hidden>
+      <button id="collection-rename" type="button" role="menuitem">重命名</button>
+      <button id="collection-delete" type="button" role="menuitem">删除</button>
+    </div>
+    <script src="./library.js"></script>
+    <script src="./navigation.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>

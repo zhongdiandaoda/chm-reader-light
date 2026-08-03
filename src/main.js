@@ -11,8 +11,19 @@ const {
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { randomUUID } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
-const { extractBook, resolveBookResource } = require('./chm');
+const {
+  decodeMarkup,
+  extractBook,
+  highlightSearchMatches,
+  injectContentNavigationBridge,
+  resolveBookResource,
+  searchBookContents,
+} = require('./chm');
+const {
+  renameCollectionInLibrary,
+} = require('./library');
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'chm',
@@ -25,7 +36,90 @@ protocol.registerSchemesAsPrivileged([{
 
 let mainWindow;
 let bookRoot;
+let bookSearchIndex = [];
 let pendingFile;
+
+function getLibraryDir() {
+  return path.join(app.getPath('userData'), 'library');
+}
+
+function getLibraryIndexPath() {
+  return path.join(getLibraryDir(), 'library.json');
+}
+
+function normalizeLibrary(parsed) {
+  if (Array.isArray(parsed)) {
+    return { collections: [], books: parsed.map((book) => ({ collectionId: null, ...book })) };
+  }
+  return {
+    collections: Array.isArray(parsed?.collections) ? parsed.collections : [],
+    books: Array.isArray(parsed?.books) ? parsed.books : [],
+  };
+}
+
+async function readLibrary() {
+  try {
+    const raw = await fs.promises.readFile(getLibraryIndexPath(), 'utf-8');
+    return normalizeLibrary(JSON.parse(raw));
+  } catch {
+    return { collections: [], books: [] };
+  }
+}
+
+async function writeLibrary(library) {
+  await fs.promises.mkdir(getLibraryDir(), { recursive: true });
+  await fs.promises.writeFile(getLibraryIndexPath(), JSON.stringify(library, null, 2));
+}
+
+async function importBooks(filePaths, collectionId = null) {
+  const library = await readLibrary();
+
+  for (const filePath of filePaths) {
+    if (path.extname(filePath).toLowerCase() !== '.chm') continue;
+
+    library.books.push({
+      id: randomUUID(),
+      name: path.basename(filePath, path.extname(filePath)),
+      filePath,
+      addedAt: Date.now(),
+      collectionId: collectionId || null,
+    });
+  }
+
+  await writeLibrary(library);
+  return library;
+}
+
+async function removeBook(id) {
+  const library = await readLibrary();
+  library.books = library.books.filter((item) => item.id !== id);
+  await writeLibrary(library);
+  return library;
+}
+
+async function createCollection(name) {
+  const library = await readLibrary();
+  const collection = { id: randomUUID(), name: name || '新书库', createdAt: Date.now() };
+  library.collections.push(collection);
+  await writeLibrary(library);
+  return library;
+}
+
+async function renameCollection(id, name) {
+  const library = renameCollectionInLibrary(await readLibrary(), id, name);
+  await writeLibrary(library);
+  return library;
+}
+
+async function removeCollection(id) {
+  const library = await readLibrary();
+  library.books = library.books.map((item) => (
+    item.collectionId === id ? { ...item, collectionId: null } : item
+  ));
+  library.collections = library.collections.filter((item) => item.id !== id);
+  await writeLibrary(library);
+  return library;
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -60,9 +154,13 @@ function createMenu() {
   }, {
     label: 'File',
     submenu: [{
-      label: 'Open CHM...',
+      label: 'Add CHM to Library...',
       accelerator: 'CmdOrCtrl+O',
-      click: () => selectAndOpenBook(),
+      click: () => selectAndImportBooks(),
+    }, {
+      label: 'Show Library',
+      accelerator: 'CmdOrCtrl+L',
+      click: () => mainWindow?.webContents.send('library:show'),
     }, {
       role: 'close',
     }],
@@ -120,30 +218,42 @@ function createBookUrl(topicPath) {
   return `chm://book/${encodedPath}${hash}`;
 }
 
-async function openBook(chmPath) {
+function addSearchHighlightStyles(markup) {
+  const styles = `<style>
+    .chm-search-match { background: #f7df83; color: inherit; border-radius: 2px; padding: 0 1px; }
+    .chm-search-current { background: #f2a93b; box-shadow: 0 0 0 2px rgba(210, 125, 20, 0.28); animation: chm-search-pulse 650ms ease-out; }
+    @keyframes chm-search-pulse { from { box-shadow: 0 0 0 6px rgba(210, 125, 20, 0.38); } to { box-shadow: 0 0 0 2px rgba(210, 125, 20, 0.28); } }
+  </style>`;
+  return /<\/head>/i.test(markup) ? markup.replace(/<\/head>/i, `${styles}</head>`) : `${styles}${markup}`;
+}
+
+async function openBook(chmPath, displayName) {
   if (!chmPath || path.extname(chmPath).toLowerCase() !== '.chm') {
     throw new Error('请选择有效的 .chm 文件');
   }
 
+  const name = displayName || path.basename(chmPath, path.extname(chmPath));
   const nextRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'chm-reader-'));
   try {
     const metadata = await extractBook(chmPath, nextRoot, await locateExtractor());
     const previousRoot = bookRoot;
     bookRoot = nextRoot;
+    bookSearchIndex = metadata.searchIndex;
 
     if (previousRoot) {
       fs.promises.rm(previousRoot, { recursive: true, force: true }).catch(() => {});
     }
 
     const result = {
-      name: path.basename(chmPath, path.extname(chmPath)),
+      name,
       filePath: chmPath,
       contents: metadata.contents,
       defaultPage: createBookUrl(metadata.defaultPage),
+      searchablePageCount: metadata.searchIndex.length,
     };
 
     mainWindow?.setRepresentedFilename(chmPath);
-    mainWindow?.setTitle(`${result.name} - CHM Reader`);
+    mainWindow?.setTitle(`${result.name} - CHMReaderLight`);
     mainWindow?.webContents.send('book:opened', result);
     return result;
   } catch (error) {
@@ -152,24 +262,44 @@ async function openBook(chmPath) {
   }
 }
 
-async function selectAndOpenBook() {
+async function openLibraryBook(id) {
+  const library = await readLibrary();
+  const entry = library.books.find((item) => item.id === id);
+  if (!entry) throw new Error('该文档已不在书库中');
+
+  const chmPath = entry.filePath || path.join(getLibraryDir(), entry.storedName);
+  try {
+    return await openBook(chmPath, entry.name);
+  } catch (error) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: '无法打开 CHM',
+      message: error.message,
+      detail: '请确认文件仍存在且未损坏，并已通过 Homebrew 安装 chmlib。',
+    });
+    return null;
+  }
+}
+
+async function selectAndImportBooks(collectionId = null) {
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: '打开 CHM 文件',
-    buttonLabel: '打开',
-    properties: ['openFile'],
+    title: '添加 CHM 到书库',
+    buttonLabel: '添加',
+    properties: ['openFile', 'multiSelections'],
     filters: [{ name: 'Compiled HTML Help', extensions: ['chm'] }],
   });
 
   if (result.canceled) return null;
 
   try {
-    return await openBook(result.filePaths[0]);
+    const library = await importBooks(result.filePaths, collectionId);
+    mainWindow?.webContents.send('library:updated', library);
+    return library;
   } catch (error) {
     await dialog.showMessageBox(mainWindow, {
       type: 'error',
-      title: '无法打开 CHM',
+      title: '无法添加到书库',
       message: error.message,
-      detail: '请确认文件未损坏，并已通过 Homebrew 安装 chmlib。',
     });
     return null;
   }
@@ -186,6 +316,27 @@ function registerBookProtocol() {
       const filePath = resolveBookResource(bookRoot, requestUrl.pathname);
       const response = await net.fetch(pathToFileURL(filePath).toString());
       const headers = new Headers(response.headers);
+      const searchQuery = requestUrl.searchParams.get('search');
+      const isHtml = ['.htm', '.html'].includes(path.extname(filePath).toLowerCase());
+      if (isHtml) {
+        const scriptNonce = randomUUID();
+        headers.set(
+          'Content-Security-Policy',
+          `default-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; script-src 'nonce-${scriptNonce}'; font-src chm: data:; media-src chm:; frame-src chm:`,
+        );
+        let markup = decodeMarkup(await fs.promises.readFile(filePath));
+        if (searchQuery) {
+          const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match'), 10) || 0);
+          markup = addSearchHighlightStyles(highlightSearchMatches(markup, searchQuery, selectedIndex).markup);
+        }
+        markup = injectContentNavigationBridge(markup, scriptNonce);
+        headers.set('Content-Type', 'text/html; charset=utf-8');
+        return new Response(markup, {
+          status: response.status,
+          statusText: response.statusText,
+          headers,
+        });
+      }
       headers.set(
         'Content-Security-Policy',
         "default-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; font-src chm: data:; media-src chm:; frame-src chm:",
@@ -201,17 +352,31 @@ function registerBookProtocol() {
   });
 }
 
-ipcMain.handle('book:open', () => selectAndOpenBook());
+ipcMain.handle('library:list', () => readLibrary());
+ipcMain.handle('library:import', (_, collectionId) => selectAndImportBooks(collectionId));
+ipcMain.handle('library:open', (_, id) => openLibraryBook(id));
+ipcMain.handle('library:remove', (_, id) => removeBook(id));
+ipcMain.handle('collection:create', (_, name) => createCollection(name));
+ipcMain.handle('collection:rename', (_, id, name) => renameCollection(id, name));
+ipcMain.handle('collection:remove', (_, id) => removeCollection(id));
 ipcMain.handle('book:url', (_, topicPath) => createBookUrl(topicPath));
+ipcMain.handle('book:search', (_, query) => searchBookContents(bookSearchIndex, query));
 ipcMain.handle('external:open', (_, url) => {
   if (/^https?:\/\//i.test(url)) return shell.openExternal(url);
   return undefined;
 });
 
+async function importAndOpen(filePath) {
+  const library = await importBooks([filePath]);
+  mainWindow?.webContents.send('library:updated', library);
+  const added = library.books[library.books.length - 1];
+  if (added) await openLibraryBook(added.id);
+}
+
 app.on('open-file', (event, filePath) => {
   event.preventDefault();
   if (app.isReady()) {
-    openBook(filePath).catch(() => {});
+    importAndOpen(filePath).catch(() => {});
   } else {
     pendingFile = filePath;
   }
@@ -223,7 +388,7 @@ app.whenReady().then(async () => {
   createMenu();
 
   if (pendingFile) {
-    await openBook(pendingFile).catch(() => {});
+    await importAndOpen(pendingFile).catch(() => {});
     pendingFile = null;
   }
 

@@ -11,8 +11,8 @@ if [[ "$host_arch" == "arm64" ]]; then
 fi
 
 arch="${1:-$default_arch}"
-app_path="$root_dir/dist/CHMReader-darwin-$arch/CHMReader.app"
-target_path="/Applications/CHMReader.app"
+app_path="$root_dir/dist/CHMReaderLight-darwin-$arch/CHMReaderLight.app"
+target_path="/Applications/CHMReaderLight.app"
 
 "$root_dir/scripts/package-macos.sh" "$arch"
 
