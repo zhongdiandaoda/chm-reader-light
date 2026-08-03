@@ -187,6 +187,22 @@
         </section>
       </main>
     </div>
+    <div class="modal-backdrop" id="collection-dialog" hidden>
+      <form class="modal" id="collection-form" role="dialog" aria-modal="true" aria-labelledby="collection-dialog-title">
+        <h2 id="collection-dialog-title">新建书库</h2>
+        <label for="collection-name">书库名称</label>
+        <input id="collection-name" type="text" maxlength="40" autocomplete="off" required>
+        <div class="modal-actions">
+          <button class="text-button" id="collection-cancel" type="button">取消</button>
+          <button class="primary-button" id="collection-create" type="submit">创建</button>
+        </div>
+      </form>
+    </div>
+    <div class="context-menu" id="collection-context-menu" role="menu" hidden>
+      <button id="collection-rename" type="button" role="menuitem">重命名</button>
+      <button id="collection-delete" type="button" role="menuitem">删除</button>
+    </div>
+    <script src="./library.js"></script>
     <script src="./navigation.js"></script>
     <script src="./renderer.js"></script>
   </body>

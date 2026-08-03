@@ -20,6 +20,9 @@ const {
   resolveBookResource,
   searchBookContents,
 } = require('./chm');
+const {
+  renameCollectionInLibrary,
+} = require('./library');
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'chm',
@@ -97,6 +100,12 @@ async function createCollection(name) {
   const library = await readLibrary();
   const collection = { id: randomUUID(), name: name || '新书库', createdAt: Date.now() };
   library.collections.push(collection);
+  await writeLibrary(library);
+  return library;
+}
+
+async function renameCollection(id, name) {
+  const library = renameCollectionInLibrary(await readLibrary(), id, name);
   await writeLibrary(library);
   return library;
 }
@@ -339,6 +348,7 @@ ipcMain.handle('library:import', (_, collectionId) => selectAndImportBooks(colle
 ipcMain.handle('library:open', (_, id) => openLibraryBook(id));
 ipcMain.handle('library:remove', (_, id) => removeBook(id));
 ipcMain.handle('collection:create', (_, name) => createCollection(name));
+ipcMain.handle('collection:rename', (_, id, name) => renameCollection(id, name));
 ipcMain.handle('collection:remove', (_, id) => removeCollection(id));
 ipcMain.handle('book:url', (_, topicPath) => createBookUrl(topicPath));
 ipcMain.handle('book:search', (_, query) => searchBookContents(bookSearchIndex, query));

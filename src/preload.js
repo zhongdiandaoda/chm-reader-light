@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('chmReader', {
   openLibraryBook: (id) => ipcRenderer.invoke('library:open', id),
   removeLibraryBook: (id) => ipcRenderer.invoke('library:remove', id),
   createCollection: (name) => ipcRenderer.invoke('collection:create', name),
+  renameCollection: (id, name) => ipcRenderer.invoke('collection:rename', id, name),
   removeCollection: (id) => ipcRenderer.invoke('collection:remove', id),
   createBookUrl: (topicPath) => ipcRenderer.invoke('book:url', topicPath),
   searchBook: (query) => ipcRenderer.invoke('book:search', query),

@@ -9,6 +9,15 @@ const elements = {
   libraryHeading: document.querySelector('#library-heading'),
   collectionList: document.querySelector('#collection-list'),
   addCollection: document.querySelector('#add-collection'),
+  collectionDialog: document.querySelector('#collection-dialog'),
+  collectionForm: document.querySelector('#collection-form'),
+  collectionDialogTitle: document.querySelector('#collection-dialog-title'),
+  collectionName: document.querySelector('#collection-name'),
+  collectionCancel: document.querySelector('#collection-cancel'),
+  collectionCreate: document.querySelector('#collection-create'),
+  collectionContextMenu: document.querySelector('#collection-context-menu'),
+  collectionRename: document.querySelector('#collection-rename'),
+  collectionDelete: document.querySelector('#collection-delete'),
   viewGrid: document.querySelector('#view-grid'),
   viewList: document.querySelector('#view-list'),
   addBook: document.querySelector('#add-book'),
@@ -42,6 +51,11 @@ const elements = {
   zoomReset: document.querySelector('#zoom-reset'),
 };
 
+const {
+  getNextCollectionName,
+  normalizeCollectionName,
+} = window.chmLibrary;
+
 let currentBook;
 let currentTopicPath;
 let history = [];
@@ -59,6 +73,10 @@ let searchState = {
 let library = { collections: [], books: [] };
 let selectedCollectionId = null; // null = 全部
 let libraryLayout = 'grid';
+let collectionDialogRestoreFocus = null;
+let collectionDialogMode = { type: 'create', collectionId: null };
+let contextCollection = null;
+let contextCollectionCount = 0;
 
 function showView(view) {
   document.body.dataset.view = view;
@@ -87,6 +105,7 @@ function selectCollection(id) {
 }
 
 function renderLibrary(nextLibrary) {
+  hideCollectionContextMenu();
   library = {
     collections: Array.isArray(nextLibrary?.collections) ? nextLibrary.collections : [],
     books: Array.isArray(nextLibrary?.books) ? nextLibrary.books : [],
@@ -133,6 +152,11 @@ function createCollectionItem(collection, count, removable) {
   item.append(select);
 
   if (removable) {
+    item.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      openCollectionContextMenu(event, collection, count);
+    });
+
     const remove = document.createElement('button');
     remove.className = 'collection-remove';
     remove.type = 'button';
@@ -141,13 +165,7 @@ function createCollectionItem(collection, count, removable) {
     remove.setAttribute('aria-label', `删除书库 ${collection.name}`);
     remove.addEventListener('click', async (event) => {
       event.stopPropagation();
-      const message = count > 0
-        ? `删除书库“${collection.name}”后，其中的 ${count} 个文档会移动到“全部”（不会删除源文件）。`
-        : `删除书库“${collection.name}”？`;
-      // eslint-disable-next-line no-alert
-      if (!window.confirm(message)) return;
-      const updated = await window.chmReader.removeCollection(collection.id);
-      renderLibrary(updated);
+      await confirmAndRemoveCollection(collection, count);
     });
     item.append(remove);
   }
@@ -215,16 +233,82 @@ async function openLibraryBook(id) {
   if (!book) showView('library');
 }
 
-async function requestCreateCollection() {
+function hideCollectionContextMenu() {
+  elements.collectionContextMenu.hidden = true;
+  contextCollection = null;
+  contextCollectionCount = 0;
+}
+
+function openCollectionContextMenu(event, collection, count) {
+  contextCollection = collection;
+  contextCollectionCount = count;
+  elements.collectionContextMenu.hidden = false;
+
+  const { offsetWidth, offsetHeight } = elements.collectionContextMenu;
+  const left = Math.min(event.clientX, window.innerWidth - offsetWidth - 8);
+  const top = Math.min(event.clientY, window.innerHeight - offsetHeight - 8);
+  elements.collectionContextMenu.style.left = `${Math.max(8, left)}px`;
+  elements.collectionContextMenu.style.top = `${Math.max(8, top)}px`;
+  elements.collectionRename.focus();
+}
+
+async function confirmAndRemoveCollection(collection, count) {
+  const message = count > 0
+    ? `删除书库“${collection.name}”后，其中的 ${count} 个文档会移动到“全部”（不会删除源文件）。`
+    : `删除书库“${collection.name}”？`;
   // eslint-disable-next-line no-alert
-  const name = window.prompt('新书库名称', '新书库');
-  if (name === null) return;
-  const trimmed = name.trim();
-  if (!trimmed) return;
-  const updated = await window.chmReader.createCollection(trimmed);
-  const created = updated.collections[updated.collections.length - 1];
+  if (!window.confirm(message)) return;
+  const updated = await window.chmReader.removeCollection(collection.id);
+  renderLibrary(updated);
+}
+
+function openCollectionDialog(collection = null) {
+  hideCollectionContextMenu();
+  const isRename = Boolean(collection);
+  collectionDialogRestoreFocus = document.activeElement;
+  collectionDialogMode = {
+    type: isRename ? 'rename' : 'create',
+    collectionId: collection?.id || null,
+  };
+  elements.collectionDialogTitle.textContent = isRename ? '重命名书库' : '新建书库';
+  elements.collectionCreate.textContent = isRename ? '保存' : '创建';
+  elements.collectionName.value = isRename
+    ? collection.name
+    : getNextCollectionName(library.collections);
+  elements.collectionDialog.hidden = false;
+  requestAnimationFrame(() => {
+    elements.collectionName.focus();
+    elements.collectionName.select();
+  });
+}
+
+function closeCollectionDialog() {
+  elements.collectionDialog.hidden = true;
+  elements.collectionCreate.disabled = false;
+  collectionDialogMode = { type: 'create', collectionId: null };
+  if (collectionDialogRestoreFocus?.focus) collectionDialogRestoreFocus.focus();
+  collectionDialogRestoreFocus = null;
+}
+
+async function submitCreateCollection(event) {
+  event.preventDefault();
+  const trimmed = normalizeCollectionName(elements.collectionName.value);
+  if (!trimmed) {
+    elements.collectionName.focus();
+    return;
+  }
+
+  elements.collectionCreate.disabled = true;
+  const isRename = collectionDialogMode.type === 'rename';
+  const updated = isRename
+    ? await window.chmReader.renameCollection(collectionDialogMode.collectionId, trimmed)
+    : await window.chmReader.createCollection(trimmed);
+  const created = isRename
+    ? updated.collections.find((collection) => collection.id === collectionDialogMode.collectionId)
+    : updated.collections[updated.collections.length - 1];
   renderLibrary(updated);
   if (created) selectCollection(created.id);
+  closeCollectionDialog();
 }
 
 async function loadLibrary() {
@@ -679,7 +763,22 @@ function initializeResizing() {
 
 elements.addBook.addEventListener('click', requestImportBooks);
 elements.emptyAddBook.addEventListener('click', requestImportBooks);
-elements.addCollection.addEventListener('click', requestCreateCollection);
+elements.addCollection.addEventListener('click', () => openCollectionDialog());
+elements.collectionForm.addEventListener('submit', submitCreateCollection);
+elements.collectionCancel.addEventListener('click', closeCollectionDialog);
+elements.collectionDialog.addEventListener('pointerdown', (event) => {
+  if (event.target === elements.collectionDialog) closeCollectionDialog();
+});
+elements.collectionRename.addEventListener('click', () => {
+  if (contextCollection) openCollectionDialog(contextCollection);
+});
+elements.collectionDelete.addEventListener('click', async () => {
+  if (!contextCollection) return;
+  const collection = contextCollection;
+  const count = contextCollectionCount;
+  hideCollectionContextMenu();
+  await confirmAndRemoveCollection(collection, count);
+});
 elements.viewGrid.addEventListener('click', () => setLibraryLayout('grid'));
 elements.viewList.addEventListener('click', () => setLibraryLayout('list'));
 elements.backToLibrary.addEventListener('click', () => showView('library'));
@@ -711,11 +810,22 @@ elements.searchDirectory.addEventListener('click', () => setSearchScope('directo
 elements.searchPrevious.addEventListener('click', () => moveSearchMatch(-1));
 elements.searchNext.addEventListener('click', () => moveSearchMatch(1));
 document.addEventListener('pointerdown', (event) => {
+  if (!elements.collectionContextMenu.hidden && !event.target.closest('.context-menu')) {
+    hideCollectionContextMenu();
+  }
   if (elements.searchScopeMenu.hidden || event.target.closest('.search-box')) return;
   elements.searchScopeMenu.hidden = true;
   elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
 });
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !elements.collectionContextMenu.hidden) {
+    hideCollectionContextMenu();
+    return;
+  }
+  if (event.key === 'Escape' && !elements.collectionDialog.hidden) {
+    closeCollectionDialog();
+    return;
+  }
   if (event.key !== 'Escape' || elements.searchScopeMenu.hidden) return;
   elements.searchScopeMenu.hidden = true;
   elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
