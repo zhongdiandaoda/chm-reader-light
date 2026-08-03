@@ -125,7 +125,18 @@
       <main class="reader-layout" id="reader-layout" hidden>
         <aside class="sidebar" id="sidebar" aria-label="文档目录">
           <div class="sidebar-header">
-            <div class="eyebrow">内容</div>
+            <div class="sidebar-heading">
+              <div class="eyebrow">内容</div>
+              <button class="sidebar-menu-trigger" id="tree-menu-trigger" type="button" aria-label="目录操作" title="目录操作" aria-expanded="false" aria-controls="tree-actions-menu">
+                <span aria-hidden="true">⋯</span>
+              </button>
+              <div class="tree-actions-menu" id="tree-actions-menu" role="menu" hidden>
+                <div class="tree-actions-menu-title">目录操作</div>
+                <button id="expand-all" type="button" role="menuitem" disabled>展开全部</button>
+                <button id="collapse-all" type="button" role="menuitem" disabled>收起全部</button>
+                <button id="refresh-tree" type="button" role="menuitem" disabled>刷新目录</button>
+              </div>
+            </div>
             <div class="search-box">
               <button class="search-scope-trigger" id="search-scope-trigger" type="button" aria-label="选择搜索范围" aria-expanded="false" aria-controls="search-scope-menu">
                 <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -133,8 +144,8 @@
                 <path d="m12.2 12.2 4 4"></path>
                 </svg>
               </button>
-              <span class="sr-only">搜索目录和正文</span>
-              <input id="search-navigation" type="search" placeholder="搜索目录和正文" autocomplete="off" disabled>
+              <span class="sr-only">搜索正文</span>
+              <input id="search-navigation" type="search" placeholder="搜索正文" autocomplete="off" disabled>
               <span class="search-scope-label" id="search-scope-label">正文</span>
               <div class="search-scope-menu" id="search-scope-menu" role="menu" hidden>
                 <button id="search-body" type="button" role="menuitemradio" aria-checked="true">正文</button>
@@ -142,10 +153,6 @@
               </div>
             </div>
             <div class="search-status" id="search-status" aria-live="polite"></div>
-            <div class="tree-actions" aria-label="目录展开操作">
-              <button class="tree-action-button" id="expand-all" type="button" disabled>展开全部</button>
-              <button class="tree-action-button" id="collapse-all" type="button" disabled>收起全部</button>
-            </div>
           </div>
           <nav class="navigation" id="navigation" aria-label="CHM 章节">
             <div class="sidebar-placeholder">

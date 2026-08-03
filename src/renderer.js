@@ -46,8 +46,11 @@ const elements = {
   forward: document.querySelector('#go-forward'),
   previousPage: document.querySelector('#previous-page'),
   nextPage: document.querySelector('#next-page'),
+  treeMenuTrigger: document.querySelector('#tree-menu-trigger'),
+  treeActionsMenu: document.querySelector('#tree-actions-menu'),
   expandAll: document.querySelector('#expand-all'),
   collapseAll: document.querySelector('#collapse-all'),
+  refreshTree: document.querySelector('#refresh-tree'),
   zoomReset: document.querySelector('#zoom-reset'),
 };
 
@@ -556,6 +559,7 @@ function applyBook(book) {
   elements.search.disabled = book.contents.length === 0 && book.searchablePageCount === 0;
   elements.expandAll.disabled = book.contents.length === 0;
   elements.collapseAll.disabled = book.contents.length === 0;
+  elements.refreshTree.disabled = book.contents.length === 0;
   elements.search.value = '';
   elements.searchBody.setAttribute('aria-checked', 'true');
   elements.searchDirectory.setAttribute('aria-checked', 'false');
@@ -578,6 +582,22 @@ function applyBook(book) {
   } else {
     setLoading(false);
     elements.emptyState.hidden = false;
+  }
+}
+
+function setTreeActionsMenuOpen(isOpen) {
+  elements.treeActionsMenu.hidden = !isOpen;
+  elements.treeMenuTrigger.setAttribute('aria-expanded', String(isOpen));
+  if (isOpen) elements.expandAll.focus();
+}
+
+function refreshNavigationTree() {
+  if (!currentBook) return;
+
+  renderNavigation(currentBook.contents);
+  if (currentTopicPath) {
+    const activeRow = findNavigationRow(currentTopicPath);
+    if (activeRow) activateNavigationRow(activeRow);
   }
 }
 
@@ -789,8 +809,21 @@ elements.back.addEventListener('click', () => moveHistory(-1));
 elements.forward.addEventListener('click', () => moveHistory(1));
 elements.previousPage.addEventListener('click', () => movePage(-1));
 elements.nextPage.addEventListener('click', () => movePage(1));
-elements.expandAll.addEventListener('click', () => setAllTreeItemsExpanded(true));
-elements.collapseAll.addEventListener('click', () => setAllTreeItemsExpanded(false));
+elements.treeMenuTrigger.addEventListener('click', () => {
+  setTreeActionsMenuOpen(elements.treeActionsMenu.hidden);
+});
+elements.expandAll.addEventListener('click', () => {
+  setAllTreeItemsExpanded(true);
+  setTreeActionsMenuOpen(false);
+});
+elements.collapseAll.addEventListener('click', () => {
+  setAllTreeItemsExpanded(false);
+  setTreeActionsMenuOpen(false);
+});
+elements.refreshTree.addEventListener('click', () => {
+  refreshNavigationTree();
+  setTreeActionsMenuOpen(false);
+});
 elements.contentFrame.addEventListener('load', syncNavigationWithFrame);
 elements.search.addEventListener('input', (event) => {
   searchNavigation(event.target.value);
@@ -813,11 +846,21 @@ document.addEventListener('pointerdown', (event) => {
   if (!elements.collectionContextMenu.hidden && !event.target.closest('.context-menu')) {
     hideCollectionContextMenu();
   }
+  if (!elements.treeActionsMenu.hidden
+    && !event.target.closest('#tree-menu-trigger')
+    && !event.target.closest('#tree-actions-menu')) {
+    setTreeActionsMenuOpen(false);
+  }
   if (elements.searchScopeMenu.hidden || event.target.closest('.search-box')) return;
   elements.searchScopeMenu.hidden = true;
   elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
 });
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !elements.treeActionsMenu.hidden) {
+    setTreeActionsMenuOpen(false);
+    elements.treeMenuTrigger.focus();
+    return;
+  }
   if (event.key === 'Escape' && !elements.collectionContextMenu.hidden) {
     hideCollectionContextMenu();
     return;
