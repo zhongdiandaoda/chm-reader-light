@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "Node16",
     "rootDir": ".",
     "outDir": ".test-build",
     "noEmit": false
