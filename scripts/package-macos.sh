@@ -38,4 +38,8 @@ fi
   --app-bundle-id=com.liuqi.chmreader \
   --app-category-type=public.app-category.reference
 
+"$root_dir/scripts/vendor-chmlib-macos.sh" \
+  "$root_dir/dist/CHMReaderLight-darwin-$arch/CHMReaderLight.app" \
+  "$arch"
+
 printf "\n已生成: %s\n" "$root_dir/dist/CHMReaderLight-darwin-$arch/CHMReaderLight.app"

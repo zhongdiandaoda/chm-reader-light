@@ -27,3 +27,20 @@ test('reader toolbar places text encoding picker after zoom controls', () => {
   assert.match(toolbarRight, /<option value="gbk">简体中文 \(GBK\)<\/option>/);
   assert.match(toolbarRight, /<option value="gb18030">简体中文 \(GB18030\)<\/option>/);
 });
+
+test('runtime prefers the bundled CHM extractor', () => {
+  const main = fs.readFileSync(path.join(__dirname, '..', 'src', 'main.js'), 'utf-8');
+
+  assert.match(main, /process\.resourcesPath, 'native', nativeName, 'bin', 'extract_chmLib'/);
+  assert.match(main, /resources', 'native', nativeName, 'bin', 'extract_chmLib'/);
+});
+
+test('macOS packaging vendors chmlib into the app bundle', () => {
+  const packageScript = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'package-macos.sh'), 'utf-8');
+  const vendorScript = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'vendor-chmlib-macos.sh'), 'utf-8');
+
+  assert.match(packageScript, /vendor-chmlib-macos[.]sh/);
+  assert.match(vendorScript, /install_name_tool -change/);
+  assert.match(vendorScript, /codesign --force --sign -/);
+  assert.match(vendorScript, /Contents\/Resources\/native\/darwin-\$arch/);
+});

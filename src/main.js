@@ -199,17 +199,45 @@ function createMenu() {
 }
 
 async function locateExtractor() {
+  async function resolveExecutable(candidate) {
+    if (path.isAbsolute(candidate)) {
+      await fs.promises.access(candidate, fs.constants.X_OK);
+      return candidate;
+    }
+
+    const paths = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
+    for (const directory of paths) {
+      const executable = path.join(directory, candidate);
+      try {
+        await fs.promises.access(executable, fs.constants.X_OK);
+        return executable;
+      } catch {
+        // Continue searching PATH.
+      }
+    }
+    throw new Error(`Executable not found: ${candidate}`);
+  }
+
+  const nativeName = process.platform === 'darwin'
+    ? `darwin-${process.arch}`
+    : `${process.platform}-${process.arch}`;
   const candidates = [
+    path.join(process.resourcesPath, 'native', nativeName, 'bin', 'extract_chmLib'),
+    path.join(__dirname, '..', 'resources', 'native', nativeName, 'bin', 'extract_chmLib'),
     '/opt/homebrew/bin/extract_chmLib',
     '/usr/local/bin/extract_chmLib',
     'extract_chmLib',
   ];
 
   for (const candidate of candidates) {
-    if (!path.isAbsolute(candidate) || fs.existsSync(candidate)) return candidate;
+    try {
+      return await resolveExecutable(candidate);
+    } catch {
+      // Try the next bundled or system extractor candidate.
+    }
   }
 
-  throw new Error('未找到 extract_chmLib，请先运行 brew install chmlib');
+  throw new Error('未找到可用的 CHM 解包器。请重新安装应用，或在开发环境安装 chmlib。');
 }
 
 function createBookUrl(topicPath) {
@@ -294,7 +322,7 @@ async function openLibraryBook(id) {
       type: 'error',
       title: '无法打开 CHM',
       message: error.message,
-      detail: '请确认文件仍存在且未损坏，并已通过 Homebrew 安装 chmlib。',
+      detail: '请确认文件仍存在且未损坏。若问题持续存在，请重新安装应用以恢复内置 CHM 解包器。',
     });
     return null;
   }
