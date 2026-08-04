@@ -11,6 +11,7 @@ const {
   getSearchMatchCount,
   highlightSearchMatches,
   injectContentNavigationBridge,
+  mapWithConcurrency,
   parseContents,
   readExtractedBook,
   resolveBookResource,
@@ -175,6 +176,45 @@ test('readExtractedBook parses contents and search index with selected encoding'
   } finally {
     await fs.promises.rm(root, { recursive: true, force: true });
   }
+});
+
+test('readExtractedBook can skip search index construction', async () => {
+  const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'chm-reader-test-'));
+  try {
+    await fs.promises.writeFile(
+      path.join(root, 'index.hhc'),
+      '<ul><li><object type="text/sitemap"><param name="Name" value="Index"><param name="Local" value="index.htm"></object></li></ul>',
+    );
+    await fs.promises.writeFile(
+      path.join(root, 'index.htm'),
+      '<html><body>Index body</body></html>',
+    );
+
+    const metadata = await readExtractedBook(root, {
+      buildSearchIndex: false,
+    });
+
+    assert.equal(metadata.contents[0].title, 'Index');
+    assert.deepEqual(metadata.searchIndex, []);
+  } finally {
+    await fs.promises.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('mapWithConcurrency never exceeds the configured worker limit', async () => {
+  let active = 0;
+  let maxActive = 0;
+
+  const result = await mapWithConcurrency([1, 2, 3, 4, 5], 2, async (value) => {
+    active += 1;
+    maxActive = Math.max(maxActive, active);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    active -= 1;
+    return value * 2;
+  });
+
+  assert.deepEqual(result, [2, 4, 6, 8, 10]);
+  assert.equal(maxActive, 2);
 });
 
 test('searchBookContents finds normalized body text without case sensitivity', () => {

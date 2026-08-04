@@ -916,6 +916,11 @@ elements.textEncoding.addEventListener('change', async () => {
 });
 
 window.chmReader.onBookOpened(applyBook);
+window.chmReader.onBookIndexReady(({ searchablePageCount }) => {
+  if (!currentBook) return;
+  currentBook.searchablePageCount = searchablePageCount;
+  elements.search.disabled = currentBook.contents.length === 0 && searchablePageCount === 0;
+});
 window.chmReader.onLibraryUpdated(renderLibrary);
 window.chmReader.onShowLibrary(() => showView('library'));
 window.chmReader.onFocusSearch(() => {

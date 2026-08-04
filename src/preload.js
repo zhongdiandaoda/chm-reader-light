@@ -17,6 +17,11 @@ contextBridge.exposeInMainWorld('chmReader', {
     ipcRenderer.on('book:opened', listener);
     return () => ipcRenderer.removeListener('book:opened', listener);
   },
+  onBookIndexReady: (callback) => {
+    const listener = (_, result) => callback(result);
+    ipcRenderer.on('book:index-ready', listener);
+    return () => ipcRenderer.removeListener('book:index-ready', listener);
+  },
   onLibraryUpdated: (callback) => {
     const listener = (_, entries) => callback(entries);
     ipcRenderer.on('library:updated', listener);

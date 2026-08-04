@@ -94,6 +94,27 @@ function listFiles(root) {
     .map((entry) => path.join(entry.parentPath, entry.name));
 }
 
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const limit = Math.max(1, Math.floor(Number(concurrency) || 1));
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function consume() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    () => consume(),
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 function decodeMarkup(buffer, textEncoding = null) {
   if (textEncoding) {
     return new TextDecoder(textEncoding).decode(buffer);
@@ -234,11 +255,12 @@ function getTopicTitles(items, titles = new Map()) {
   return titles;
 }
 
-async function createSearchIndex(root, files, contents, textEncoding = null) {
+async function createSearchIndex(root, files, contents, textEncoding = null, options = {}) {
   const titles = getTopicTitles(contents);
   const htmlFiles = files.filter((file) => ['.htm', '.html'].includes(path.extname(file).toLowerCase()));
+  const concurrency = options.concurrency || 4;
 
-  const entries = await Promise.all(htmlFiles.map(async (file) => {
+  const entries = await mapWithConcurrency(htmlFiles, concurrency, async (file) => {
     try {
       const relativePath = path.relative(root, file).split(path.sep).join('/');
       const markup = decodeMarkup(await fs.promises.readFile(file), textEncoding);
@@ -252,7 +274,7 @@ async function createSearchIndex(root, files, contents, textEncoding = null) {
     } catch {
       return null;
     }
-  }));
+  });
   return entries.filter(Boolean);
 }
 
@@ -278,13 +300,21 @@ function searchBookContents(index, query) {
     });
 }
 
-async function readExtractedBook(root, textEncoding = null) {
+async function readExtractedBook(root, textEncodingOrOptions = null) {
+  const options = typeof textEncodingOrOptions === 'object' && textEncodingOrOptions !== null
+    ? textEncodingOrOptions
+    : { textEncoding: textEncodingOrOptions };
+  const textEncoding = options.textEncoding || null;
   const files = listFiles(root);
   const metadata = findBookMetadata(root, files);
   const contents = metadata.contentsFile
     ? parseContents(decodeMarkup(await fs.promises.readFile(metadata.contentsFile), textEncoding))
     : [];
-  const searchIndex = await createSearchIndex(root, files, contents, textEncoding);
+  const searchIndex = options.buildSearchIndex === false
+    ? []
+    : await createSearchIndex(root, files, contents, textEncoding, {
+      concurrency: options.indexConcurrency,
+    });
 
   return {
     ...metadata,
@@ -297,7 +327,11 @@ async function extractBook(chmPath, destination, extractor = 'extract_chmLib', o
   await fs.promises.mkdir(destination, { recursive: true });
   await execFileAsync(extractor, [chmPath, destination]);
 
-  return readExtractedBook(destination, options.textEncoding || null);
+  return readExtractedBook(destination, {
+    textEncoding: options.textEncoding || null,
+    buildSearchIndex: options.buildSearchIndex !== false,
+    indexConcurrency: options.indexConcurrency,
+  });
 }
 
 module.exports = {
@@ -309,6 +343,8 @@ module.exports = {
   getSearchMatchCount,
   highlightSearchMatches,
   injectContentNavigationBridge,
+  listFiles,
+  mapWithConcurrency,
   normalizeSearchText,
   normalizeTopicPath,
   parseContents,

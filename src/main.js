@@ -12,6 +12,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
+const { Worker } = require('node:worker_threads');
 const { pathToFileURL } = require('node:url');
 const {
   decodeMarkup,
@@ -41,6 +42,8 @@ let bookSearchIndex = [];
 let bookTextEncoding = null;
 let currentBookPath = null;
 let currentBookName = null;
+let searchIndexWorker;
+let searchIndexGeneration = 0;
 let pendingFile;
 
 function getLibraryDir() {
@@ -261,6 +264,50 @@ function createBookResult(name, chmPath, metadata) {
   };
 }
 
+function stopSearchIndexWorker() {
+  searchIndexGeneration += 1;
+  if (searchIndexWorker) {
+    searchIndexWorker.terminate();
+    searchIndexWorker = null;
+  }
+}
+
+function startSearchIndexBuild(root, contents, textEncoding) {
+  stopSearchIndexWorker();
+  const generation = searchIndexGeneration;
+  const worker = new Worker(path.join(__dirname, 'search-index-worker.js'), {
+    workerData: {
+      root,
+      contents,
+      textEncoding: textEncoding || null,
+      concurrency: 4,
+    },
+  });
+  searchIndexWorker = worker;
+
+  worker.once('message', (message) => {
+    if (generation !== searchIndexGeneration || root !== bookRoot) return;
+    searchIndexWorker = null;
+    if (message.error) {
+      console.error(`CHM search index failed: ${message.error.message}`);
+      return;
+    }
+
+    bookSearchIndex = message.searchIndex;
+    mainWindow?.webContents.send('book:index-ready', {
+      searchablePageCount: bookSearchIndex.length,
+    });
+  });
+  worker.once('error', (error) => {
+    if (generation !== searchIndexGeneration || root !== bookRoot) return;
+    searchIndexWorker = null;
+    console.error(`CHM search index worker failed: ${error.message}`);
+  });
+  worker.once('exit', () => {
+    if (searchIndexWorker === worker) searchIndexWorker = null;
+  });
+}
+
 function normalizeTextEncoding(encoding) {
   if (!encoding || encoding === 'auto') return null;
   new TextDecoder(encoding);
@@ -286,6 +333,7 @@ async function openBook(chmPath, displayName) {
   try {
     const metadata = await extractBook(chmPath, nextRoot, await locateExtractor(), {
       textEncoding: bookTextEncoding,
+      buildSearchIndex: false,
     });
     const previousRoot = bookRoot;
     bookRoot = nextRoot;
@@ -294,7 +342,7 @@ async function openBook(chmPath, displayName) {
     currentBookName = name;
 
     if (previousRoot) {
-      fs.promises.rm(previousRoot, { recursive: true, force: true }).catch(() => {});
+      fs.promises.rm(previousRoot, { recursive: true, force: true }).catch(() => { });
     }
 
     const result = createBookResult(name, chmPath, metadata);
@@ -302,6 +350,7 @@ async function openBook(chmPath, displayName) {
     mainWindow?.setRepresentedFilename(chmPath);
     mainWindow?.setTitle(`${result.name} - CHMReaderLight`);
     mainWindow?.webContents.send('book:opened', result);
+    startSearchIndexBuild(nextRoot, metadata.contents, bookTextEncoding);
     return result;
   } catch (error) {
     await fs.promises.rm(nextRoot, { recursive: true, force: true });
@@ -332,10 +381,14 @@ async function setBookTextEncoding(encoding) {
   bookTextEncoding = normalizeTextEncoding(encoding);
   if (!bookRoot || !currentBookPath) return { textEncoding: bookTextEncoding };
 
-  const metadata = await readExtractedBook(bookRoot, bookTextEncoding);
+  const metadata = await readExtractedBook(bookRoot, {
+    textEncoding: bookTextEncoding,
+    buildSearchIndex: false,
+  });
   bookSearchIndex = metadata.searchIndex;
   const result = createBookResult(currentBookName, currentBookPath, metadata);
   mainWindow?.webContents.send('book:opened', result);
+  startSearchIndexBuild(bookRoot, metadata.contents, bookTextEncoding);
   return result;
 }
 
@@ -435,7 +488,7 @@ async function importAndOpen(filePath) {
 app.on('open-file', (event, filePath) => {
   event.preventDefault();
   if (app.isReady()) {
-    importAndOpen(filePath).catch(() => {});
+    importAndOpen(filePath).catch(() => { });
   } else {
     pendingFile = filePath;
   }
@@ -447,7 +500,7 @@ app.whenReady().then(async () => {
   createMenu();
 
   if (pendingFile) {
-    await importAndOpen(pendingFile).catch(() => {});
+    await importAndOpen(pendingFile).catch(() => { });
     pendingFile = null;
   }
 
@@ -461,5 +514,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
+  stopSearchIndexWorker();
   if (bookRoot) fs.rmSync(bookRoot, { recursive: true, force: true });
 });
