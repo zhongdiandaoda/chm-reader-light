@@ -1,4 +1,6 @@
 node_modules/
 dist/
+build/
+.test-build/
 .DS_Store
 *.log
