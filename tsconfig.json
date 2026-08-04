@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "UMD",
+    "module": "CommonJS",
     "moduleResolution": "Node",
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "ignoreDeprecations": "6.0",
     "esModuleInterop": true,

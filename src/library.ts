@@ -1,12 +1,12 @@
 export interface LibraryCollection {
-  id?: string;
-  name?: string;
+  id: string;
+  name: string;
   [key: string]: unknown;
 }
 
 export interface LibraryData {
-  collections?: LibraryCollection[];
-  books?: unknown[];
+  collections: LibraryCollection[];
+  books: unknown[];
   [key: string]: unknown;
 }
 
@@ -39,13 +39,12 @@ export function renameCollectionInLibrary(
   name: unknown,
 ): LibraryData {
   const nextName = normalizeCollectionName(name);
-  if (!id || !nextName) return library || {};
+  if (!id || !nextName) return library || { collections: [], books: [] };
 
   return {
-    collections: (Array.isArray(library?.collections) ? library.collections : [])
-      .map((collection) => (
-        collection.id === id ? { ...collection, name: nextName } : collection
-      )),
-    books: Array.isArray(library?.books) ? library.books : [],
+    collections: library ? library.collections.map((collection) => (
+      collection.id === id ? { ...collection, name: nextName } : collection
+    )) : [],
+    books: library?.books || [],
   };
 }

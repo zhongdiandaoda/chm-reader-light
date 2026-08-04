@@ -30,6 +30,8 @@ if [[ "${SKIP_CHECKS:-0}" != "1" ]]; then
   npm run check
 fi
 
+npm run build
+
 ./node_modules/.bin/electron-packager . CHMReaderLight \
   --platform=darwin \
   --arch="$arch" \
