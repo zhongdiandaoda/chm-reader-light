@@ -18,6 +18,8 @@ const {
   searchBookContents,
 } = require('../src/chm');
 
+export { };
+
 test('parseContents builds a nested navigation tree from HHC markup', () => {
   const markup = `
     <ul>
@@ -205,7 +207,7 @@ test('mapWithConcurrency never exceeds the configured worker limit', async () =>
   let active = 0;
   let maxActive = 0;
 
-  const result = await mapWithConcurrency([1, 2, 3, 4, 5], 2, async (value) => {
+  const result = await mapWithConcurrency([1, 2, 3, 4, 5], 2, async (value: number) => {
     active += 1;
     maxActive = Math.max(maxActive, active);
     await new Promise((resolve) => setTimeout(resolve, 5));

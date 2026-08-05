@@ -7,6 +7,8 @@ const {
   normalizeTopicReference,
 } = require('../src/navigation');
 
+export { };
+
 test('normalizeTopicReference converts chm URLs to comparable book paths', () => {
   assert.equal(
     normalizeTopicReference('chm://book/Guide%20Folder/Page.htm#section-2'),

@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "rootDir": "src",
+    "outDir": ".build-browser",
+    "noEmit": false
+  },
+  "include": [
+    "src/library.ts",
+    "src/navigation.ts",
+    "src/renderer.ts"
+  ],
+  "exclude": ["node_modules", "build", "dist", ".build-browser"]
+}

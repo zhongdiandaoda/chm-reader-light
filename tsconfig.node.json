@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "Node16",
+    "rootDir": "src",
+    "outDir": ".build-node",
+    "noEmit": false
+  },
+  "include": [
+    "src/chm.ts",
+    "src/library.ts",
+    "src/main.ts",
+    "src/navigation.ts",
+    "src/preload.ts",
+    "src/search-index-worker.ts"
+  ],
+  "exclude": ["node_modules", "build", "dist", ".build-node"]
+}

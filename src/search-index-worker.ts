@@ -1,5 +1,5 @@
-const { parentPort, workerData } = require('node:worker_threads');
-const { createSearchIndex, listFiles } = require('./chm');
+import { parentPort, workerData } from 'node:worker_threads';
+import { createSearchIndex, listFiles } from './chm';
 
 async function buildSearchIndex() {
   const files = listFiles(workerData.root);
@@ -14,10 +14,10 @@ async function buildSearchIndex() {
 
 buildSearchIndex()
   .then((searchIndex) => {
-    parentPort.postMessage({ searchIndex });
+    parentPort?.postMessage({ searchIndex });
   })
   .catch((error) => {
-    parentPort.postMessage({
+    parentPort?.postMessage({
       error: {
         message: error.message,
         stack: error.stack,

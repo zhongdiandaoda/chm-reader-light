@@ -1,3 +1,18 @@
+export { };
+
+import type {
+  BrowserWindow as BrowserWindowType,
+  IpcMainInvokeEvent,
+} from 'electron';
+import type { Worker as WorkerType } from 'node:worker_threads';
+import type {
+  BookContentsItem,
+  BookMetadata,
+  ExtractBookOptions,
+  SearchIndexEntry,
+  SearchResult,
+} from './chm';
+
 const {
   app,
   BrowserWindow,
@@ -22,10 +37,8 @@ const {
   readExtractedBook,
   resolveBookResource,
   searchBookContents,
-} = require('./chm');
-const {
-  renameCollectionInLibrary,
-} = require('./library');
+} = require('./chm') as typeof import('./chm');
+const { renameCollectionInLibrary } = require('./library') as typeof import('./library');
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'chm',
@@ -36,35 +49,81 @@ protocol.registerSchemesAsPrivileged([{
   },
 }]);
 
-let mainWindow;
-let bookRoot;
-let bookSearchIndex = [];
-let bookTextEncoding = null;
-let currentBookPath = null;
-let currentBookName = null;
-let searchIndexWorker;
-let searchIndexGeneration = 0;
-let pendingFile;
+interface LibraryBook {
+  id: string;
+  name: string;
+  filePath?: string;
+  storedName?: string;
+  addedAt?: number;
+  collectionId: string | null;
+}
 
-function getLibraryDir() {
+interface LibraryCollection {
+  id: string;
+  name: string;
+  createdAt?: number;
+  [key: string]: unknown;
+}
+
+interface LibraryState {
+  collections: LibraryCollection[];
+  books: LibraryBook[];
+  [key: string]: unknown;
+}
+
+interface OpenedBook {
+  name: string;
+  filePath: string;
+  contents: BookContentsItem[];
+  defaultPage: string | null;
+  searchablePageCount: number;
+  textEncoding: string | null;
+}
+
+interface SearchIndexWorkerMessage {
+  searchIndex?: SearchIndexEntry[];
+  error?: { message: string; stack?: string };
+}
+
+let mainWindow: BrowserWindowType | undefined;
+let bookRoot: string | undefined;
+let bookSearchIndex: SearchIndexEntry[] = [];
+let bookTextEncoding: string | null = null;
+let currentBookPath: string | null = null;
+let currentBookName: string | null = null;
+let searchIndexWorker: WorkerType | undefined;
+let searchIndexGeneration = 0;
+let pendingFile: string | undefined;
+
+function getLibraryDir(): string {
   return path.join(app.getPath('userData'), 'library');
 }
 
-function getLibraryIndexPath() {
+function getLibraryIndexPath(): string {
   return path.join(getLibraryDir(), 'library.json');
 }
 
-function normalizeLibrary(parsed) {
+function normalizeLibrary(parsed: unknown): LibraryState {
   if (Array.isArray(parsed)) {
-    return { collections: [], books: parsed.map((book) => ({ collectionId: null, ...book })) };
+    return {
+      collections: [],
+      books: parsed.map((book) => ({
+        ...(typeof book === 'object' && book !== null ? book : {}),
+        collectionId: null,
+      })) as LibraryBook[],
+    };
   }
   return {
-    collections: Array.isArray(parsed?.collections) ? parsed.collections : [],
-    books: Array.isArray(parsed?.books) ? parsed.books : [],
+    collections: Array.isArray((parsed as { collections?: unknown[] })?.collections)
+      ? (parsed as { collections: LibraryCollection[] }).collections
+      : [],
+    books: Array.isArray((parsed as { books?: unknown[] })?.books)
+      ? (parsed as { books: LibraryBook[] }).books
+      : [],
   };
 }
 
-async function readLibrary() {
+async function readLibrary(): Promise<LibraryState> {
   try {
     const raw = await fs.promises.readFile(getLibraryIndexPath(), 'utf-8');
     return normalizeLibrary(JSON.parse(raw));
@@ -73,12 +132,15 @@ async function readLibrary() {
   }
 }
 
-async function writeLibrary(library) {
+async function writeLibrary(library: LibraryState): Promise<void> {
   await fs.promises.mkdir(getLibraryDir(), { recursive: true });
   await fs.promises.writeFile(getLibraryIndexPath(), JSON.stringify(library, null, 2));
 }
 
-async function importBooks(filePaths, collectionId = null) {
+async function importBooks(
+  filePaths: readonly string[],
+  collectionId: string | null = null,
+): Promise<LibraryState> {
   const library = await readLibrary();
 
   for (const filePath of filePaths) {
@@ -97,14 +159,14 @@ async function importBooks(filePaths, collectionId = null) {
   return library;
 }
 
-async function removeBook(id) {
+async function removeBook(id: string): Promise<LibraryState> {
   const library = await readLibrary();
   library.books = library.books.filter((item) => item.id !== id);
   await writeLibrary(library);
   return library;
 }
 
-async function createCollection(name) {
+async function createCollection(name: string): Promise<LibraryState> {
   const library = await readLibrary();
   const collection = { id: randomUUID(), name: name || '新书库', createdAt: Date.now() };
   library.collections.push(collection);
@@ -112,13 +174,13 @@ async function createCollection(name) {
   return library;
 }
 
-async function renameCollection(id, name) {
-  const library = renameCollectionInLibrary(await readLibrary(), id, name);
+async function renameCollection(id: string, name: string): Promise<LibraryState> {
+  const library = normalizeLibrary(renameCollectionInLibrary(await readLibrary(), id, name));
   await writeLibrary(library);
   return library;
 }
 
-async function removeCollection(id) {
+async function removeCollection(id: string): Promise<LibraryState> {
   const library = await readLibrary();
   library.books = library.books.map((item) => (
     item.collectionId === id ? { ...item, collectionId: null } : item
@@ -144,7 +206,7 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+  mainWindow?.loadFile(path.join(__dirname, 'index.html'));
 }
 
 function createMenu() {
@@ -202,7 +264,7 @@ function createMenu() {
 }
 
 async function locateExtractor() {
-  async function resolveExecutable(candidate) {
+  async function resolveExecutable(candidate: string): Promise<string> {
     if (path.isAbsolute(candidate)) {
       await fs.promises.access(candidate, fs.constants.X_OK);
       return candidate;
@@ -224,8 +286,9 @@ async function locateExtractor() {
   const nativeName = process.platform === 'darwin'
     ? `darwin-${process.arch}`
     : `${process.platform}-${process.arch}`;
-  const candidates = [
-    path.join(process.resourcesPath, 'native', nativeName, 'bin', 'extract_chmLib'),
+  const resourcesPath = (process as NodeJS.Process & { resourcesPath: string }).resourcesPath;
+  const candidates: string[] = [
+    path.join(resourcesPath, 'native', nativeName, 'bin', 'extract_chmLib'),
     path.join(__dirname, '..', 'resources', 'native', nativeName, 'bin', 'extract_chmLib'),
     '/opt/homebrew/bin/extract_chmLib',
     '/usr/local/bin/extract_chmLib',
@@ -243,7 +306,7 @@ async function locateExtractor() {
   throw new Error('未找到可用的 CHM 解包器。请重新安装应用，或在开发环境安装 chmlib。');
 }
 
-function createBookUrl(topicPath) {
+function createBookUrl(topicPath: string | null | undefined): string | null {
   if (!topicPath) return null;
 
   const hashIndex = topicPath.indexOf('#');
@@ -253,7 +316,11 @@ function createBookUrl(topicPath) {
   return `chm://book/${encodedPath}${hash}`;
 }
 
-function createBookResult(name, chmPath, metadata) {
+function createBookResult(
+  name: string,
+  chmPath: string,
+  metadata: BookMetadata,
+): OpenedBook {
   return {
     name,
     filePath: chmPath,
@@ -268,11 +335,15 @@ function stopSearchIndexWorker() {
   searchIndexGeneration += 1;
   if (searchIndexWorker) {
     searchIndexWorker.terminate();
-    searchIndexWorker = null;
+    searchIndexWorker = undefined;
   }
 }
 
-function startSearchIndexBuild(root, contents, textEncoding) {
+function startSearchIndexBuild(
+  root: string,
+  contents: BookContentsItem[],
+  textEncoding: string | null,
+): void {
   stopSearchIndexWorker();
   const generation = searchIndexGeneration;
   const worker = new Worker(path.join(__dirname, 'search-index-worker.js'), {
@@ -285,36 +356,36 @@ function startSearchIndexBuild(root, contents, textEncoding) {
   });
   searchIndexWorker = worker;
 
-  worker.once('message', (message) => {
+  worker.once('message', (message: SearchIndexWorkerMessage) => {
     if (generation !== searchIndexGeneration || root !== bookRoot) return;
-    searchIndexWorker = null;
+    searchIndexWorker = undefined;
     if (message.error) {
       console.error(`CHM search index failed: ${message.error.message}`);
       return;
     }
 
-    bookSearchIndex = message.searchIndex;
+    bookSearchIndex = message.searchIndex || [];
     mainWindow?.webContents.send('book:index-ready', {
       searchablePageCount: bookSearchIndex.length,
     });
   });
-  worker.once('error', (error) => {
+  worker.once('error', (error: Error) => {
     if (generation !== searchIndexGeneration || root !== bookRoot) return;
-    searchIndexWorker = null;
+    searchIndexWorker = undefined;
     console.error(`CHM search index worker failed: ${error.message}`);
   });
   worker.once('exit', () => {
-    if (searchIndexWorker === worker) searchIndexWorker = null;
+    if (searchIndexWorker === worker) searchIndexWorker = undefined;
   });
 }
 
-function normalizeTextEncoding(encoding) {
+function normalizeTextEncoding(encoding: string): string | null {
   if (!encoding || encoding === 'auto') return null;
   new TextDecoder(encoding);
   return encoding;
 }
 
-function addSearchHighlightStyles(markup) {
+function addSearchHighlightStyles(markup: string): string {
   const styles = `<style>
     .chm-search-match { background: #f7df83; color: inherit; border-radius: 2px; padding: 0 1px; }
     .chm-search-current { background: #f2a93b; box-shadow: 0 0 0 2px rgba(210, 125, 20, 0.28); animation: chm-search-pulse 650ms ease-out; }
@@ -323,7 +394,7 @@ function addSearchHighlightStyles(markup) {
   return /<\/head>/i.test(markup) ? markup.replace(/<\/head>/i, `${styles}</head>`) : `${styles}${markup}`;
 }
 
-async function openBook(chmPath, displayName) {
+async function openBook(chmPath: string, displayName?: string): Promise<OpenedBook> {
   if (!chmPath || path.extname(chmPath).toLowerCase() !== '.chm') {
     throw new Error('请选择有效的 .chm 文件');
   }
@@ -358,7 +429,7 @@ async function openBook(chmPath, displayName) {
   }
 }
 
-async function openLibraryBook(id) {
+async function openLibraryBook(id: string): Promise<OpenedBook | null> {
   const library = await readLibrary();
   const entry = library.books.find((item) => item.id === id);
   if (!entry) throw new Error('该文档已不在书库中');
@@ -370,29 +441,34 @@ async function openLibraryBook(id) {
     await dialog.showMessageBox(mainWindow, {
       type: 'error',
       title: '无法打开 CHM',
-      message: error.message,
+      message: error instanceof Error ? error.message : String(error),
       detail: '请确认文件仍存在且未损坏。若问题持续存在，请重新安装应用以恢复内置 CHM 解包器。',
     });
     return null;
   }
 }
 
-async function setBookTextEncoding(encoding) {
+async function setBookTextEncoding(
+  encoding: string,
+): Promise<OpenedBook | { textEncoding: string | null }> {
   bookTextEncoding = normalizeTextEncoding(encoding);
-  if (!bookRoot || !currentBookPath) return { textEncoding: bookTextEncoding };
+  if (!bookRoot || !currentBookPath || !currentBookName) return { textEncoding: bookTextEncoding };
+  const activeRoot = bookRoot;
+  const activePath = currentBookPath;
+  const activeName = currentBookName;
 
-  const metadata = await readExtractedBook(bookRoot, {
+  const metadata = await readExtractedBook(activeRoot, {
     textEncoding: bookTextEncoding,
     buildSearchIndex: false,
   });
   bookSearchIndex = metadata.searchIndex;
-  const result = createBookResult(currentBookName, currentBookPath, metadata);
+  const result = createBookResult(activeName, activePath, metadata);
   mainWindow?.webContents.send('book:opened', result);
-  startSearchIndexBuild(bookRoot, metadata.contents, bookTextEncoding);
+  startSearchIndexBuild(activeRoot, metadata.contents, bookTextEncoding);
   return result;
 }
 
-async function selectAndImportBooks(collectionId = null) {
+async function selectAndImportBooks(collectionId: string | null = null): Promise<LibraryState | null> {
   const result = await dialog.showOpenDialog(mainWindow, {
     title: '添加 CHM 到书库',
     buttonLabel: '添加',
@@ -410,14 +486,14 @@ async function selectAndImportBooks(collectionId = null) {
     await dialog.showMessageBox(mainWindow, {
       type: 'error',
       title: '无法添加到书库',
-      message: error.message,
+      message: error instanceof Error ? error.message : String(error),
     });
     return null;
   }
 }
 
-function registerBookProtocol() {
-  protocol.handle('chm', async (request) => {
+function registerBookProtocol(): void {
+  protocol.handle('chm', async (request: { url: string }) => {
     try {
       const requestUrl = new URL(request.url);
       if (!bookRoot || requestUrl.hostname !== 'book') {
@@ -437,7 +513,7 @@ function registerBookProtocol() {
         );
         let markup = decodeMarkup(await fs.promises.readFile(filePath), bookTextEncoding);
         if (searchQuery) {
-          const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match'), 10) || 0);
+          const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match') || '', 10) || 0);
           markup = addSearchHighlightStyles(highlightSearchMatches(markup, searchQuery, selectedIndex).markup);
         }
         markup = injectContentNavigationBridge(markup, scriptNonce);
@@ -463,29 +539,29 @@ function registerBookProtocol() {
   });
 }
 
-ipcMain.handle('library:list', () => readLibrary());
-ipcMain.handle('library:import', (_, collectionId) => selectAndImportBooks(collectionId));
-ipcMain.handle('library:open', (_, id) => openLibraryBook(id));
-ipcMain.handle('library:remove', (_, id) => removeBook(id));
-ipcMain.handle('collection:create', (_, name) => createCollection(name));
-ipcMain.handle('collection:rename', (_, id, name) => renameCollection(id, name));
-ipcMain.handle('collection:remove', (_, id) => removeCollection(id));
-ipcMain.handle('book:url', (_, topicPath) => createBookUrl(topicPath));
-ipcMain.handle('book:search', (_, query) => searchBookContents(bookSearchIndex, query));
-ipcMain.handle('book:encoding', (_, encoding) => setBookTextEncoding(encoding));
-ipcMain.handle('external:open', (_, url) => {
+ipcMain.handle('library:list', (_event: IpcMainInvokeEvent) => readLibrary());
+ipcMain.handle('library:import', (_event: IpcMainInvokeEvent, collectionId: string | null) => selectAndImportBooks(collectionId));
+ipcMain.handle('library:open', (_event: IpcMainInvokeEvent, id: string) => openLibraryBook(id));
+ipcMain.handle('library:remove', (_event: IpcMainInvokeEvent, id: string) => removeBook(id));
+ipcMain.handle('collection:create', (_event: IpcMainInvokeEvent, name: string) => createCollection(name));
+ipcMain.handle('collection:rename', (_event: IpcMainInvokeEvent, id: string, name: string) => renameCollection(id, name));
+ipcMain.handle('collection:remove', (_event: IpcMainInvokeEvent, id: string) => removeCollection(id));
+ipcMain.handle('book:url', (_event: IpcMainInvokeEvent, topicPath: string | null) => createBookUrl(topicPath));
+ipcMain.handle('book:search', (_event: IpcMainInvokeEvent, query: string): SearchResult[] => searchBookContents(bookSearchIndex, query));
+ipcMain.handle('book:encoding', (_event: IpcMainInvokeEvent, encoding: string) => setBookTextEncoding(encoding));
+ipcMain.handle('external:open', (_event: IpcMainInvokeEvent, url: string) => {
   if (/^https?:\/\//i.test(url)) return shell.openExternal(url);
   return undefined;
 });
 
-async function importAndOpen(filePath) {
+async function importAndOpen(filePath: string): Promise<void> {
   const library = await importBooks([filePath]);
   mainWindow?.webContents.send('library:updated', library);
   const added = library.books[library.books.length - 1];
   if (added) await openLibraryBook(added.id);
 }
 
-app.on('open-file', (event, filePath) => {
+app.on('open-file', (event: Electron.Event, filePath: string) => {
   event.preventDefault();
   if (app.isReady()) {
     importAndOpen(filePath).catch(() => { });
@@ -501,7 +577,7 @@ app.whenReady().then(async () => {
 
   if (pendingFile) {
     await importAndOpen(pendingFile).catch(() => { });
-    pendingFile = null;
+    pendingFile = undefined;
   }
 
   app.on('activate', () => {

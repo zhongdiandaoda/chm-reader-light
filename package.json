@@ -2,7 +2,7 @@
   "name": "chm-reader-light",
   "version": "0.1.0",
   "description": "A focused CHM reader for macOS",
-  "main": "src/main.js",
+  "main": "build/main.js",
   "author": "liuqi.9867",
   "license": "MIT",
   "type": "commonjs",
@@ -10,8 +10,10 @@
     "doctor": "bash scripts/doctor.sh",
     "run": "bash scripts/run.sh",
     "start": "electron .",
-    "test": "node --test",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer.js && node --check src/chm.js && node --check src/navigation.js && node --check src/library.js",
+    "test": "node scripts/test.js",
+    "build": "node scripts/build.js",
+    "check": "npm run typecheck && npm run build && node --check build/main.js && node --check build/preload.js && node --check build/chm.js && node --check build/navigation.js && node --check build/library.js && node --check build/search-index-worker.js",
+    "typecheck": "tsc --noEmit",
     "clean": "bash scripts/clean.sh",
     "package:mac": "bash scripts/package-macos.sh",
     "package:mac:arm64": "bash scripts/package-macos.sh arm64",
@@ -22,7 +24,9 @@
   },
   "devDependencies": {
     "@electron/packager": "20.0.4",
-    "electron": "43.2.0"
+    "@types/node": "^24.13.3",
+    "electron": "43.2.0",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "cheerio": "1.2.0"
