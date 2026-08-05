@@ -30,6 +30,8 @@ if [[ "${SKIP_CHECKS:-0}" != "1" ]]; then
   npm run check
 fi
 
+npm run build
+
 ./node_modules/.bin/electron-packager . CHMReaderLight \
   --platform=darwin \
   --arch="$arch" \
@@ -37,5 +39,9 @@ fi
   --overwrite \
   --app-bundle-id=com.liuqi.chmreader \
   --app-category-type=public.app-category.reference
+
+"$root_dir/scripts/vendor-chmlib-macos.sh" \
+  "$root_dir/dist/CHMReaderLight-darwin-$arch/CHMReaderLight.app" \
+  "$arch"
 
 printf "\n已生成: %s\n" "$root_dir/dist/CHMReaderLight-darwin-$arch/CHMReaderLight.app"

@@ -7,6 +7,8 @@ const {
   renameCollectionInLibrary,
 } = require('../src/library');
 
+export { };
+
 test('normalizeCollectionName trims user input', () => {
   assert.equal(normalizeCollectionName('  运维文档  '), '运维文档');
 });

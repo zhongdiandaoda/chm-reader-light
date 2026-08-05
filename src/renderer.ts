@@ -1,87 +1,179 @@
-const elements = {
-  libraryToolbar: document.querySelector('#library-toolbar'),
-  readerToolbar: document.querySelector('#reader-toolbar'),
-  libraryView: document.querySelector('#library-view'),
-  libraryContent: document.querySelector('#library-content'),
-  libraryEmpty: document.querySelector('#library-empty'),
-  libraryGrid: document.querySelector('#library-grid'),
-  libraryCount: document.querySelector('#library-count'),
-  libraryHeading: document.querySelector('#library-heading'),
-  collectionList: document.querySelector('#collection-list'),
-  addCollection: document.querySelector('#add-collection'),
-  collectionDialog: document.querySelector('#collection-dialog'),
-  collectionForm: document.querySelector('#collection-form'),
-  collectionDialogTitle: document.querySelector('#collection-dialog-title'),
-  collectionName: document.querySelector('#collection-name'),
-  collectionCancel: document.querySelector('#collection-cancel'),
-  collectionCreate: document.querySelector('#collection-create'),
-  collectionContextMenu: document.querySelector('#collection-context-menu'),
-  collectionRename: document.querySelector('#collection-rename'),
-  collectionDelete: document.querySelector('#collection-delete'),
-  viewGrid: document.querySelector('#view-grid'),
-  viewList: document.querySelector('#view-list'),
-  addBook: document.querySelector('#add-book'),
-  emptyAddBook: document.querySelector('#empty-add-book'),
-  backToLibrary: document.querySelector('#back-to-library'),
-  bookTitle: document.querySelector('#book-title'),
-  contentFrame: document.querySelector('#content-frame'),
-  emptyState: document.querySelector('#empty-state'),
-  loadingState: document.querySelector('#loading-state'),
-  navigation: document.querySelector('#navigation'),
-  readerLayout: document.querySelector('#reader-layout'),
-  resizeHandle: document.querySelector('#resize-handle'),
-  search: document.querySelector('#search-navigation'),
-  searchScopeTrigger: document.querySelector('#search-scope-trigger'),
-  searchScopeMenu: document.querySelector('#search-scope-menu'),
-  searchScopeLabel: document.querySelector('#search-scope-label'),
-  searchBody: document.querySelector('#search-body'),
-  searchDirectory: document.querySelector('#search-directory'),
-  searchStatus: document.querySelector('#search-status'),
-  searchMatchNavigation: document.querySelector('#search-match-navigation'),
-  searchToolbarSeparator: document.querySelector('#search-toolbar-separator'),
-  searchPrevious: document.querySelector('#search-previous'),
-  searchNext: document.querySelector('#search-next'),
-  searchMatchPosition: document.querySelector('#search-match-position'),
-  back: document.querySelector('#go-back'),
-  forward: document.querySelector('#go-forward'),
-  previousPage: document.querySelector('#previous-page'),
-  nextPage: document.querySelector('#next-page'),
-  treeMenuTrigger: document.querySelector('#tree-menu-trigger'),
-  treeActionsMenu: document.querySelector('#tree-actions-menu'),
-  expandAll: document.querySelector('#expand-all'),
-  collapseAll: document.querySelector('#collapse-all'),
-  refreshTree: document.querySelector('#refresh-tree'),
-  zoomReset: document.querySelector('#zoom-reset'),
-};
+export { };
 
-const {
+import type { BookContentsItem, SearchResult } from './chm';
+import {
   getNextCollectionName,
   normalizeCollectionName,
-} = window.chmLibrary;
+} from './library.js';
+import {
+  findTopicPathByUrl,
+  getTopicPathsInReadingOrder,
+} from './navigation.js';
 
-let currentBook;
-let currentTopicPath;
-let history = [];
+interface LibraryBook {
+  id: string;
+  name: string;
+  filePath?: string;
+  storedName?: string;
+  addedAt?: number;
+  collectionId: string | null;
+}
+
+interface LibraryCollection {
+  id: string;
+  name: string;
+  createdAt?: number;
+  [key: string]: unknown;
+}
+
+type CollectionItem = LibraryCollection | { id: null; name: string };
+
+interface LibraryState {
+  collections: LibraryCollection[];
+  books: LibraryBook[];
+}
+
+interface OpenedBook {
+  name: string;
+  filePath: string;
+  contents: BookContentsItem[];
+  defaultPage: string | null;
+  searchablePageCount: number;
+  textEncoding: string | null;
+}
+
+interface ChmReaderApi {
+  listLibrary: () => Promise<LibraryState>;
+  importBooks: (collectionId: string | null) => Promise<LibraryState | null>;
+  openLibraryBook: (id: string) => Promise<OpenedBook | null>;
+  removeLibraryBook: (id: string) => Promise<LibraryState>;
+  createCollection: (name: string) => Promise<LibraryState>;
+  renameCollection: (id: string, name: string) => Promise<LibraryState>;
+  removeCollection: (id: string) => Promise<LibraryState>;
+  createBookUrl: (topicPath: string | null) => Promise<string | null>;
+  searchBook: (query: string) => Promise<SearchResult[]>;
+  setTextEncoding: (encoding: string) => Promise<OpenedBook | { textEncoding: string | null }>;
+  onBookOpened: (callback: (book: OpenedBook) => void) => () => void;
+  onBookIndexReady: (callback: (result: { searchablePageCount: number }) => void) => () => void;
+  onLibraryUpdated: (callback: (entries: LibraryState) => void) => () => void;
+  onShowLibrary: (callback: () => void) => () => void;
+  onFocusSearch: (callback: () => void) => () => void;
+}
+
+type SearchScope = 'body' | 'directory';
+interface SearchState {
+  scope: SearchScope;
+  query: string;
+  resultsByPath: Map<string, SearchResult>;
+  currentMatchIndex: number;
+}
+
+interface UiElement extends HTMLElement {
+  disabled: boolean;
+  value: string;
+  placeholder: string;
+  src: string;
+  contentWindow: Window | null;
+  select(): void;
+  setPointerCapture(pointerId: number): void;
+  hasPointerCapture(pointerId: number): boolean;
+}
+
+declare global {
+  interface Window {
+    chmReader: ChmReaderApi;
+  }
+}
+
+function query(selector: string): UiElement {
+  const element = document.querySelector<UiElement>(selector);
+  if (!element) throw new Error(`Missing renderer element: ${selector}`);
+  return element;
+}
+
+const elements = {
+  libraryToolbar: query('#library-toolbar'),
+  readerToolbar: query('#reader-toolbar'),
+  libraryView: query('#library-view'),
+  libraryContent: query('#library-content'),
+  libraryEmpty: query('#library-empty'),
+  libraryGrid: query('#library-grid'),
+  libraryCount: query('#library-count'),
+  libraryHeading: query('#library-heading'),
+  collectionList: query('#collection-list'),
+  addCollection: query('#add-collection'),
+  collectionDialog: query('#collection-dialog'),
+  collectionForm: query('#collection-form'),
+  collectionDialogTitle: query('#collection-dialog-title'),
+  collectionName: query('#collection-name'),
+  collectionCancel: query('#collection-cancel'),
+  collectionCreate: query('#collection-create'),
+  collectionContextMenu: query('#collection-context-menu'),
+  collectionRename: query('#collection-rename'),
+  collectionDelete: query('#collection-delete'),
+  viewGrid: query('#view-grid'),
+  viewList: query('#view-list'),
+  addBook: query('#add-book'),
+  emptyAddBook: query('#empty-add-book'),
+  backToLibrary: query('#back-to-library'),
+  bookTitle: query('#book-title'),
+  contentFrame: query('#content-frame'),
+  emptyState: query('#empty-state'),
+  loadingState: query('#loading-state'),
+  navigation: query('#navigation'),
+  readerLayout: query('#reader-layout'),
+  resizeHandle: query('#resize-handle'),
+  search: query('#search-navigation'),
+  searchScopeTrigger: query('#search-scope-trigger'),
+  searchScopeMenu: query('#search-scope-menu'),
+  searchScopeLabel: query('#search-scope-label'),
+  searchBody: query('#search-body'),
+  searchDirectory: query('#search-directory'),
+  searchStatus: query('#search-status'),
+  searchMatchNavigation: query('#search-match-navigation'),
+  searchToolbarSeparator: query('#search-toolbar-separator'),
+  searchPrevious: query('#search-previous'),
+  searchNext: query('#search-next'),
+  searchMatchPosition: query('#search-match-position'),
+  back: query('#go-back'),
+  forward: query('#go-forward'),
+  previousPage: query('#previous-page'),
+  nextPage: query('#next-page'),
+  treeMenuTrigger: query('#tree-menu-trigger'),
+  treeActionsMenu: query('#tree-actions-menu'),
+  expandAll: query('#expand-all'),
+  collapseAll: query('#collapse-all'),
+  refreshTree: query('#refresh-tree'),
+  zoomReset: query('#zoom-reset'),
+  textEncoding: query('#text-encoding'),
+  textEncodingValue: query('#text-encoding-value'),
+  textEncodingMenu: query('#text-encoding-menu'),
+};
+
+let currentBook: OpenedBook | null = null;
+let currentTopicPath: string | null = null;
+let history: Array<{ topicPath: string; row: UiElement | null }> = [];
 let historyIndex = -1;
-let readingOrder = [];
+let readingOrder: string[] = [];
 let zoom = 1;
 let searchRequestId = 0;
-let searchState = {
+let pendingTopicPathAfterEncoding: string | null = null;
+let searchState: SearchState = {
   scope: 'body',
   query: '',
   resultsByPath: new Map(),
   currentMatchIndex: 0,
 };
 
-let library = { collections: [], books: [] };
-let selectedCollectionId = null; // null = 全部
+let library: LibraryState = { collections: [], books: [] };
+let selectedCollectionId: string | null = null; // null = 全部
 let libraryLayout = 'grid';
-let collectionDialogRestoreFocus = null;
-let collectionDialogMode = { type: 'create', collectionId: null };
-let contextCollection = null;
+let collectionDialogRestoreFocus: UiElement | null = null;
+let collectionDialogMode: { type: 'create' | 'rename'; collectionId: string | null } = { type: 'create', collectionId: null };
+let contextCollection: LibraryCollection | null = null;
 let contextCollectionCount = 0;
 
-function showView(view) {
+function showView(view: 'library' | 'reader'): void {
   document.body.dataset.view = view;
   const isReader = view === 'reader';
   elements.libraryToolbar.hidden = isReader;
@@ -90,24 +182,24 @@ function showView(view) {
   elements.readerLayout.hidden = !isReader;
 }
 
-function booksInSelectedCollection() {
+function booksInSelectedCollection(): LibraryBook[] {
   if (selectedCollectionId === null) return library.books;
   return library.books.filter((book) => book.collectionId === selectedCollectionId);
 }
 
-function setLibraryLayout(layout) {
+function setLibraryLayout(layout: 'grid' | 'list'): void {
   libraryLayout = layout;
   elements.libraryContent.dataset.layout = layout;
   elements.viewGrid.setAttribute('aria-pressed', String(layout === 'grid'));
   elements.viewList.setAttribute('aria-pressed', String(layout === 'list'));
 }
 
-function selectCollection(id) {
+function selectCollection(id: string | null): void {
   selectedCollectionId = id;
   renderLibrary(library);
 }
 
-function renderLibrary(nextLibrary) {
+function renderLibrary(nextLibrary: LibraryState): void {
   hideCollectionContextMenu();
   library = {
     collections: Array.isArray(nextLibrary?.collections) ? nextLibrary.collections : [],
@@ -133,7 +225,7 @@ function renderCollectionList() {
   });
 }
 
-function createCollectionItem(collection, count, removable) {
+function createCollectionItem(collection: CollectionItem, count: number, removable: boolean): HTMLDivElement {
   const item = document.createElement('div');
   item.className = 'collection-item';
   item.classList.toggle('active', selectedCollectionId === collection.id);
@@ -157,7 +249,7 @@ function createCollectionItem(collection, count, removable) {
   if (removable) {
     item.addEventListener('contextmenu', (event) => {
       event.preventDefault();
-      openCollectionContextMenu(event, collection, count);
+      openCollectionContextMenu(event, collection as LibraryCollection, count);
     });
 
     const remove = document.createElement('button');
@@ -168,7 +260,7 @@ function createCollectionItem(collection, count, removable) {
     remove.setAttribute('aria-label', `删除书库 ${collection.name}`);
     remove.addEventListener('click', async (event) => {
       event.stopPropagation();
-      await confirmAndRemoveCollection(collection, count);
+      await confirmAndRemoveCollection(collection as LibraryCollection, count);
     });
     item.append(remove);
   }
@@ -190,7 +282,7 @@ function renderBooks() {
   books.forEach((entry) => elements.libraryGrid.append(createLibraryCard(entry)));
 }
 
-function createLibraryCard(entry) {
+function createLibraryCard(entry: LibraryBook): HTMLDivElement {
   const card = document.createElement('div');
   card.className = 'library-card';
   card.dataset.id = entry.id;
@@ -209,7 +301,8 @@ function createLibraryCard(entry) {
       </svg>
     </span>
     <span class="library-name"></span>`;
-  open.querySelector('.library-name').textContent = entry.name;
+  const nameElement = open.querySelector<HTMLElement>('.library-name');
+  if (nameElement) nameElement.textContent = entry.name;
   open.addEventListener('click', () => openLibraryBook(entry.id));
 
   const remove = document.createElement('button');
@@ -228,7 +321,7 @@ function createLibraryCard(entry) {
   return card;
 }
 
-async function openLibraryBook(id) {
+async function openLibraryBook(id: string): Promise<void> {
   showView('reader');
   elements.bookTitle.textContent = '正在打开...';
   setLoading(true);
@@ -242,7 +335,7 @@ function hideCollectionContextMenu() {
   contextCollectionCount = 0;
 }
 
-function openCollectionContextMenu(event, collection, count) {
+function openCollectionContextMenu(event: MouseEvent, collection: LibraryCollection, count: number): void {
   contextCollection = collection;
   contextCollectionCount = count;
   elements.collectionContextMenu.hidden = false;
@@ -255,7 +348,7 @@ function openCollectionContextMenu(event, collection, count) {
   elements.collectionRename.focus();
 }
 
-async function confirmAndRemoveCollection(collection, count) {
+async function confirmAndRemoveCollection(collection: LibraryCollection, count: number): Promise<void> {
   const message = count > 0
     ? `删除书库“${collection.name}”后，其中的 ${count} 个文档会移动到“全部”（不会删除源文件）。`
     : `删除书库“${collection.name}”？`;
@@ -265,10 +358,10 @@ async function confirmAndRemoveCollection(collection, count) {
   renderLibrary(updated);
 }
 
-function openCollectionDialog(collection = null) {
+function openCollectionDialog(collection: LibraryCollection | null = null): void {
   hideCollectionContextMenu();
   const isRename = Boolean(collection);
-  collectionDialogRestoreFocus = document.activeElement;
+  collectionDialogRestoreFocus = document.activeElement as UiElement | null;
   collectionDialogMode = {
     type: isRename ? 'rename' : 'create',
     collectionId: collection?.id || null,
@@ -276,7 +369,7 @@ function openCollectionDialog(collection = null) {
   elements.collectionDialogTitle.textContent = isRename ? '重命名书库' : '新建书库';
   elements.collectionCreate.textContent = isRename ? '保存' : '创建';
   elements.collectionName.value = isRename
-    ? collection.name
+    ? collection?.name || ''
     : getNextCollectionName(library.collections);
   elements.collectionDialog.hidden = false;
   requestAnimationFrame(() => {
@@ -293,7 +386,7 @@ function closeCollectionDialog() {
   collectionDialogRestoreFocus = null;
 }
 
-async function submitCreateCollection(event) {
+async function submitCreateCollection(event: SubmitEvent): Promise<void> {
   event.preventDefault();
   const trimmed = normalizeCollectionName(elements.collectionName.value);
   if (!trimmed) {
@@ -304,7 +397,7 @@ async function submitCreateCollection(event) {
   elements.collectionCreate.disabled = true;
   const isRename = collectionDialogMode.type === 'rename';
   const updated = isRename
-    ? await window.chmReader.renameCollection(collectionDialogMode.collectionId, trimmed)
+    ? await window.chmReader.renameCollection(collectionDialogMode.collectionId || '', trimmed)
     : await window.chmReader.createCollection(trimmed);
   const created = isRename
     ? updated.collections.find((collection) => collection.id === collectionDialogMode.collectionId)
@@ -319,7 +412,7 @@ async function loadLibrary() {
   renderLibrary(nextLibrary);
 }
 
-function setLoading(isLoading) {
+function setLoading(isLoading: boolean): void {
   elements.loadingState.hidden = !isLoading;
   if (isLoading) {
     elements.emptyState.hidden = true;
@@ -327,7 +420,7 @@ function setLoading(isLoading) {
   }
 }
 
-function renderNavigation(items) {
+function renderNavigation(items: readonly BookContentsItem[]): void {
   elements.navigation.replaceChildren();
 
   if (!items.length) {
@@ -346,9 +439,9 @@ function renderNavigation(items) {
   applySearchStateToNavigation();
 }
 
-function createTreeItem(item, level) {
+function createTreeItem(item: BookContentsItem, level: number): HTMLLIElement {
   const listItem = document.createElement('li');
-  const row = document.createElement('div');
+  const row = document.createElement('div') as unknown as UiElement;
   const disclosure = document.createElement('button');
   const link = document.createElement('button');
   const count = document.createElement('span');
@@ -383,7 +476,8 @@ function createTreeItem(item, level) {
   }
 
   if (item.path) {
-    link.addEventListener('click', () => navigateTo(item.path, true, row));
+    const topicPath = item.path;
+    link.addEventListener('click', () => navigateTo(topicPath, true, row));
   } else if (hasChildren) {
     link.addEventListener('click', () => disclosure.click());
   } else {
@@ -403,29 +497,30 @@ function createTreeItem(item, level) {
   return listItem;
 }
 
-function setTreeItemExpanded(item, expanded) {
+function setTreeItemExpanded(item: HTMLElement, expanded: boolean): void {
   const hasChildren = item.querySelector(':scope > ul');
   if (!hasChildren) return;
 
   item.classList.toggle('expanded', expanded);
   item.setAttribute('aria-expanded', String(expanded));
   const title = item.dataset.title || '目录';
-  const disclosure = item.querySelector(':scope > .tree-row .disclosure');
+  const disclosure = item.querySelector<HTMLElement>(':scope > .tree-row .disclosure');
   disclosure?.setAttribute('aria-label', `${expanded ? '折叠' : '展开'} ${title}`);
 }
 
-function setAllTreeItemsExpanded(expanded) {
+function setAllTreeItemsExpanded(expanded: boolean): void {
   elements.navigation
-    .querySelectorAll('.tree-item')
+    .querySelectorAll<HTMLElement>('.tree-item')
     .forEach((item) => setTreeItemExpanded(item, expanded));
 }
 
-function getTopicSearchResult(topicPath) {
-  const pagePath = topicPath?.split('#', 1)[0]?.toLocaleLowerCase();
+function getTopicSearchResult(topicPath: string | null): SearchResult | null {
+  if (!topicPath) return null;
+  const pagePath = topicPath.split('#', 1)[0].toLocaleLowerCase();
   return searchState.resultsByPath.get(pagePath) || null;
 }
 
-function createSearchUrl(url, topicPath, matchIndex) {
+function createSearchUrl(url: string, topicPath: string | null, matchIndex: number): string {
   const result = getTopicSearchResult(topicPath);
   if (searchState.scope !== 'body' || !searchState.query || !result) return url;
 
@@ -436,7 +531,12 @@ function createSearchUrl(url, topicPath, matchIndex) {
   return searchUrl.toString();
 }
 
-async function navigateTo(topicPath, addToHistory = true, activeRow = null, matchIndex = 0) {
+async function navigateTo(
+  topicPath: string,
+  addToHistory = true,
+  activeRow: UiElement | null = null,
+  matchIndex = 0,
+): Promise<void> {
   const url = await window.chmReader.createBookUrl(topicPath);
   if (!url) return;
 
@@ -462,39 +562,42 @@ async function navigateTo(topicPath, addToHistory = true, activeRow = null, matc
   updateSearchMatchNavigation();
 }
 
-function findNavigationRow(topicPath) {
-  const item = [...elements.navigation.querySelectorAll('.tree-item')]
+function findNavigationRow(topicPath: string): UiElement | null {
+  const item = [...elements.navigation.querySelectorAll<HTMLElement>('.tree-item')]
     .find((candidate) => candidate.dataset.topicPath === topicPath);
-  return item?.querySelector(':scope > .tree-row') || null;
+  return item?.querySelector<UiElement>(':scope > .tree-row') || null;
 }
 
-function activateNavigationRow(row, options = {}) {
+function activateNavigationRow(
+  row: UiElement,
+  options: { block?: ScrollLogicalPosition } = {},
+): void {
   document.querySelector('.tree-row.active')?.classList.remove('active');
   row.classList.add('active');
   row.scrollIntoView({ block: options.block || 'nearest' });
 }
 
-function revealTopicInNavigation(topicPath) {
+function revealTopicInNavigation(topicPath: string | null): void {
   if (!topicPath) return;
 
-  const item = [...elements.navigation.querySelectorAll('.tree-item')]
+  const item = [...elements.navigation.querySelectorAll<HTMLElement>('.tree-item')]
     .find((candidate) => candidate.dataset.topicPath === topicPath);
   if (!item) return;
 
-  let parent = item.parentElement?.closest('.tree-item');
+  let parent = item.parentElement?.closest<HTMLElement>('.tree-item') || null;
   while (parent) {
     setTreeItemExpanded(parent, true);
-    parent = parent.parentElement?.closest('.tree-item');
+    parent = parent.parentElement?.closest<HTMLElement>('.tree-item') || null;
   }
 
-  const row = item.querySelector(':scope > .tree-row');
+  const row = item.querySelector<UiElement>(':scope > .tree-row');
   if (row) activateNavigationRow(row, { block: 'center' });
 }
 
-function syncNavigationWithUrl(url) {
+function syncNavigationWithUrl(url: string): void {
   if (!currentBook || typeof url !== 'string' || !url.startsWith('chm://book/')) return;
 
-  const topicPath = window.chmNavigation.findTopicPathByUrl(
+  const topicPath = findTopicPathByUrl(
     currentBook.contents,
     url,
   );
@@ -503,7 +606,7 @@ function syncNavigationWithUrl(url) {
   updatePageButtons();
 }
 
-function getContentFrameUrl() {
+function getContentFrameUrl(): string {
   try {
     return elements.contentFrame.contentWindow?.location.href || elements.contentFrame.src;
   } catch {
@@ -511,11 +614,11 @@ function getContentFrameUrl() {
   }
 }
 
-function syncNavigationWithFrame() {
+function syncNavigationWithFrame(): void {
   syncNavigationWithUrl(getContentFrameUrl());
 }
 
-function loadContent(url) {
+function loadContent(url: string): void {
   elements.contentFrame.hidden = false;
   elements.emptyState.hidden = true;
   setLoading(false);
@@ -525,18 +628,18 @@ function loadContent(url) {
   });
 }
 
-function updateHistoryButtons() {
+function updateHistoryButtons(): void {
   elements.back.disabled = historyIndex <= 0;
   elements.forward.disabled = historyIndex >= history.length - 1;
 }
 
-function updatePageButtons() {
-  const currentIndex = readingOrder.indexOf(currentTopicPath);
+function updatePageButtons(): void {
+  const currentIndex = currentTopicPath ? readingOrder.indexOf(currentTopicPath) : -1;
   elements.previousPage.disabled = currentIndex <= 0;
   elements.nextPage.disabled = currentIndex < 0 || currentIndex >= readingOrder.length - 1;
 }
 
-function moveHistory(offset) {
+function moveHistory(offset: number): void {
   const nextIndex = historyIndex + offset;
   if (nextIndex < 0 || nextIndex >= history.length) return;
 
@@ -545,15 +648,15 @@ function moveHistory(offset) {
   navigateTo(entry.topicPath, false, entry.row);
 }
 
-function movePage(offset) {
-  const currentIndex = readingOrder.indexOf(currentTopicPath);
+function movePage(offset: number): void {
+  const currentIndex = currentTopicPath ? readingOrder.indexOf(currentTopicPath) : -1;
   const nextTopicPath = readingOrder[currentIndex + offset];
   if (!nextTopicPath) return;
 
   navigateTo(nextTopicPath, true);
 }
 
-function applyBook(book) {
+function applyBook(book: OpenedBook): void {
   if (!book) return;
 
   currentBook = book;
@@ -566,8 +669,9 @@ function applyBook(book) {
     resultsByPath: new Map(),
     currentMatchIndex: 0,
   };
-  readingOrder = window.chmNavigation.getTopicPathsInReadingOrder(book.contents);
+  readingOrder = getTopicPathsInReadingOrder(book.contents);
   elements.bookTitle.textContent = book.name;
+  setTextEncodingControlValue(book.textEncoding || 'auto');
   elements.search.disabled = book.contents.length === 0 && book.searchablePageCount === 0;
   elements.expandAll.disabled = book.contents.length === 0;
   elements.collapseAll.disabled = book.contents.length === 0;
@@ -585,10 +689,14 @@ function applyBook(book) {
   updateHistoryButtons();
   updatePageButtons();
 
-  const firstTopic = findFirstTopic(book.contents);
-  if (firstTopic) {
-    const firstRow = elements.navigation.querySelector('.tree-row');
-    navigateTo(firstTopic, true, firstRow);
+  const restoreTopic = pendingTopicPathAfterEncoding && readingOrder.includes(pendingTopicPathAfterEncoding)
+    ? pendingTopicPathAfterEncoding
+    : null;
+  pendingTopicPathAfterEncoding = null;
+
+  const initialTopic = restoreTopic || findFirstTopic(book.contents);
+  if (initialTopic) {
+    navigateTo(initialTopic, true, findNavigationRow(initialTopic));
   } else if (book.defaultPage) {
     loadContent(book.defaultPage);
   } else {
@@ -597,13 +705,84 @@ function applyBook(book) {
   }
 }
 
-function setTreeActionsMenuOpen(isOpen) {
+function getEncodingOptions(): UiElement[] {
+  return [...elements.textEncodingMenu.querySelectorAll<UiElement>('.encoding-option')];
+}
+
+function getTextEncodingControlValue(): string {
+  return elements.textEncoding.dataset.encoding || 'auto';
+}
+
+function setTextEncodingControlValue(encoding: string | null): void {
+  const nextEncoding = encoding || 'auto';
+  const options = getEncodingOptions();
+  const selectedOption = options.find((option) => option.dataset.encoding === nextEncoding) || options[0];
+
+  elements.textEncoding.dataset.encoding = selectedOption?.dataset.encoding || 'auto';
+  elements.textEncodingValue.textContent = selectedOption?.textContent?.trim() || '默认编码';
+  options.forEach((option) => {
+    option.setAttribute('aria-selected', String(option === selectedOption));
+  });
+}
+
+function setEncodingMenuOpen(isOpen: boolean): void {
+  if (isOpen && elements.textEncoding.disabled) return;
+
+  elements.textEncodingMenu.hidden = !isOpen;
+  elements.textEncoding.setAttribute('aria-expanded', String(isOpen));
+  if (!isOpen) return;
+
+  const selectedOption = getEncodingOptions()
+    .find((option) => option.getAttribute('aria-selected') === 'true');
+  selectedOption?.focus();
+}
+
+async function selectTextEncoding(nextEncoding: string): Promise<void> {
+  const previousEncoding = getTextEncodingControlValue();
+  setEncodingMenuOpen(false);
+  if (nextEncoding === previousEncoding) return;
+
+  pendingTopicPathAfterEncoding = currentTopicPath;
+  elements.textEncoding.disabled = true;
+  setTextEncodingControlValue(nextEncoding);
+  try {
+    await window.chmReader.setTextEncoding(nextEncoding);
+  } catch (error: unknown) {
+    pendingTopicPathAfterEncoding = null;
+    setTextEncodingControlValue(previousEncoding);
+    window.alert(`无法切换文本编码：${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    elements.textEncoding.disabled = false;
+  }
+}
+
+function focusEncodingOption(offset: number): void {
+  const options = getEncodingOptions();
+  if (!options.length) return;
+
+  const activeIndex = options.indexOf(document.activeElement as UiElement);
+  const selectedIndex = options.findIndex((option) => option.getAttribute('aria-selected') === 'true');
+  const currentIndex = activeIndex >= 0 ? activeIndex : Math.max(0, selectedIndex);
+  const nextIndex = (currentIndex + offset + options.length) % options.length;
+  options[nextIndex].focus();
+}
+
+function focusFirstEncodingOption(): void {
+  getEncodingOptions()[0]?.focus();
+}
+
+function focusLastEncodingOption(): void {
+  const options = getEncodingOptions();
+  options[options.length - 1]?.focus();
+}
+
+function setTreeActionsMenuOpen(isOpen: boolean): void {
   elements.treeActionsMenu.hidden = !isOpen;
   elements.treeMenuTrigger.setAttribute('aria-expanded', String(isOpen));
   if (isOpen) elements.expandAll.focus();
 }
 
-function refreshNavigationTree() {
+function refreshNavigationTree(): void {
   if (!currentBook) return;
 
   renderNavigation(currentBook.contents);
@@ -613,7 +792,7 @@ function refreshNavigationTree() {
   }
 }
 
-function findFirstTopic(items) {
+function findFirstTopic(items: readonly BookContentsItem[]): string | null {
   for (const item of items) {
     if (item.path) return item.path;
     const childTopic = findFirstTopic(item.children);
@@ -624,29 +803,31 @@ function findFirstTopic(items) {
 
 function updateSearchMatchNavigation() {
   const result = getTopicSearchResult(currentTopicPath);
+  const matchCount = result?.count || 0;
   const hasCurrentPageMatches = searchState.scope === 'body'
     && Boolean(searchState.query)
     && Boolean(result);
   elements.searchMatchNavigation.hidden = !hasCurrentPageMatches;
   elements.searchToolbarSeparator.hidden = !hasCurrentPageMatches;
-  elements.searchPrevious.disabled = !hasCurrentPageMatches || result.count < 2;
-  elements.searchNext.disabled = !hasCurrentPageMatches || result.count < 2;
+  elements.searchPrevious.disabled = !hasCurrentPageMatches || matchCount < 2;
+  elements.searchNext.disabled = !hasCurrentPageMatches || matchCount < 2;
   elements.searchMatchPosition.value = hasCurrentPageMatches
-    ? `${searchState.currentMatchIndex + 1} / ${result.count}`
+    ? `${searchState.currentMatchIndex + 1} / ${matchCount}`
     : '0 / 0';
 }
 
 function applySearchStateToNavigation() {
-  const topLevelItems = [...elements.navigation.querySelectorAll('.tree > .tree-item')];
+  const topLevelItems = [...elements.navigation.querySelectorAll<HTMLElement>('.tree > .tree-item')];
   const hasQuery = Boolean(searchState.query);
 
-  function applyBodySearch(item) {
-    const childCount = [...item.querySelectorAll(':scope > ul > .tree-item')]
-      .map(applyBodySearch)
+  function applyBodySearch(item: HTMLElement): number {
+    const childCount = [...item.querySelectorAll<HTMLElement>(':scope > ul > .tree-item')]
+      .map((child) => applyBodySearch(child))
       .reduce((total, count) => total + count, 0);
-    const ownCount = getTopicSearchResult(item.dataset.topicPath)?.count || 0;
+    const ownCount = getTopicSearchResult(item.dataset.topicPath || null)?.count || 0;
     const total = ownCount + childCount;
-    const count = item.querySelector(':scope > .tree-row .tree-search-count');
+    const count = item.querySelector<UiElement>(':scope > .tree-row .tree-search-count');
+    if (!count) return total;
     count.hidden = total === 0;
     count.textContent = total ? `(${total})` : '';
     item.classList.toggle('search-match', ownCount > 0);
@@ -655,15 +836,16 @@ function applySearchStateToNavigation() {
     return total;
   }
 
-  function applyDirectorySearch(item) {
-    const childMatches = [...item.querySelectorAll(':scope > ul > .tree-item')]
-      .map(applyDirectorySearch)
+  function applyDirectorySearch(item: HTMLElement): boolean {
+    const childMatches = [...item.querySelectorAll<HTMLElement>(':scope > ul > .tree-item')]
+      .map((child) => applyDirectorySearch(child))
       .some(Boolean);
-    const ownMatch = item.dataset.title.includes(searchState.query.toLocaleLowerCase());
+    const ownMatch = (item.dataset.title || '').includes(searchState.query.toLocaleLowerCase());
     const matches = ownMatch || childMatches;
     item.classList.toggle('search-match', ownMatch);
     item.classList.toggle('filtered-out', !matches);
-    item.querySelector(':scope > .tree-row .tree-search-count').hidden = true;
+    const count = item.querySelector<UiElement>(':scope > .tree-row .tree-search-count');
+    if (count) count.hidden = true;
     if (childMatches) setTreeItemExpanded(item, true);
     return matches;
   }
@@ -671,7 +853,8 @@ function applySearchStateToNavigation() {
   topLevelItems.forEach((item) => {
     if (!hasQuery) {
       item.classList.remove('search-match', 'filtered-out');
-      item.querySelector(':scope > .tree-row .tree-search-count').hidden = true;
+      const count = item.querySelector<UiElement>(':scope > .tree-row .tree-search-count');
+      if (count) count.hidden = true;
       return;
     }
     if (searchState.scope === 'body') applyBodySearch(item);
@@ -701,14 +884,15 @@ function updateSearchStatus() {
   elements.searchStatus.textContent = `正文中找到 ${count} 处，涉及 ${results.length} 个章节`;
 }
 
-function moveSearchMatch(offset) {
+function moveSearchMatch(offset: number): void {
   const result = getTopicSearchResult(currentTopicPath);
   if (!result || result.count < 2) return;
   const nextMatch = (searchState.currentMatchIndex + offset + result.count) % result.count;
+  if (!currentTopicPath) return;
   navigateTo(currentTopicPath, false, findNavigationRow(currentTopicPath), nextMatch);
 }
 
-function setSearchScope(scope) {
+function setSearchScope(scope: SearchScope): void {
   searchState.scope = scope;
   elements.searchBody.setAttribute('aria-checked', String(scope === 'body'));
   elements.searchDirectory.setAttribute('aria-checked', String(scope === 'directory'));
@@ -719,7 +903,7 @@ function setSearchScope(scope) {
   searchNavigation(elements.search.value);
 }
 
-async function searchNavigation(query) {
+async function searchNavigation(query: string): Promise<void> {
   const normalizedQuery = query.trim();
   const requestId = ++searchRequestId;
   searchState.query = normalizedQuery;
@@ -748,12 +932,12 @@ async function searchNavigation(query) {
   renderNavigation(currentBook?.contents || []);
   updateSearchStatus();
   updateSearchMatchNavigation();
-  if (getTopicSearchResult(currentTopicPath)) {
+  if (currentTopicPath && getTopicSearchResult(currentTopicPath)) {
     navigateTo(currentTopicPath, false, findNavigationRow(currentTopicPath));
   }
 }
 
-function setZoom(nextZoom) {
+function setZoom(nextZoom: number): void {
   zoom = Math.min(1.6, Math.max(0.7, nextZoom));
   elements.contentFrame.style.width = `${100 / zoom}%`;
   elements.contentFrame.style.height = `${100 / zoom}%`;
@@ -768,25 +952,25 @@ async function requestImportBooks() {
 }
 
 function initializeResizing() {
-  let startX;
-  let startWidth;
+  let startX = 0;
+  let startWidth = 0;
 
-  elements.resizeHandle.addEventListener('pointerdown', (event) => {
+  elements.resizeHandle.addEventListener('pointerdown', (event: PointerEvent) => {
     startX = event.clientX;
-    startWidth = document.querySelector('#sidebar').getBoundingClientRect().width;
+    startWidth = query('#sidebar').getBoundingClientRect().width;
     elements.resizeHandle.setPointerCapture(event.pointerId);
   });
 
-  elements.resizeHandle.addEventListener('pointermove', (event) => {
+  elements.resizeHandle.addEventListener('pointermove', (event: PointerEvent) => {
     if (!elements.resizeHandle.hasPointerCapture(event.pointerId)) return;
     const width = Math.min(460, Math.max(210, startWidth + event.clientX - startX));
     elements.readerLayout.style.setProperty('--sidebar-width', `${width}px`);
   });
 
-  elements.resizeHandle.addEventListener('keydown', (event) => {
+  elements.resizeHandle.addEventListener('keydown', (event: KeyboardEvent) => {
     if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
     event.preventDefault();
-    const sidebar = document.querySelector('#sidebar');
+    const sidebar = query('#sidebar');
     const delta = event.key === 'ArrowLeft' ? -12 : 12;
     const width = Math.min(460, Math.max(210, sidebar.getBoundingClientRect().width + delta));
     elements.readerLayout.style.setProperty('--sidebar-width', `${width}px`);
@@ -814,7 +998,7 @@ elements.collectionDelete.addEventListener('click', async () => {
 elements.viewGrid.addEventListener('click', () => setLibraryLayout('grid'));
 elements.viewList.addEventListener('click', () => setLibraryLayout('list'));
 elements.backToLibrary.addEventListener('click', () => showView('library'));
-document.querySelector('#toggle-sidebar').addEventListener('click', () => {
+query('#toggle-sidebar').addEventListener('click', () => {
   elements.readerLayout.classList.toggle('sidebar-hidden');
 });
 elements.back.addEventListener('click', () => moveHistory(-1));
@@ -822,7 +1006,7 @@ elements.forward.addEventListener('click', () => moveHistory(1));
 elements.previousPage.addEventListener('click', () => movePage(-1));
 elements.nextPage.addEventListener('click', () => movePage(1));
 elements.treeMenuTrigger.addEventListener('click', () => {
-  setTreeActionsMenuOpen(elements.treeActionsMenu.hidden);
+  setTreeActionsMenuOpen(Boolean(elements.treeActionsMenu.hidden));
 });
 elements.expandAll.addEventListener('click', () => {
   setAllTreeItemsExpanded(true);
@@ -841,10 +1025,10 @@ window.addEventListener('message', (event) => {
   if (event.data?.type !== 'chm-reader:navigated') return;
   syncNavigationWithUrl(event.data.href);
 });
-elements.search.addEventListener('input', (event) => {
-  searchNavigation(event.target.value);
+elements.search.addEventListener('input', (event: Event) => {
+  searchNavigation((event.currentTarget as UiElement).value);
 });
-elements.search.addEventListener('keydown', (event) => {
+elements.search.addEventListener('keydown', (event: KeyboardEvent) => {
   if (event.key !== 'Enter') return;
   event.preventDefault();
   moveSearchMatch(event.shiftKey ? -1 : 1);
@@ -858,20 +1042,78 @@ elements.searchBody.addEventListener('click', () => setSearchScope('body'));
 elements.searchDirectory.addEventListener('click', () => setSearchScope('directory'));
 elements.searchPrevious.addEventListener('click', () => moveSearchMatch(-1));
 elements.searchNext.addEventListener('click', () => moveSearchMatch(1));
-document.addEventListener('pointerdown', (event) => {
-  if (!elements.collectionContextMenu.hidden && !event.target.closest('.context-menu')) {
+elements.textEncoding.addEventListener('click', () => {
+  setEncodingMenuOpen(Boolean(elements.textEncodingMenu.hidden));
+});
+elements.textEncoding.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (!['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) return;
+  event.preventDefault();
+  setEncodingMenuOpen(true);
+  if (event.key === 'ArrowUp') focusLastEncodingOption();
+});
+elements.textEncodingMenu.addEventListener('click', (event: MouseEvent) => {
+  const option = (event.target as Element | null)?.closest<UiElement>('.encoding-option');
+  const encoding = option?.dataset.encoding;
+  if (encoding) selectTextEncoding(encoding);
+});
+elements.textEncodingMenu.addEventListener('keydown', (event: KeyboardEvent) => {
+  const option = (event.target as Element | null)?.closest<UiElement>('.encoding-option');
+  if (!option) return;
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    focusEncodingOption(1);
+    return;
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    focusEncodingOption(-1);
+    return;
+  }
+  if (event.key === 'Home') {
+    event.preventDefault();
+    focusFirstEncodingOption();
+    return;
+  }
+  if (event.key === 'End') {
+    event.preventDefault();
+    focusLastEncodingOption();
+    return;
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    setEncodingMenuOpen(false);
+    elements.textEncoding.focus();
+    return;
+  }
+  if (!['Enter', ' '].includes(event.key)) return;
+  event.preventDefault();
+  const encoding = option.dataset.encoding;
+  if (encoding) selectTextEncoding(encoding);
+});
+document.addEventListener('pointerdown', (event: PointerEvent) => {
+  const target = event.target as Element | null;
+  if (!elements.collectionContextMenu.hidden && !target?.closest('.context-menu')) {
     hideCollectionContextMenu();
   }
   if (!elements.treeActionsMenu.hidden
-    && !event.target.closest('#tree-menu-trigger')
-    && !event.target.closest('#tree-actions-menu')) {
+    && !target?.closest('#tree-menu-trigger')
+    && !target?.closest('#tree-actions-menu')) {
     setTreeActionsMenuOpen(false);
   }
-  if (elements.searchScopeMenu.hidden || event.target.closest('.search-box')) return;
+  if (!elements.textEncodingMenu.hidden && !target?.closest('.encoding-picker')) {
+    setEncodingMenuOpen(false);
+  }
+  if (elements.searchScopeMenu.hidden || target?.closest('.search-box')) return;
   elements.searchScopeMenu.hidden = true;
   elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
 });
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !elements.textEncodingMenu.hidden) {
+    setEncodingMenuOpen(false);
+    elements.textEncoding.focus();
+    return;
+  }
   if (event.key === 'Escape' && !elements.treeActionsMenu.hidden) {
     setTreeActionsMenuOpen(false);
     elements.treeMenuTrigger.focus();
@@ -890,11 +1132,16 @@ document.addEventListener('keydown', (event) => {
   elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
   elements.searchScopeTrigger.focus();
 });
-document.querySelector('#zoom-out').addEventListener('click', () => setZoom(zoom - 0.1));
-document.querySelector('#zoom-in').addEventListener('click', () => setZoom(zoom + 0.1));
+query('#zoom-out').addEventListener('click', () => setZoom(zoom - 0.1));
+query('#zoom-in').addEventListener('click', () => setZoom(zoom + 0.1));
 elements.zoomReset.addEventListener('click', () => setZoom(1));
 
 window.chmReader.onBookOpened(applyBook);
+window.chmReader.onBookIndexReady(({ searchablePageCount }) => {
+  if (!currentBook) return;
+  currentBook.searchablePageCount = searchablePageCount;
+  elements.search.disabled = currentBook.contents.length === 0 && searchablePageCount === 0;
+});
 window.chmReader.onLibraryUpdated(renderLibrary);
 window.chmReader.onShowLibrary(() => showView('library'));
 window.chmReader.onFocusSearch(() => {

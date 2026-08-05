@@ -21,8 +21,6 @@ fi
 
 check_command node "安装 Node.js 22 或更高版本"
 check_command npm "安装 npm"
-check_command brew "安装 Homebrew: https://brew.sh"
-check_command extract_chmLib "运行: brew install chmlib"
 
 if command -v node >/dev/null 2>&1; then
   node_major="$(node -p "process.versions.node.split('.')[0]")"

@@ -2,19 +2,57 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
-const cheerio = require('cheerio');
+import * as cheerio from 'cheerio';
 
 const execFileAsync = promisify(execFile);
 
-function parseContents(markup) {
+export interface BookContentsItem {
+  title: string;
+  path: string | null;
+  children: BookContentsItem[];
+}
+
+export interface BookMetadata {
+  contentsFile: string | null;
+  defaultPage: string | null;
+  contents: BookContentsItem[];
+  searchIndex: SearchIndexEntry[];
+}
+
+export interface SearchIndexEntry {
+  path: string;
+  title: string;
+  text: string;
+}
+
+export interface SearchResult {
+  path: string;
+  title: string;
+  count: number;
+  excerpt: string;
+}
+
+export interface SearchIndexOptions {
+  concurrency?: number;
+}
+
+export interface ReadExtractedBookOptions extends SearchIndexOptions {
+  textEncoding?: string | null;
+  buildSearchIndex?: boolean;
+  indexConcurrency?: number;
+}
+
+export interface ExtractBookOptions extends ReadExtractedBookOptions { }
+
+export function parseContents(markup: string): BookContentsItem[] {
   const $ = cheerio.load(markup);
   const root = $('ul').first();
 
-  function parseList(list) {
-    const nodes = [];
-    let previousNode = null;
+  function parseList(list: any): BookContentsItem[] {
+    const nodes: BookContentsItem[] = [];
+    let previousNode: BookContentsItem | null = null;
 
-    list.children().each((_, element) => {
+    list.children().each((_: number, element: any) => {
       const item = $(element);
       const tagName = element.tagName?.toLowerCase();
 
@@ -28,7 +66,7 @@ function parseContents(markup) {
       const sitemap = item.children('object').first();
       const params = new Map();
 
-      sitemap.children('param').each((__, param) => {
+      sitemap.children('param').each((__: number, param: any) => {
         const name = ($(param).attr('name') || '').toLowerCase();
         params.set(name, $(param).attr('value') || '');
       });
@@ -51,7 +89,7 @@ function parseContents(markup) {
   return root.length ? parseList(root) : [];
 }
 
-function normalizeTopicPath(topicPath) {
+export function normalizeTopicPath(topicPath: string | null | undefined): string | null {
   if (!topicPath) return null;
 
   return topicPath
@@ -61,7 +99,7 @@ function normalizeTopicPath(topicPath) {
     .replaceAll('\\', '/');
 }
 
-function findBookMetadata(root, files) {
+export function findBookMetadata(root: string, files: readonly string[]): Omit<BookMetadata, 'contents' | 'searchIndex'> {
   const contentsFile = files.find((file) => path.extname(file).toLowerCase() === '.hhc') || null;
   const htmlFiles = files.filter((file) => ['.htm', '.html'].includes(path.extname(file).toLowerCase()));
   const preferredNames = ['index.htm', 'index.html', 'default.htm', 'default.html'];
@@ -75,7 +113,7 @@ function findBookMetadata(root, files) {
   };
 }
 
-function resolveBookResource(root, encodedPath) {
+export function resolveBookResource(root: string, encodedPath: string): string {
   const pathWithoutSuffix = encodedPath.split(/[?#]/, 1)[0];
   const relativePath = decodeURIComponent(pathWithoutSuffix).replace(/^[/\\]+/, '');
   const rootPath = path.resolve(root);
@@ -88,14 +126,43 @@ function resolveBookResource(root, encodedPath) {
   return resolvedPath;
 }
 
-function listFiles(root) {
+export function listFiles(root: string): string[] {
   return fs.readdirSync(root, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => path.join(entry.parentPath, entry.name));
+    .filter((entry: any) => entry.isFile())
+    .map((entry: any) => path.join(entry.parentPath, entry.name));
 }
 
-function decodeMarkup(buffer) {
-  const preview = buffer.subarray(0, 2048).toString('latin1');
+export async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number | undefined,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const limit = Math.max(1, Math.floor(Number(concurrency) || 1));
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function consume() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(limit, items.length) },
+    () => consume(),
+  );
+  await Promise.all(workers);
+  return results;
+}
+
+export function decodeMarkup(buffer: Uint8Array, textEncoding: string | null = null): string {
+  if (textEncoding) {
+    return new TextDecoder(textEncoding).decode(buffer);
+  }
+
+  const preview = Buffer.from(buffer.subarray(0, 2048)).toString('latin1');
   const declaredCharset = preview.match(/charset\s*=\s*["']?([\w-]+)/i)?.[1];
 
   if (declaredCharset) {
@@ -113,18 +180,18 @@ function decodeMarkup(buffer) {
   }
 }
 
-function extractSearchableText(markup) {
+export function extractSearchableText(markup: string): string {
   const $ = cheerio.load(markup);
   $('script, style, noscript, template').remove();
-  const textMarkup = $.root().html().replace(/<[^>]+>/g, ' ');
+  const textMarkup = ($.root().html() || '').replace(/<[^>]+>/g, ' ');
   return cheerio.load(textMarkup).text().replace(/\s+/g, ' ').trim();
 }
 
-function normalizeSearchText(value) {
+export function normalizeSearchText(value: unknown): string {
   return String(value || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
 }
 
-function createSearchPattern(query) {
+function createSearchPattern(query: string): RegExp | null {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return null;
 
@@ -135,23 +202,23 @@ function createSearchPattern(query) {
   return new RegExp(pattern, 'gi');
 }
 
-function getSearchMatchCount(text, query) {
+export function getSearchMatchCount(text: string, query: string): number {
   const pattern = createSearchPattern(query);
   if (!pattern) return 0;
   return [...String(text || '').matchAll(pattern)].length;
 }
 
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (character) => ({
+function escapeHtml(value: unknown): string {
+  return String(value).replace(/[&<>"']/g, (character: string) => ({
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;',
-  })[character]);
+  } as Record<string, string>)[character]);
 }
 
-function injectContentNavigationBridge(markup, nonce) {
+export function injectContentNavigationBridge(markup: string, nonce: string): string {
   const bridge = `<script nonce="${escapeHtml(nonce)}">
 (function () {
   function notifyNavigation() {
@@ -190,13 +257,17 @@ function injectContentNavigationBridge(markup, nonce) {
   return `${bridge}${markup}`;
 }
 
-function highlightSearchMatches(markup, query, selectedIndex = 0) {
+export function highlightSearchMatches(
+  markup: string,
+  query: string,
+  selectedIndex = 0,
+): { markup: string; count: number } {
   const pattern = createSearchPattern(query);
   if (!pattern) return { markup, count: 0 };
 
-  const $ = cheerio.load(markup, { decodeEntities: false });
+  const $ = cheerio.load(markup, { decodeEntities: false } as any);
   let matchIndex = 0;
-  $('body, body *').contents().each((_, node) => {
+  $('body, body *').contents().each((_: number, node: any) => {
     if (node.type !== 'text' || ['script', 'style', 'noscript', 'template'].includes(node.parent?.tagName)) {
       return;
     }
@@ -204,7 +275,7 @@ function highlightSearchMatches(markup, query, selectedIndex = 0) {
     const text = node.data || '';
     if (!pattern.test(text)) return;
     pattern.lastIndex = 0;
-    const replacement = text.replace(pattern, (match) => {
+    const replacement = text.replace(pattern, (match: string) => {
       const classes = matchIndex === selectedIndex
         ? 'chm-search-match chm-search-current'
         : 'chm-search-match';
@@ -219,10 +290,13 @@ function highlightSearchMatches(markup, query, selectedIndex = 0) {
   return { markup: $.html(), count: matchIndex };
 }
 
-function getTopicTitles(items, titles = new Map()) {
+function getTopicTitles(
+  items: readonly BookContentsItem[],
+  titles = new Map<string, string>(),
+): Map<string, string> {
   items.forEach((item) => {
     if (item.path) {
-      const topicPath = normalizeTopicPath(item.path).split('#', 1)[0];
+      const topicPath = (normalizeTopicPath(item.path) || '').split('#', 1)[0];
       titles.set(topicPath.toLocaleLowerCase(), item.title);
     }
     getTopicTitles(item.children, titles);
@@ -230,14 +304,21 @@ function getTopicTitles(items, titles = new Map()) {
   return titles;
 }
 
-async function createSearchIndex(root, files, contents) {
+export async function createSearchIndex(
+  root: string,
+  files: readonly string[],
+  contents: readonly BookContentsItem[],
+  textEncoding: string | null = null,
+  options: SearchIndexOptions = {},
+): Promise<SearchIndexEntry[]> {
   const titles = getTopicTitles(contents);
   const htmlFiles = files.filter((file) => ['.htm', '.html'].includes(path.extname(file).toLowerCase()));
+  const concurrency = options.concurrency || 4;
 
-  const entries = await Promise.all(htmlFiles.map(async (file) => {
+  const entries = await mapWithConcurrency(htmlFiles, concurrency, async (file) => {
     try {
       const relativePath = path.relative(root, file).split(path.sep).join('/');
-      const markup = decodeMarkup(await fs.promises.readFile(file));
+      const markup = decodeMarkup(await fs.promises.readFile(file), textEncoding);
       const $ = cheerio.load(markup);
       const pageTitle = $('title').first().text().trim();
       return {
@@ -248,11 +329,11 @@ async function createSearchIndex(root, files, contents) {
     } catch {
       return null;
     }
-  }));
-  return entries.filter(Boolean);
+  });
+  return entries.filter((entry): entry is SearchIndexEntry => entry !== null);
 }
 
-function searchBookContents(index, query) {
+export function searchBookContents(index: readonly SearchIndexEntry[], query: string): SearchResult[] {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return [];
 
@@ -274,16 +355,24 @@ function searchBookContents(index, query) {
     });
 }
 
-async function extractBook(chmPath, destination, extractor = 'extract_chmLib') {
-  await fs.promises.mkdir(destination, { recursive: true });
-  await execFileAsync(extractor, [chmPath, destination]);
-
-  const files = listFiles(destination);
-  const metadata = findBookMetadata(destination, files);
+export async function readExtractedBook(
+  root: string,
+  textEncodingOrOptions: string | ReadExtractedBookOptions | null = null,
+): Promise<BookMetadata> {
+  const options: ReadExtractedBookOptions = typeof textEncodingOrOptions === 'object' && textEncodingOrOptions !== null
+    ? textEncodingOrOptions
+    : { textEncoding: textEncodingOrOptions };
+  const textEncoding = options.textEncoding || null;
+  const files = listFiles(root);
+  const metadata = findBookMetadata(root, files);
   const contents = metadata.contentsFile
-    ? parseContents(decodeMarkup(await fs.promises.readFile(metadata.contentsFile)))
+    ? parseContents(decodeMarkup(await fs.promises.readFile(metadata.contentsFile), textEncoding))
     : [];
-  const searchIndex = await createSearchIndex(destination, files, contents);
+  const searchIndex = options.buildSearchIndex === false
+    ? []
+    : await createSearchIndex(root, files, contents, textEncoding, {
+      concurrency: options.indexConcurrency,
+    });
 
   return {
     ...metadata,
@@ -292,18 +381,18 @@ async function extractBook(chmPath, destination, extractor = 'extract_chmLib') {
   };
 }
 
-module.exports = {
-  createSearchIndex,
-  decodeMarkup,
-  extractBook,
-  extractSearchableText,
-  findBookMetadata,
-  getSearchMatchCount,
-  highlightSearchMatches,
-  injectContentNavigationBridge,
-  normalizeSearchText,
-  normalizeTopicPath,
-  parseContents,
-  resolveBookResource,
-  searchBookContents,
-};
+export async function extractBook(
+  chmPath: string,
+  destination: string,
+  extractor = 'extract_chmLib',
+  options: ExtractBookOptions = {},
+): Promise<BookMetadata> {
+  await fs.promises.mkdir(destination, { recursive: true });
+  await execFileAsync(extractor, [chmPath, destination]);
+
+  return readExtractedBook(destination, {
+    textEncoding: options.textEncoding || null,
+    buildSearchIndex: options.buildSearchIndex !== false,
+    indexConcurrency: options.indexConcurrency,
+  });
+}

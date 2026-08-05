@@ -20,14 +20,6 @@
 
 - macOS 12 或更高版本
 - Node.js 22 或更高版本
-- Homebrew
-- CHMLib 0.40
-
-安装 CHM 解析工具：
-
-```bash
-brew install chmlib
-```
 
 检查环境：
 
@@ -42,14 +34,20 @@ npm install
 npm run run
 ```
 
+开发启动前会自动执行 TypeScript 编译，产物位于 `build/`，Electron 从 `build/main.js` 启动。
+
 也可以在应用菜单中选择 `File > Add CHM to Library...`（或按 `Command+O`）添加文档，`File > Show Library`（或按 `Command+L`）返回书库。
 
 ## 测试与检查
 
 ```bash
 npm test
+npm run typecheck
+npm run build
 npm run check
 ```
+
+`src/` 和 `test/` 使用 TypeScript；测试脚本会先将 TypeScript 编译到临时目录，再由 Node.js test runner 执行。
 
 ## macOS 打包
 
@@ -71,7 +69,7 @@ Intel：
 npm run package:mac:x64
 ```
 
-应用会生成在 `dist/` 目录。CHMLib 当前作为运行时依赖，目标 Mac 也需要执行一次 `brew install chmlib`。
+应用会生成在 `dist/` 目录。打包阶段会把 `extract_chmLib` 和 `libchm` 内置到 `.app` 中，因此目标 Mac 不需要额外安装 CHMLib。打包机需要安装对应架构的 CHMLib 作为 vendoring 来源：Apple Silicon 默认路径为 `/opt/homebrew/bin/extract_chmLib`，Intel 默认路径为 `/usr/local/bin/extract_chmLib`。
 
 ## macOS 安装
 
@@ -92,18 +90,21 @@ npm run install:mac:x64
 
 ## 脚本清单
 
-- `npm run doctor`：检查 macOS、Node.js、Homebrew 和 `extract_chmLib`。
-- `npm run run`：检查环境，安装缺失的 npm 依赖，并启动开发版应用。
+- `npm run doctor`：检查 macOS、Node.js 和 npm。
+- `npm run typecheck`：执行严格 TypeScript 类型检查，不生成文件。
+- `npm run build`：编译 TypeScript，并复制 HTML、CSS 和静态资源到 `build/`。
+- `npm run run`：检查环境，安装缺失的 npm 依赖，编译并启动开发版应用。
 - `npm run package:mac`：按当前机器架构打包 macOS 应用。
 - `npm run package:mac:arm64`：打包 Apple Silicon 应用。
 - `npm run package:mac:x64`：打包 Intel 应用。
 - `npm run install:mac`：打包并安装到 `/Applications/CHMReaderLight.app`，若已存在则升级覆盖。
-- `npm run clean`：清理 `dist/` 打包产物。
+- `npm run clean`：清理 `build/`、`dist/` 和测试临时产物。
 
 ## 实现说明
 
 - 书库条目仅在 `library.json` 中记录源文件的原始路径、显示名、所属书库和添加时间（不复制源文件）；进入应用先渲染书库，点击条目才提取并进入阅读视图。移除书库或文档只删除该记录，不影响源文件。
-- Electron 主进程调用 `extract_chmLib`，将文档释放到应用专用临时目录。
+- Electron 主进程优先调用应用内置的 `extract_chmLib`，将文档释放到应用专用临时目录；开发环境可回退到系统安装的 `extract_chmLib`。
+- Node/Electron 代码编译为 CommonJS；renderer 和浏览器 helper 编译为 ES module，由 `src/index.html` 以 `type="module"` 加载。
 - `.hhc` 文件在主进程解析为纯数据目录树，兼容子级 `<ul>` 嵌套在 `<li>` 内或作为相邻兄弟节点的两种常见格式，再通过隔离的 preload API 传给界面。
 - 正文通过受限的 `chm://` 自定义协议加载，所有路径在读取前都进行解码和目录边界检查。
 - 正文 iframe 不允许脚本、表单或弹窗；协议响应额外携带严格 CSP。
