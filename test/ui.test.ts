@@ -30,10 +30,20 @@ test('reader toolbar places text encoding picker after zoom controls', () => {
 
   assert.ok(zoomInIndex >= 0, 'reader toolbar should include zoom-in control');
   assert.ok(encodingIndex > zoomInIndex, 'text encoding picker should sit to the right of zoom controls');
-  assert.match(toolbarRight, /<select id="text-encoding"[^>]*aria-label="文本编码"/);
-  assert.match(toolbarRight, /<option value="auto">默认编码<\/option>/);
-  assert.match(toolbarRight, /<option value="gbk">简体中文 \(GBK\)<\/option>/);
-  assert.match(toolbarRight, /<option value="gb18030">简体中文 \(GB18030\)<\/option>/);
+  assert.match(toolbarRight, /<button class="encoding-trigger" id="text-encoding"[^>]*aria-haspopup="listbox"/);
+  assert.match(toolbarRight, /<div class="encoding-menu" id="text-encoding-menu" role="listbox"[^>]*hidden>/);
+  assert.doesNotMatch(toolbarRight, /<select id="text-encoding"/);
+  assert.match(toolbarRight, /data-encoding="auto"[^>]*>默认编码<\/button>/);
+  assert.match(toolbarRight, /data-encoding="gbk"[^>]*>简体中文 \(GBK\)<\/button>/);
+  assert.match(toolbarRight, /data-encoding="gb18030"[^>]*>简体中文 \(GB18030\)<\/button>/);
+});
+
+test('encoding picker menu is anchored below the trigger instead of using native select popup', () => {
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+
+  assert.match(css, /\.encoding-picker\s*{[^}]*position: relative;/s);
+  assert.match(css, /\.encoding-menu\s*{[^}]*position: absolute;[^}]*top: calc\(100% \+ 6px\);/s);
+  assert.match(css, /\.encoding-menu\s*{[^}]*right: 0;/s);
 });
 
 test('runtime prefers the bundled CHM extractor', () => {

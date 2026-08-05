@@ -146,6 +146,8 @@ const elements = {
   refreshTree: query('#refresh-tree'),
   zoomReset: query('#zoom-reset'),
   textEncoding: query('#text-encoding'),
+  textEncodingValue: query('#text-encoding-value'),
+  textEncodingMenu: query('#text-encoding-menu'),
 };
 
 let currentBook: OpenedBook | null = null;
@@ -669,7 +671,7 @@ function applyBook(book: OpenedBook): void {
   };
   readingOrder = getTopicPathsInReadingOrder(book.contents);
   elements.bookTitle.textContent = book.name;
-  elements.textEncoding.value = book.textEncoding || 'auto';
+  setTextEncodingControlValue(book.textEncoding || 'auto');
   elements.search.disabled = book.contents.length === 0 && book.searchablePageCount === 0;
   elements.expandAll.disabled = book.contents.length === 0;
   elements.collapseAll.disabled = book.contents.length === 0;
@@ -701,6 +703,77 @@ function applyBook(book: OpenedBook): void {
     setLoading(false);
     elements.emptyState.hidden = false;
   }
+}
+
+function getEncodingOptions(): UiElement[] {
+  return [...elements.textEncodingMenu.querySelectorAll<UiElement>('.encoding-option')];
+}
+
+function getTextEncodingControlValue(): string {
+  return elements.textEncoding.dataset.encoding || 'auto';
+}
+
+function setTextEncodingControlValue(encoding: string | null): void {
+  const nextEncoding = encoding || 'auto';
+  const options = getEncodingOptions();
+  const selectedOption = options.find((option) => option.dataset.encoding === nextEncoding) || options[0];
+
+  elements.textEncoding.dataset.encoding = selectedOption?.dataset.encoding || 'auto';
+  elements.textEncodingValue.textContent = selectedOption?.textContent?.trim() || '默认编码';
+  options.forEach((option) => {
+    option.setAttribute('aria-selected', String(option === selectedOption));
+  });
+}
+
+function setEncodingMenuOpen(isOpen: boolean): void {
+  if (isOpen && elements.textEncoding.disabled) return;
+
+  elements.textEncodingMenu.hidden = !isOpen;
+  elements.textEncoding.setAttribute('aria-expanded', String(isOpen));
+  if (!isOpen) return;
+
+  const selectedOption = getEncodingOptions()
+    .find((option) => option.getAttribute('aria-selected') === 'true');
+  selectedOption?.focus();
+}
+
+async function selectTextEncoding(nextEncoding: string): Promise<void> {
+  const previousEncoding = getTextEncodingControlValue();
+  setEncodingMenuOpen(false);
+  if (nextEncoding === previousEncoding) return;
+
+  pendingTopicPathAfterEncoding = currentTopicPath;
+  elements.textEncoding.disabled = true;
+  setTextEncodingControlValue(nextEncoding);
+  try {
+    await window.chmReader.setTextEncoding(nextEncoding);
+  } catch (error: unknown) {
+    pendingTopicPathAfterEncoding = null;
+    setTextEncodingControlValue(previousEncoding);
+    window.alert(`无法切换文本编码：${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    elements.textEncoding.disabled = false;
+  }
+}
+
+function focusEncodingOption(offset: number): void {
+  const options = getEncodingOptions();
+  if (!options.length) return;
+
+  const activeIndex = options.indexOf(document.activeElement as UiElement);
+  const selectedIndex = options.findIndex((option) => option.getAttribute('aria-selected') === 'true');
+  const currentIndex = activeIndex >= 0 ? activeIndex : Math.max(0, selectedIndex);
+  const nextIndex = (currentIndex + offset + options.length) % options.length;
+  options[nextIndex].focus();
+}
+
+function focusFirstEncodingOption(): void {
+  getEncodingOptions()[0]?.focus();
+}
+
+function focusLastEncodingOption(): void {
+  const options = getEncodingOptions();
+  options[options.length - 1]?.focus();
 }
 
 function setTreeActionsMenuOpen(isOpen: boolean): void {
@@ -969,6 +1042,55 @@ elements.searchBody.addEventListener('click', () => setSearchScope('body'));
 elements.searchDirectory.addEventListener('click', () => setSearchScope('directory'));
 elements.searchPrevious.addEventListener('click', () => moveSearchMatch(-1));
 elements.searchNext.addEventListener('click', () => moveSearchMatch(1));
+elements.textEncoding.addEventListener('click', () => {
+  setEncodingMenuOpen(Boolean(elements.textEncodingMenu.hidden));
+});
+elements.textEncoding.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (!['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) return;
+  event.preventDefault();
+  setEncodingMenuOpen(true);
+  if (event.key === 'ArrowUp') focusLastEncodingOption();
+});
+elements.textEncodingMenu.addEventListener('click', (event: MouseEvent) => {
+  const option = (event.target as Element | null)?.closest<UiElement>('.encoding-option');
+  const encoding = option?.dataset.encoding;
+  if (encoding) selectTextEncoding(encoding);
+});
+elements.textEncodingMenu.addEventListener('keydown', (event: KeyboardEvent) => {
+  const option = (event.target as Element | null)?.closest<UiElement>('.encoding-option');
+  if (!option) return;
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    focusEncodingOption(1);
+    return;
+  }
+  if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    focusEncodingOption(-1);
+    return;
+  }
+  if (event.key === 'Home') {
+    event.preventDefault();
+    focusFirstEncodingOption();
+    return;
+  }
+  if (event.key === 'End') {
+    event.preventDefault();
+    focusLastEncodingOption();
+    return;
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    setEncodingMenuOpen(false);
+    elements.textEncoding.focus();
+    return;
+  }
+  if (!['Enter', ' '].includes(event.key)) return;
+  event.preventDefault();
+  const encoding = option.dataset.encoding;
+  if (encoding) selectTextEncoding(encoding);
+});
 document.addEventListener('pointerdown', (event: PointerEvent) => {
   const target = event.target as Element | null;
   if (!elements.collectionContextMenu.hidden && !target?.closest('.context-menu')) {
@@ -979,11 +1101,19 @@ document.addEventListener('pointerdown', (event: PointerEvent) => {
     && !target?.closest('#tree-actions-menu')) {
     setTreeActionsMenuOpen(false);
   }
+  if (!elements.textEncodingMenu.hidden && !target?.closest('.encoding-picker')) {
+    setEncodingMenuOpen(false);
+  }
   if (elements.searchScopeMenu.hidden || target?.closest('.search-box')) return;
   elements.searchScopeMenu.hidden = true;
   elements.searchScopeTrigger.setAttribute('aria-expanded', 'false');
 });
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !elements.textEncodingMenu.hidden) {
+    setEncodingMenuOpen(false);
+    elements.textEncoding.focus();
+    return;
+  }
   if (event.key === 'Escape' && !elements.treeActionsMenu.hidden) {
     setTreeActionsMenuOpen(false);
     elements.treeMenuTrigger.focus();
@@ -1005,20 +1135,6 @@ document.addEventListener('keydown', (event) => {
 query('#zoom-out').addEventListener('click', () => setZoom(zoom - 0.1));
 query('#zoom-in').addEventListener('click', () => setZoom(zoom + 0.1));
 elements.zoomReset.addEventListener('click', () => setZoom(1));
-elements.textEncoding.addEventListener('change', async () => {
-  const previousEncoding = currentBook?.textEncoding || 'auto';
-  pendingTopicPathAfterEncoding = currentTopicPath;
-  elements.textEncoding.disabled = true;
-  try {
-    await window.chmReader.setTextEncoding(elements.textEncoding.value);
-  } catch (error: unknown) {
-    pendingTopicPathAfterEncoding = null;
-    elements.textEncoding.value = previousEncoding;
-    window.alert(`无法切换文本编码：${error instanceof Error ? error.message : String(error)}`);
-  } finally {
-    elements.textEncoding.disabled = false;
-  }
-});
 
 window.chmReader.onBookOpened(applyBook);
 window.chmReader.onBookIndexReady(({ searchablePageCount }) => {
