@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; frame-src chm:">
     <title>CHMReaderLight</title>
+    <link rel="icon" href="./assets/app-logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body data-view="library">
@@ -12,7 +13,10 @@
       <header class="app-header" id="library-toolbar">
         <div class="titlebar">
           <div class="window-drag-region" aria-hidden="true"></div>
-          <div class="titlebar-title">CHMReaderLight</div>
+          <div class="titlebar-brand" aria-label="CHMReaderLight">
+            <img class="titlebar-logo" src="./assets/app-logo.svg" alt="">
+            <div class="titlebar-title">CHMReaderLight</div>
+          </div>
         </div>
         <div class="toolbar">
           <div class="toolbar-left">
@@ -51,7 +55,10 @@
       <header class="app-header" id="reader-toolbar" hidden>
         <div class="titlebar">
           <div class="window-drag-region" aria-hidden="true"></div>
-          <div class="titlebar-title" id="book-title">CHMReaderLight</div>
+          <div class="titlebar-brand" aria-label="当前书籍">
+            <img class="titlebar-logo" src="./assets/app-logo.svg" alt="">
+            <div class="titlebar-title" id="book-title">CHMReaderLight</div>
+          </div>
         </div>
         <div class="toolbar">
           <div class="toolbar-left">

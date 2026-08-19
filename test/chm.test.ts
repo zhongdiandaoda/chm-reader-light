@@ -238,6 +238,22 @@ test('searchBookContents finds normalized body text without case sensitivity', (
   assert.match(results[0].excerpt, /Use Homebrew to install the reader\./);
 });
 
+test('extractSearchableText decodes entities and ignores non-content tags', () => {
+  const text = extractSearchableText(`
+    <html><head>
+      <title>Network &amp; Routing</title>
+      <style>.hidden { content: "ignored"; }</style>
+      <template>ignored template</template>
+    </head><body>
+      <h1>VXLAN&nbsp;Guide</h1>
+      <script>const ignored = "VXLAN";</script>
+      <p>Use &lt;route&gt; entries.</p>
+    </body></html>
+  `);
+
+  assert.equal(text, 'Network & Routing VXLAN Guide Use <route> entries.');
+});
+
 test('searchBookContents returns the number of matches for each matching page', () => {
   const index = [{
     path: 'network.htm',

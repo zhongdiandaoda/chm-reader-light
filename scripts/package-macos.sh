@@ -32,11 +32,15 @@ fi
 
 npm run build
 
+icon_path="$root_dir/build/assets/app-icon.icns"
+"$root_dir/scripts/generate-macos-icon.sh" "$icon_path"
+
 ./node_modules/.bin/electron-packager . CHMReaderLight \
   --platform=darwin \
   --arch="$arch" \
   --out=dist \
   --overwrite \
+  --icon="$icon_path" \
   --app-bundle-id=com.liuqi.chmreader \
   --app-category-type=public.app-category.reference
 

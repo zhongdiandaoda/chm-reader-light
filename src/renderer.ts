@@ -53,6 +53,7 @@ interface ChmReaderApi {
   createBookUrl: (topicPath: string | null) => Promise<string | null>;
   searchBook: (query: string) => Promise<SearchResult[]>;
   setTextEncoding: (encoding: string) => Promise<OpenedBook | { textEncoding: string | null }>;
+  setView: (view: 'library' | 'reader') => Promise<unknown>;
   onBookOpened: (callback: (book: OpenedBook) => void) => () => void;
   onBookIndexReady: (callback: (result: { searchablePageCount: number }) => void) => () => void;
   onLibraryUpdated: (callback: (entries: LibraryState) => void) => () => void;
@@ -175,6 +176,7 @@ let contextCollectionCount = 0;
 
 function showView(view: 'library' | 'reader'): void {
   document.body.dataset.view = view;
+  void window.chmReader.setView(view);
   const isReader = view === 'reader';
   elements.libraryToolbar.hidden = isReader;
   elements.readerToolbar.hidden = !isReader;

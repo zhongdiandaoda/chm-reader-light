@@ -49,6 +49,7 @@ interface ChmReaderApi {
   createBookUrl: (topicPath: string | null) => Promise<string | null>;
   searchBook: (query: string) => Promise<SearchResult[]>;
   setTextEncoding: (encoding: string) => Promise<OpenedBook | { textEncoding: string | null }>;
+  setView: (view: 'library' | 'reader') => Promise<unknown>;
   openExternal: (url: string) => Promise<unknown>;
   onBookOpened: (callback: (book: OpenedBook) => void) => Unsubscribe;
   onBookIndexReady: (callback: (result: IndexReady) => void) => Unsubscribe;
@@ -79,6 +80,7 @@ const chmReader: ChmReaderApi = {
   createBookUrl: (topicPath) => ipcRenderer.invoke('book:url', topicPath) as Promise<string | null>,
   searchBook: (query) => ipcRenderer.invoke('book:search', query) as Promise<SearchResult[]>,
   setTextEncoding: (encoding) => ipcRenderer.invoke('book:encoding', encoding) as Promise<OpenedBook | { textEncoding: string | null }>,
+  setView: (view) => ipcRenderer.invoke('view:set', view),
   openExternal: (url) => ipcRenderer.invoke('external:open', url),
   onBookOpened: (callback) => {
     const listener = (_event: unknown, book: unknown) => callback(book as OpenedBook);

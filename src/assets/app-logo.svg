@@ -1,0 +1,8 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="rotate(45 64 64)">
+    <path d="M54 18H24V104H78" stroke="#241E26" stroke-width="14" stroke-linecap="square" stroke-linejoin="miter"/>
+    <path d="M74 18H104V104H50" stroke="#8A8890" stroke-width="14" stroke-linecap="square" stroke-linejoin="miter"/>
+    <path d="M54 42H44V80H70" stroke="#241E26" stroke-width="14" stroke-linecap="square" stroke-linejoin="miter"/>
+    <path d="M74 42H84V80H58" stroke="#8A8890" stroke-width="14" stroke-linecap="square" stroke-linejoin="miter"/>
+  </g>
+</svg>

@@ -53,6 +53,48 @@ test('runtime prefers the bundled CHM extractor', () => {
   assert.match(main, /resources', 'native', nativeName, 'bin', 'extract_chmLib'/);
 });
 
+test('runtime reuses extracted CHM cache before invoking the extractor', () => {
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+
+  assert.match(main, /'extracted-books'/);
+  assert.match(main, /update\(path\.resolve\(chmPath\)\)/);
+  assert.match(main, /update\(String\(stats\.size\)\)/);
+  assert.match(main, /update\(String\(Math\.trunc\(stats\.mtimeMs\)\)\)/);
+  assert.match(main, /readExtractedBook\(nextRoot,/);
+  assert.match(main, /extractBook\(chmPath, activeStagingRoot,/);
+  assert.match(main, /previousRoot && !previousRootIsCached/);
+  assert.match(main, /bookRoot && !bookRootIsCached/);
+});
+
+test('runtime avoids sending to a destroyed window from async callbacks', () => {
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+
+  assert.match(main, /function getLiveMainWindow\(\): BrowserWindowType \| null/);
+  assert.match(main, /mainWindow\.isDestroyed\(\)/);
+  assert.match(main, /targetWindow\.webContents\.isDestroyed\(\)/);
+  assert.match(main, /sendToMainWindow\('book:index-ready'/);
+  assert.match(main, /browserWindow\.on\('closed'/);
+  assert.match(main, /stopSearchIndexWorker\(\)/);
+  assert.doesNotMatch(main, /mainWindow\?\.webContents\.send/);
+});
+
+test('closing the reader window returns to the library before closing the app', () => {
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+  const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
+  const preload = fs.readFileSync(path.join(projectRoot, 'src', 'preload.ts'), 'utf-8');
+
+  assert.match(main, /let currentView: 'library' \| 'reader' = 'library'/);
+  assert.match(main, /browserWindow\.on\('close', \(event: \{ preventDefault: \(\) => void \}\) =>/);
+  assert.match(main, /if \(isQuitting \|\| currentView !== 'reader'\) return/);
+  assert.match(main, /event\.preventDefault\(\)/);
+  assert.match(main, /currentView = 'library'/);
+  assert.match(main, /sendToMainWindow\('library:show'\)/);
+  assert.match(main, /ipcMain\.handle\('view:set'/);
+  assert.match(main, /app\.on\('before-quit'/);
+  assert.match(renderer, /window\.chmReader\.setView\(view\)/);
+  assert.match(preload, /setView: \(view\) => ipcRenderer\.invoke\('view:set', view\)/);
+});
+
 test('macOS packaging vendors chmlib into the app bundle', () => {
   const packageScript = fs.readFileSync(path.join(projectRoot, 'scripts', 'package-macos.sh'), 'utf-8');
   const vendorScript = fs.readFileSync(path.join(projectRoot, 'scripts', 'vendor-chmlib-macos.sh'), 'utf-8');

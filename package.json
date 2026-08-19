@@ -11,6 +11,7 @@
     "run": "bash scripts/run.sh",
     "start": "electron .",
     "test": "node scripts/test.js",
+    "benchmark:chm": "npm run build && node scripts/benchmark-chm.js",
     "build": "node scripts/build.js",
     "check": "npm run typecheck && npm run build && node --check build/main.js && node --check build/preload.js && node --check build/chm.js && node --check build/navigation.js && node --check build/library.js && node --check build/search-index-worker.js",
     "typecheck": "tsc --noEmit",
@@ -29,7 +30,8 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "cheerio": "1.2.0"
+    "cheerio": "1.2.0",
+    "htmlparser2": "10.1.0"
   },
   "engines": {
     "node": ">=22"

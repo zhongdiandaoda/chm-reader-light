@@ -26,7 +26,7 @@ const {
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { randomUUID } = require('node:crypto');
+const { createHash, randomUUID } = require('node:crypto');
 const { Worker } = require('node:worker_threads');
 const { pathToFileURL } = require('node:url');
 const {
@@ -91,9 +91,27 @@ let bookSearchIndex: SearchIndexEntry[] = [];
 let bookTextEncoding: string | null = null;
 let currentBookPath: string | null = null;
 let currentBookName: string | null = null;
+let bookRootIsCached = false;
 let searchIndexWorker: WorkerType | undefined;
 let searchIndexGeneration = 0;
 let pendingFile: string | undefined;
+let currentView: 'library' | 'reader' = 'library';
+let isQuitting = false;
+
+function getLiveMainWindow(): BrowserWindowType | null {
+  if (!mainWindow) return null;
+  if (mainWindow.isDestroyed()) {
+    mainWindow = undefined;
+    return null;
+  }
+  return mainWindow;
+}
+
+function sendToMainWindow(channel: string, ...args: unknown[]): void {
+  const targetWindow = getLiveMainWindow();
+  if (!targetWindow || targetWindow.webContents.isDestroyed()) return;
+  targetWindow.webContents.send(channel, ...args);
+}
 
 function getLibraryDir(): string {
   return path.join(app.getPath('userData'), 'library');
@@ -101,6 +119,22 @@ function getLibraryDir(): string {
 
 function getLibraryIndexPath(): string {
   return path.join(getLibraryDir(), 'library.json');
+}
+
+function getExtractCacheDir(): string {
+  return path.join(app.getPath('userData'), 'extracted-books');
+}
+
+async function getExtractCacheRoot(chmPath: string): Promise<string> {
+  const stats = await fs.promises.stat(chmPath);
+  const cacheKey = createHash('sha256')
+    .update(path.resolve(chmPath))
+    .update('\0')
+    .update(String(stats.size))
+    .update('\0')
+    .update(String(Math.trunc(stats.mtimeMs)))
+    .digest('hex');
+  return path.join(getExtractCacheDir(), cacheKey);
 }
 
 function normalizeLibrary(parsed: unknown): LibraryState {
@@ -191,7 +225,7 @@ async function removeCollection(id: string): Promise<LibraryState> {
 }
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  const browserWindow = new BrowserWindow({
     width: 1240,
     height: 800,
     minWidth: 760,
@@ -206,7 +240,19 @@ function createWindow() {
     },
   });
 
-  mainWindow?.loadFile(path.join(__dirname, 'index.html'));
+  mainWindow = browserWindow;
+  browserWindow.on('close', (event: { preventDefault: () => void }) => {
+    if (isQuitting || currentView !== 'reader') return;
+    event.preventDefault();
+    currentView = 'library';
+    sendToMainWindow('library:show');
+  });
+  browserWindow.on('closed', () => {
+    if (mainWindow !== browserWindow) return;
+    stopSearchIndexWorker();
+    mainWindow = undefined;
+  });
+  browserWindow.loadFile(path.join(__dirname, 'index.html'));
 }
 
 function createMenu() {
@@ -229,7 +275,10 @@ function createMenu() {
     }, {
       label: 'Show Library',
       accelerator: 'CmdOrCtrl+L',
-      click: () => mainWindow?.webContents.send('library:show'),
+      click: () => {
+        currentView = 'library';
+        sendToMainWindow('library:show');
+      },
     }, {
       role: 'close',
     }],
@@ -242,7 +291,7 @@ function createMenu() {
       {
         label: 'Find in Contents',
         accelerator: 'CmdOrCtrl+F',
-        click: () => mainWindow?.webContents.send('navigation:focus-search'),
+        click: () => sendToMainWindow('navigation:focus-search'),
       },
     ],
   }, {
@@ -365,7 +414,7 @@ function startSearchIndexBuild(
     }
 
     bookSearchIndex = message.searchIndex || [];
-    mainWindow?.webContents.send('book:index-ready', {
+    sendToMainWindow('book:index-ready', {
       searchablePageCount: bookSearchIndex.length,
     });
   });
@@ -400,31 +449,52 @@ async function openBook(chmPath: string, displayName?: string): Promise<OpenedBo
   }
 
   const name = displayName || path.basename(chmPath, path.extname(chmPath));
-  const nextRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'chm-reader-'));
+  const nextRoot = await getExtractCacheRoot(chmPath);
+  let stagingRoot: string | null = null;
   try {
-    const metadata = await extractBook(chmPath, nextRoot, await locateExtractor(), {
-      textEncoding: bookTextEncoding,
-      buildSearchIndex: false,
-    });
+    let metadata: BookMetadata;
+    try {
+      metadata = await readExtractedBook(nextRoot, {
+        textEncoding: bookTextEncoding,
+        buildSearchIndex: false,
+      });
+    } catch {
+      const activeStagingRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'chm-reader-cache-'));
+      stagingRoot = activeStagingRoot;
+      metadata = await extractBook(chmPath, activeStagingRoot, await locateExtractor(), {
+        textEncoding: bookTextEncoding,
+        buildSearchIndex: false,
+      });
+      await fs.promises.mkdir(path.dirname(nextRoot), { recursive: true });
+      await fs.promises.rm(nextRoot, { recursive: true, force: true });
+      await fs.promises.rename(activeStagingRoot, nextRoot);
+      stagingRoot = null;
+    }
+
     const previousRoot = bookRoot;
+    const previousRootIsCached = bookRootIsCached;
     bookRoot = nextRoot;
+    bookRootIsCached = true;
     bookSearchIndex = metadata.searchIndex;
     currentBookPath = chmPath;
     currentBookName = name;
 
-    if (previousRoot) {
+    if (previousRoot && !previousRootIsCached) {
       fs.promises.rm(previousRoot, { recursive: true, force: true }).catch(() => { });
     }
 
     const result = createBookResult(name, chmPath, metadata);
 
-    mainWindow?.setRepresentedFilename(chmPath);
-    mainWindow?.setTitle(`${result.name} - CHMReaderLight`);
-    mainWindow?.webContents.send('book:opened', result);
+    const targetWindow = getLiveMainWindow();
+    targetWindow?.setRepresentedFilename(chmPath);
+    targetWindow?.setTitle(`${result.name} - CHMReaderLight`);
+    sendToMainWindow('book:opened', result);
     startSearchIndexBuild(nextRoot, metadata.contents, bookTextEncoding);
     return result;
   } catch (error) {
-    await fs.promises.rm(nextRoot, { recursive: true, force: true });
+    if (stagingRoot) {
+      await fs.promises.rm(stagingRoot, { recursive: true, force: true });
+    }
     throw error;
   }
 }
@@ -463,7 +533,7 @@ async function setBookTextEncoding(
   });
   bookSearchIndex = metadata.searchIndex;
   const result = createBookResult(activeName, activePath, metadata);
-  mainWindow?.webContents.send('book:opened', result);
+  sendToMainWindow('book:opened', result);
   startSearchIndexBuild(activeRoot, metadata.contents, bookTextEncoding);
   return result;
 }
@@ -480,7 +550,7 @@ async function selectAndImportBooks(collectionId: string | null = null): Promise
 
   try {
     const library = await importBooks(result.filePaths, collectionId);
-    mainWindow?.webContents.send('library:updated', library);
+    sendToMainWindow('library:updated', library);
     return library;
   } catch (error) {
     await dialog.showMessageBox(mainWindow, {
@@ -549,6 +619,9 @@ ipcMain.handle('collection:remove', (_event: IpcMainInvokeEvent, id: string) => 
 ipcMain.handle('book:url', (_event: IpcMainInvokeEvent, topicPath: string | null) => createBookUrl(topicPath));
 ipcMain.handle('book:search', (_event: IpcMainInvokeEvent, query: string): SearchResult[] => searchBookContents(bookSearchIndex, query));
 ipcMain.handle('book:encoding', (_event: IpcMainInvokeEvent, encoding: string) => setBookTextEncoding(encoding));
+ipcMain.handle('view:set', (_event: IpcMainInvokeEvent, view: 'library' | 'reader') => {
+  currentView = view === 'reader' ? 'reader' : 'library';
+});
 ipcMain.handle('external:open', (_event: IpcMainInvokeEvent, url: string) => {
   if (/^https?:\/\//i.test(url)) return shell.openExternal(url);
   return undefined;
@@ -556,7 +629,7 @@ ipcMain.handle('external:open', (_event: IpcMainInvokeEvent, url: string) => {
 
 async function importAndOpen(filePath: string): Promise<void> {
   const library = await importBooks([filePath]);
-  mainWindow?.webContents.send('library:updated', library);
+  sendToMainWindow('library:updated', library);
   const added = library.books[library.books.length - 1];
   if (added) await openLibraryBook(added.id);
 }
@@ -589,7 +662,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
 app.on('will-quit', () => {
   stopSearchIndexWorker();
-  if (bookRoot) fs.rmSync(bookRoot, { recursive: true, force: true });
+  if (bookRoot && !bookRootIsCached) fs.rmSync(bookRoot, { recursive: true, force: true });
 });

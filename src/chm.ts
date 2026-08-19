@@ -3,8 +3,10 @@ const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 import * as cheerio from 'cheerio';
+import { Parser } from 'htmlparser2';
 
 const execFileAsync = promisify(execFile);
+const IGNORED_TEXT_TAGS = new Set(['script', 'style', 'noscript', 'template']);
 
 export interface BookContentsItem {
   title: string;
@@ -181,10 +183,63 @@ export function decodeMarkup(buffer: Uint8Array, textEncoding: string | null = n
 }
 
 export function extractSearchableText(markup: string): string {
-  const $ = cheerio.load(markup);
-  $('script, style, noscript, template').remove();
-  const textMarkup = ($.root().html() || '').replace(/<[^>]+>/g, ' ');
-  return cheerio.load(textMarkup).text().replace(/\s+/g, ' ').trim();
+  return extractHtmlTextAndTitle(markup).text;
+}
+
+function extractHtmlTextAndTitle(markup: string): { title: string; text: string } {
+  const textParts: string[] = [];
+  const titleParts: string[] = [];
+  let ignoredDepth = 0;
+  let titleDepth = 0;
+
+  const parser = new Parser({
+    onopentag(name: string) {
+      const tagName = name.toLowerCase();
+      if (IGNORED_TEXT_TAGS.has(tagName)) {
+        ignoredDepth += 1;
+        return;
+      }
+      if (tagName === 'title' && ignoredDepth === 0) {
+        titleDepth += 1;
+      }
+      if (ignoredDepth === 0) {
+        textParts.push(' ');
+        if (titleDepth > 0) {
+          titleParts.push(' ');
+        }
+      }
+    },
+    ontext(text: string) {
+      if (ignoredDepth > 0) return;
+      textParts.push(text);
+      if (titleDepth > 0) {
+        titleParts.push(text);
+      }
+    },
+    onclosetag(name: string) {
+      const tagName = name.toLowerCase();
+      if (IGNORED_TEXT_TAGS.has(tagName)) {
+        ignoredDepth = Math.max(0, ignoredDepth - 1);
+        return;
+      }
+      if (tagName === 'title') {
+        titleDepth = Math.max(0, titleDepth - 1);
+      }
+      if (ignoredDepth === 0) {
+        textParts.push(' ');
+        if (titleDepth > 0) {
+          titleParts.push(' ');
+        }
+      }
+    },
+  }, { decodeEntities: true });
+
+  parser.end(markup);
+
+  return {
+    title: titleParts.join('').replace(/\s+/g, ' ').trim(),
+    text: textParts.join('').replace(/\s+/g, ' ').trim(),
+  };
 }
 
 export function normalizeSearchText(value: unknown): string {
@@ -319,12 +374,11 @@ export async function createSearchIndex(
     try {
       const relativePath = path.relative(root, file).split(path.sep).join('/');
       const markup = decodeMarkup(await fs.promises.readFile(file), textEncoding);
-      const $ = cheerio.load(markup);
-      const pageTitle = $('title').first().text().trim();
+      const page = extractHtmlTextAndTitle(markup);
       return {
         path: relativePath,
-        title: titles.get(relativePath.toLocaleLowerCase()) || pageTitle || path.basename(relativePath),
-        text: extractSearchableText(markup),
+        title: titles.get(relativePath.toLocaleLowerCase()) || page.title || path.basename(relativePath),
+        text: page.text,
       };
     } catch {
       return null;
