@@ -1,0 +1,79 @@
+name: Install help
+description: Get help with release downloads, checksums, provenance verification, first launch, updates, or removal.
+title: "[Install]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying CHMReaderLight. Please check the install and troubleshooting guides first:
+        - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/install-macos.md
+        - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.md
+        Search existing Issues and Discussions before filing:
+        - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue
+        - https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: dropdown
+    id: install-step
+    attributes:
+      label: Which step needs help?
+      options:
+        - Choosing the right download
+        - Verifying the `.zip.sha256` checksum
+        - Verifying GitHub artifact attestation
+        - Unzipping or moving the app
+        - First launch blocked by macOS
+        - Updating or removing the app
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: release-artifact
+    attributes:
+      label: Which release artifact did you use?
+      options:
+        - CHMReaderLight-mac-arm64.zip
+        - CHMReaderLight-mac-x64.zip
+        - Built locally
+        - Running from source
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: checksum-result
+    attributes:
+      label: What did the checksum command print?
+      description: Paste the output from `shasum -a 256 -c ...` if checksum verification is part of the issue.
+      placeholder: "Example: CHMReaderLight-mac-arm64.zip: OK"
+      render: shell
+  - type: textarea
+    id: attestation-result
+    attributes:
+      label: What did the attestation command print?
+      description: Paste the output from `gh attestation verify ...` if provenance verification is part of the issue.
+      placeholder: "Example: gh attestation verify CHMReaderLight-mac-arm64.zip --repo zhongdiandaoda/chm-reader-light"
+      render: shell
+  - type: textarea
+    id: first-launch-message
+    attributes:
+      label: What did macOS show on first launch?
+      description: Include the exact warning or blocked-app text if macOS prevented launch. Mention whether you checked System Settings > Privacy & Security.
+      placeholder: "Example: macOS said the app cannot be opened because Apple cannot check it for malicious software."
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version and Mac architecture
+      placeholder: "Example: macOS 15.2, Apple Silicon"
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Mention any guide steps, commands, downloads, or workarounds you already checked.
+      placeholder: "Example: I downloaded the arm64 zip, verified the checksum, moved the app to /Applications, and checked Privacy & Security."
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic info
+      description: If the app opens, choose Help > Copy Diagnostic Info and paste the result here.
+      render: shell

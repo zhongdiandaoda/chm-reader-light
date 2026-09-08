@@ -1,0 +1,77 @@
+name: Performance report
+description: Report slow CHM opening, indexing, searching, or library workflows.
+title: "[Performance]: "
+labels: ["performance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve CHMReaderLight performance. If you can run local checks, compare timings with the Benchmarking Guide:
+        https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/benchmarking.md
+        Do not attach private CHM files or logs that expose sensitive document content or local paths.
+        Search existing Issues and Discussions before filing:
+        - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue
+        - https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: textarea
+    id: summary
+    attributes:
+      label: What feels slow?
+      description: Describe the slow workflow and what response time you expected.
+      placeholder: "Example: A 240 MB SDK manual opens quickly, but body search remains unavailable for more than a minute."
+    validations:
+      required: true
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: Which workflow feels slow?
+      options:
+        - Opening or extracting a CHM
+        - Building the search index
+        - Searching inside a CHM
+        - Filtering or managing a large library
+        - Startup or returning to the library
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: size
+    attributes:
+      label: Approximate CHM or library size
+      description: Share safe size details such as CHM file size, estimated topic/page count, or library book count.
+      placeholder: "Example: 240 MB CHM, about 18,000 HTML pages, library with 75 books."
+    validations:
+      required: true
+  - type: textarea
+    id: timing
+    attributes:
+      label: Timing details
+      description: Share measured timing, whether it is repeatable, and whether `npm run benchmark:chm` was used.
+      placeholder: |
+        Example:
+        - Opening: about 48 seconds on the first run, 9 seconds after cache reuse
+        - Search index: about 65 seconds
+        - Benchmark: npm run benchmark:chm -- --chm /path/to/manual.chm --iterations 3
+    validations:
+      required: true
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: How did you install or run CHMReaderLight?
+      options:
+        - GitHub release zip
+        - Built locally with npm run package:mac
+        - Running from source with npm run run
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic info
+      description: In the app, choose Help > Copy Diagnostic Info and paste the result here.
+      render: shell
+  - type: textarea
+    id: notes
+    attributes:
+      label: Extra context
+      description: Mention recent app changes, whether the cache was cleared, sanitized logs, or public sample files that reproduce the slowdown.

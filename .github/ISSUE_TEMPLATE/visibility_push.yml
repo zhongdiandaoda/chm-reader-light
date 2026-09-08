@@ -1,0 +1,58 @@
+name: Visibility push
+description: Plan a release announcement, directory submission, or community sharing pass.
+title: "[Visibility]: "
+labels: ["maintenance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for maintainer-owned promotion work after the repository listing and release are ready.
+        Start with the Growth Readiness guide, Share Kit, and Directory Submission Tracker:
+        - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/growth-readiness.md
+        - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/share-kit.md
+        - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/directory-submission-tracker.md
+        Do not ask for stars until the user has a clear evaluation path. Do not include private CHM content, sensitive file paths, proprietary screenshots, or confidential document text.
+  - type: textarea
+    id: audience
+    attributes:
+      label: Which visibility channel or audience is this for?
+      description: Name the directory, community, release audience, or search/listing surface.
+      placeholder: "Example: macOS open-source app directory for developers who read offline SDK manuals."
+    validations:
+      required: true
+  - type: textarea
+    id: readiness
+    attributes:
+      label: What live readiness checks passed?
+      description: Run `npm run snapshot:visibility`, then paste the listing and release audit section or summarize the passed checks.
+      placeholder: |
+        Example:
+        - npm run snapshot:visibility status: ready
+        - npm run check:remote-listing passed
+        - npm run check:remote-release passed
+    validations:
+      required: true
+  - type: textarea
+    id: baseline-metrics
+    attributes:
+      label: What baseline metrics are recorded?
+      description: Run `npm run snapshot:growth` and record stargazers_count, downloads, watchers, release version, and date before sharing.
+      placeholder: "Example from npm run snapshot:growth: 0 stars / 0 downloads / 0 watchers, no public release, 2026-09-04."
+    validations:
+      required: true
+  - type: textarea
+    id: assets
+    attributes:
+      label: What copy, demo, or listing asset will be used?
+      description: Link the Share Kit text, release note, README preview, demo, screenshot, or directory listing copy.
+      placeholder: "Example: Short Share Kit copy plus docs/assets/social-preview.png."
+    validations:
+      required: true
+  - type: input
+    id: follow-up
+    attributes:
+      label: What is the follow-up date and evidence plan?
+      description: Choose a date to recheck stars, downloads, support issues, Discussions, and listing status.
+      placeholder: "Example: Recheck on 2026-09-11 and update docs/directory-submission-tracker.md."
+    validations:
+      required: true

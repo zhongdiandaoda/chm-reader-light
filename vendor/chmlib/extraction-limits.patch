@@ -1,0 +1,127 @@
+From: CHMReaderLight maintainers
+Subject: [PATCH] Bound extracted files and bytes before writing
+
+Apply CHMReaderLight's extraction budgets inside the native helper so an
+archive is rejected before an oversized entry is opened or written. Treat
+short writes, incomplete retrieval, and enumeration failures as non-zero
+errors so callers cannot accept a partial extraction as successful.
+
+diff --git a/src/extract_chmLib.c b/src/extract_chmLib.c
+--- a/src/extract_chmLib.c
++++ b/src/extract_chmLib.c
+@@ -16,6 +16,11 @@
+  *                                                                         *
+  ***************************************************************************/
+ 
++#define MAX_EXTRACTION_ENTRIES 60000
++#define MAX_EXTRACTION_FILES 50000
++#define MAX_EXTRACTION_TOTAL_BYTES ((LONGUINT64)1024 * 1024 * 1024)
++#define MAX_EXTRACTION_FILE_BYTES ((LONGUINT64)256 * 1024 * 1024)
++
+ #include "chm_lib.h"
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -34,6 +39,9 @@
+ struct extract_context
+ {
+     const char *base_path;
++    unsigned int entry_count;
++    unsigned int file_count;
++    LONGUINT64 total_bytes;
+ };
+ 
+ static int dir_exists(const char *path)
+@@ -117,6 +125,14 @@
+         return CHM_ENUMERATOR_CONTINUE;
+     }
+ 
++    if (ctx->entry_count >= MAX_EXTRACTION_ENTRIES)
++    {
++        fprintf(stderr, "extraction entry count limit exceeded\n");
++        return CHM_ENUMERATOR_FAILURE;
++    }
++
++    ctx->entry_count++;
++
+     if (snprintf(buffer, sizeof(buffer), "%s%s", ctx->base_path, ui->path) > 1024)
+         return CHM_ENUMERATOR_FAILURE;
+ 
+@@ -130,6 +146,27 @@
+         LONGINT64 len, remain=ui->length;
+         LONGUINT64 offset = 0;
+ 
++        if (ctx->file_count >= MAX_EXTRACTION_FILES)
++        {
++            fprintf(stderr, "extraction file count limit exceeded: %s\n", ui->path);
++            return CHM_ENUMERATOR_FAILURE;
++        }
++
++        if (ui->length > MAX_EXTRACTION_FILE_BYTES)
++        {
++            fprintf(stderr, "extraction per-file size limit exceeded: %s\n", ui->path);
++            return CHM_ENUMERATOR_FAILURE;
++        }
++
++        if (ctx->total_bytes > MAX_EXTRACTION_TOTAL_BYTES - ui->length)
++        {
++            fprintf(stderr, "extraction total size limit exceeded: %s\n", ui->path);
++            return CHM_ENUMERATOR_FAILURE;
++        }
++
++        ctx->file_count++;
++        ctx->total_bytes += ui->length;
++
+         printf("--> %s\n", ui->path);
+         if ((fout = fopen(buffer, "wb")) == NULL)
+ 	{
+@@ -145,18 +182,23 @@
+ 
+         while (remain != 0)
+         {
+-            len = chm_retrieve_object(h, ui, (unsigned char *)buffer, offset, 32768);
+-            if (len > 0)
++            LONGINT64 request_len = remain < sizeof(buffer) ? (LONGINT64)remain : (LONGINT64)sizeof(buffer);
++            len = chm_retrieve_object(h, ui, (unsigned char *)buffer, offset, request_len);
++            if (len <= 0 || len > request_len)
+             {
+-                fwrite(buffer, 1, (size_t)len, fout);
+-                offset += len;
+-                remain -= len;
++                fprintf(stderr, "incomplete file: %s\n", ui->path);
++                fclose(fout);
++                return CHM_ENUMERATOR_FAILURE;
+             }
+-            else
++
++            if (fwrite(buffer, 1, (size_t)len, fout) != (size_t)len)
+             {
+-                fprintf(stderr, "incomplete file: %s\n", ui->path);
+-                break;
++                fprintf(stderr, "failed to write file: %s\n", ui->path);
++                fclose(fout);
++                return CHM_ENUMERATOR_FAILURE;
+             }
++            offset += len;
++            remain -= len;
+         }
+ 
+         fclose(fout);
+@@ -190,11 +232,18 @@
+ 
+     printf("%s:\n", v[1]);
+     ec.base_path = v[2];
++    ec.entry_count = 0;
++    ec.file_count = 0;
++    ec.total_bytes = 0;
+     if (! chm_enumerate(h,
+                         CHM_ENUMERATE_ALL,
+                         _extract_callback,
+                         (void *)&ec))
++    {
+         printf("   *** ERROR ***\n");
++        chm_close(h);
++        return 1;
++    }
+ 
+     chm_close(h);
+ 

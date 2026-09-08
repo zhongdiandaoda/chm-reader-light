@@ -1,0 +1,55 @@
+name: Feature request
+description: Suggest a reader, library, search, packaging, or documentation improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape CHMReaderLight. Please check the roadmap first so requests stay aligned with the project's current focus:
+        https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/roadmap.md
+        Check the project status guide for current platform support, release trust notes, and out-of-scope work:
+        https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/project-status.md
+        Search existing Issues and Discussions before filing:
+        - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue
+        - https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: textarea
+    id: workflow
+    attributes:
+      label: What workflow would this improve?
+      description: Describe the reading, library management, search, packaging, or documentation workflow that feels harder than it should.
+      placeholder: "Example: I regularly compare adjacent topics and need to keep my place in long CHM manuals."
+    validations:
+      required: true
+  - type: textarea
+    id: desired-behavior
+    attributes:
+      label: What would you like to happen?
+      description: Describe the outcome you want, not only the control or implementation you imagine.
+      placeholder: "Example: Show a compact progress cue near the reader controls so I know how far I am through the manual."
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area is affected?
+      options:
+        - Reader
+        - Library
+        - Search
+        - Packaging
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or workarounds
+      description: Mention any current workflow, workaround, or similar app behavior that helps explain the request.
+  - type: textarea
+    id: verification
+    attributes:
+      label: How would you verify it works?
+      description: Share the smallest user flow that would prove the feature solves the problem.
+      placeholder: "Example: Open a CHM with several nested topics, navigate to the next topic, and confirm the progress cue updates."

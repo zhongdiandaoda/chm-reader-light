@@ -1,0 +1,83 @@
+name: Bug report
+description: Report a problem with opening, browsing, searching, or packaging CHM files.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve CHMReaderLight. Please include enough detail for the issue to be reproduced on macOS.
+        Before filing, check the troubleshooting guide: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.md
+        Search existing Issues and Discussions before filing:
+        - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue
+        - https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected to happen.
+      placeholder: "Example: Opening a CHM file with Chinese page titles shows unreadable text in the sidebar."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest set of steps that reproduce the problem.
+      placeholder: |
+        1. Open CHMReaderLight
+        2. Add ...
+        3. Click ...
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      placeholder: "0.1.0, commit SHA, or downloaded build name"
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: How did you install or run CHMReaderLight?
+      options:
+        - GitHub release zip
+        - Built locally with npm run package:mac
+        - Running from source with npm run run
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic info
+      description: In the app, choose Help > Copy Diagnostic Info and paste the result here.
+      render: shell
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: "Example: macOS 15.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Mac architecture
+      options:
+        - Apple Silicon
+        - Intel
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: chm-details
+    attributes:
+      label: CHM details
+      description: Share the CHM language, approximate size, and whether it can be shared publicly.
+      placeholder: "Example: Simplified Chinese, 38 MB, cannot share publicly."
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste logs, screenshots, or error messages if available. Do not attach private CHM files, proprietary screenshots, sensitive local paths, or confidential document text.
+      render: shell

@@ -1,0 +1,50 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support guide
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md
+    about: Read where to ask usage questions, report CHM compatibility issues, or handle security reports.
+  - name: In-app support routing
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md
+    about: Installed app users can use Help > Report or Request to choose the right issue template, release feedback, security policy, or showcase route.
+  - name: Chinese Support Guide
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.zh-CN.md
+    about: 用中文确认用法问题、CHM 兼容性报告和安全反馈应该走哪个渠道。
+  - name: 应用内支持入口
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.zh-CN.md
+    about: 已安装应用的用户可以使用 Help > Report or Request 选择合适的 issue template、release feedback、安全政策或 showcase 路径。
+  - name: Project Status
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/project-status.md
+    about: Review current platform support, release trust notes, and scope before filing an issue.
+  - name: Adoption Checklist
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/adoption-checklist.md
+    about: Evaluate CHMReaderLight before deciding whether to star, watch releases, open an issue, or contribute.
+  - name: Visibility Push Guide
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/growth-readiness.md
+    about: Plan maintainer-owned release announcements, directory submissions, and follow-up metrics.
+  - name: Good First Contributions
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/good-first-contributions.md
+    about: Find scoped starter tasks, file pointers, and verification guidance before opening a pull request.
+  - name: Chinese Contributing Guide
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/CONTRIBUTING.zh-CN.md
+    about: 用中文了解本地开发、适合新贡献者的任务、提交前检查和隐私边界。
+  - name: Governance Guide
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/governance.md
+    about: Review decision paths, discussion-first changes, maintainer responsibilities, and privacy boundaries.
+  - name: Chinese Governance Guide
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/governance.zh-CN.md
+    about: 用中文了解项目决策路径、先讨论的变更、隐私边界和评审预期。
+  - name: GitHub Discussions
+    url: https://github.com/zhongdiandaoda/chm-reader-light/discussions
+    about: Ask usage questions, share safe workflow stories, or discuss release feedback.
+  - name: Release Feedback Discussion
+    url: https://github.com/zhongdiandaoda/chm-reader-light/discussions/new?category=release-feedback
+    about: Tell maintainers what would make a release easier to trust, star, watch, or share.
+  - name: GitHub Releases
+    url: https://github.com/zhongdiandaoda/chm-reader-light/releases
+    about: Download the latest macOS zip artifacts before filing an install question.
+  - name: Security Policy
+    url: https://github.com/zhongdiandaoda/chm-reader-light/security/policy
+    about: Report suspected vulnerabilities privately instead of opening a public issue.
+  - name: Chinese Security Policy
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SECURITY.zh-CN.md
+    about: 用中文私下报告疑似漏洞，避免在公开 Issue 中披露敏感细节。

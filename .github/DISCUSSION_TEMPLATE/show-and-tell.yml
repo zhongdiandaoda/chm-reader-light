@@ -1,0 +1,37 @@
+title: "[Show and tell] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share a safe CHMReaderLight workflow story that could help future users.
+        Do not include private document content, sensitive paths, proprietary screenshots, or confidential CHM text.
+        Search existing Discussions before posting:
+        https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: textarea
+    id: workflow
+    attributes:
+      label: What offline CHM workflow improved?
+      description: Describe the local documentation workflow, setup, or reading habit that changed.
+      placeholder: "Example: I keep legacy SDK manuals in one local library and jump back to recent topics quickly."
+    validations:
+      required: true
+  - type: textarea
+    id: useful-details
+    attributes:
+      label: What helped most?
+      description: Mention safe details such as library organization, search, reader preferences, install source, or docs.
+      placeholder: "Example: Library search, source folder labels, and last-read topic restore made large local manuals easier to use."
+    validations:
+      required: false
+  - type: dropdown
+    id: quote-permission
+    attributes:
+      label: May maintainers quote this in project docs, release notes, or share materials?
+      description: Choose whether maintainers can reuse this story when improving README, release notes, or share materials.
+      options:
+        - Yes, with my GitHub username
+        - Yes, anonymously
+        - Please ask me first
+        - No
+    validations:
+      required: true

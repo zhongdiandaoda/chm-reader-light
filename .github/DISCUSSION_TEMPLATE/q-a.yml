@@ -1,0 +1,25 @@
+title: "[Q&A] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for open-ended usage questions that may help future CHMReaderLight users.
+        For reproducible app bugs or CHM compatibility gaps, use the issue templates instead.
+        Search existing Discussions before posting:
+        https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do?
+      description: Describe the CHM reading, library, search, install, or support workflow you need help with.
+      placeholder: "Example: I want to search a local SDK CHM and keep my reading position between launches."
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: What have you already checked?
+      description: Mention any docs, menu actions, release artifacts, or workarounds you tried.
+      placeholder: "Example: I checked the FAQ, Getting Started, and Help > Copy Diagnostic Info."
+    validations:
+      required: false

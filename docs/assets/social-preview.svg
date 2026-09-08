@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">CHMReaderLight GitHub social preview</title>
+  <desc id="desc">A GitHub social preview card for CHMReaderLight, showing an offline CHM reader for macOS with library, search, and local-only reading highlights.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="0.55" stop-color="#eff6f2"/>
+      <stop offset="1" stop-color="#eef2ff"/>
+    </linearGradient>
+    <linearGradient id="window" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eef2f7"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="22" stdDeviation="26" flood-color="#0f172a" flood-opacity="0.20"/>
+    </filter>
+    <clipPath id="windowClip">
+      <rect x="598" y="92" width="552" height="396" rx="24"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#background)"/>
+  <rect x="80" y="76" width="172" height="172" rx="40" fill="#0f172a"/>
+  <rect x="118" y="118" width="96" height="88" rx="14" fill="#ffffff"/>
+  <path d="M140 148h52M140 172h42M140 196h48" stroke="#2563eb" stroke-width="10" stroke-linecap="round"/>
+  <path d="M178 118v28h36" fill="#dbeafe"/>
+
+  <text x="80" y="324" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="54" font-weight="760" fill="#111827">CHMReaderLight</text>
+  <text x="82" y="378" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="28" font-weight="650" fill="#2563eb">Offline CHM reader for macOS</text>
+  <text x="82" y="426" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22" fill="#475569">Manage local manuals and search contents.</text>
+  <text x="82" y="458" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22" fill="#475569">Read safely without cloud sync.</text>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18" font-weight="700">
+    <rect x="82" y="492" width="126" height="44" rx="22" fill="#dcfce7"/>
+    <text x="145" y="521" text-anchor="middle" fill="#166534">Library</text>
+    <rect x="226" y="492" width="118" height="44" rx="22" fill="#dbeafe"/>
+    <text x="285" y="521" text-anchor="middle" fill="#1d4ed8">Search</text>
+    <rect x="362" y="492" width="154" height="44" rx="22" fill="#fef3c7"/>
+    <text x="439" y="521" text-anchor="middle" fill="#92400e">Local-only</text>
+  </g>
+
+  <rect x="598" y="92" width="552" height="396" rx="24" fill="url(#window)" filter="url(#shadow)"/>
+  <g clip-path="url(#windowClip)">
+    <rect x="598" y="92" width="552" height="52" fill="#f8fafc"/>
+    <circle cx="632" cy="118" r="7" fill="#ef6a5f"/>
+    <circle cx="654" cy="118" r="7" fill="#f3bf4f"/>
+    <circle cx="676" cy="118" r="7" fill="#61c454"/>
+    <text x="874" y="124" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="14" fill="#475569">CHMReaderLight</text>
+
+    <rect x="598" y="144" width="146" height="344" fill="#f1f5f9"/>
+    <text x="626" y="184" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="19" font-weight="740" fill="#0f172a">Library</text>
+    <rect x="626" y="204" width="90" height="28" rx="10" fill="#dbeafe"/>
+    <text x="671" y="224" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#1d4ed8">All Books</text>
+    <text x="626" y="268" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#64748b">COLLECTIONS</text>
+    <line x1="626" y1="298" x2="708" y2="298" stroke="#cbd5e1" stroke-width="8" stroke-linecap="round"/>
+    <line x1="626" y1="328" x2="692" y2="328" stroke="#d7dee8" stroke-width="8" stroke-linecap="round"/>
+    <line x1="626" y1="358" x2="704" y2="358" stroke="#d7dee8" stroke-width="8" stroke-linecap="round"/>
+
+    <rect x="744" y="144" width="406" height="344" fill="#ffffff"/>
+    <rect x="780" y="182" width="320" height="38" rx="13" fill="#f8fafc" stroke="#dbe3ec"/>
+    <text x="806" y="207" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="14" fill="#64748b">Search books and paths</text>
+
+    <rect x="780" y="252" width="146" height="92" rx="14" fill="#f8fafc" stroke="#dbe3ec"/>
+    <text x="802" y="286" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="14" font-weight="740" fill="#111827">API Manual</text>
+    <line x1="802" y1="308" x2="886" y2="308" stroke="#cbd5e1" stroke-width="7" stroke-linecap="round"/>
+    <rect x="802" y="324" width="68" height="18" rx="9" fill="#dcfce7"/>
+
+    <rect x="954" y="252" width="146" height="92" rx="14" fill="#f8fafc" stroke="#dbe3ec"/>
+    <text x="976" y="286" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="14" font-weight="740" fill="#111827">SDK Docs</text>
+    <line x1="976" y1="308" x2="1062" y2="308" stroke="#cbd5e1" stroke-width="7" stroke-linecap="round"/>
+    <rect x="976" y="324" width="78" height="18" rx="9" fill="#dbeafe"/>
+
+    <rect x="780" y="378" width="320" height="64" rx="14" fill="#f8fafc" stroke="#dbe3ec"/>
+    <rect x="804" y="398" width="86" height="26" rx="9" fill="#ffffff" stroke="#dbe3ec"/>
+    <line x1="918" y1="406" x2="1072" y2="406" stroke="#cbd5e1" stroke-width="7" stroke-linecap="round"/>
+    <line x1="918" y1="424" x2="1044" y2="424" stroke="#e2e8f0" stroke-width="7" stroke-linecap="round"/>
+  </g>
+
+  <text x="640" y="572" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="20" fill="#64748b">github.com/zhongdiandaoda/chm-reader-light</text>
+</svg>

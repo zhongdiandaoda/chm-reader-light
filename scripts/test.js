@@ -5,6 +5,7 @@ const { execFileSync, spawnSync } = require('node:child_process');
 const rootDir = path.resolve(__dirname, '..');
 const tsc = path.join(rootDir, 'node_modules', '.bin', 'tsc');
 const testBuildDir = path.join(rootDir, '.test-build');
+const testArgs = process.argv.slice(2);
 
 fs.rmSync(testBuildDir, { recursive: true, force: true });
 execFileSync(tsc, ['-p', 'tsconfig.test.json', '--pretty', 'true'], {
@@ -19,7 +20,7 @@ const compiledTests = fs.readdirSync(path.join(testBuildDir, 'test'))
   .filter((file) => file.endsWith('.test.js'))
   .map((file) => path.join(testBuildDir, 'test', file));
 
-const result = spawnSync(process.execPath, ['--test', ...sourceTests, ...compiledTests], {
+const result = spawnSync(process.execPath, ['--test', ...testArgs, ...sourceTests, ...compiledTests], {
   cwd: rootDir,
   stdio: 'inherit',
 });

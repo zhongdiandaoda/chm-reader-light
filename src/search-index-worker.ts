@@ -1,14 +1,18 @@
 import { parentPort, workerData } from 'node:worker_threads';
-import { createSearchIndex, listFiles } from './chm';
+import { createSearchIndex, validateExtractedBookTree } from './chm';
 
 async function buildSearchIndex() {
-  const files = listFiles(workerData.root);
+  const { files } = await validateExtractedBookTree(workerData.root);
   return createSearchIndex(
     workerData.root,
     files,
     workerData.contents,
     workerData.textEncoding || null,
-    { concurrency: workerData.concurrency },
+    {
+      concurrency: workerData.concurrency,
+      maxMarkupBytes: workerData.maxMarkupBytes,
+      maxSearchIndexSourceBytes: workerData.maxSearchIndexSourceBytes,
+    },
   );
 }
 

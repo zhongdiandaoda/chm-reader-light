@@ -16,6 +16,7 @@ import type {
 const {
   app,
   BrowserWindow,
+  clipboard,
   dialog,
   ipcMain,
   Menu,
@@ -26,19 +27,106 @@ const {
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { createHash, randomUUID } = require('node:crypto');
+const { randomUUID } = require('node:crypto');
 const { Worker } = require('node:worker_threads');
 const { pathToFileURL } = require('node:url');
 const {
-  decodeMarkup,
+  DEFAULT_MARKUP_LIMITS,
   extractBook,
   highlightSearchMatches,
   injectContentNavigationBridge,
+  mapWithConcurrency,
+  MarkupTooLargeError,
+  readMarkupFile,
   readExtractedBook,
   resolveBookResource,
   searchBookContents,
 } = require('./chm') as typeof import('./chm');
-const { renameCollectionInLibrary } = require('./library') as typeof import('./library');
+const {
+  addBooksToLibrary,
+  findBookByFilePath,
+  markBookOpenedInLibrary,
+  normalizeLibraryData,
+  normalizeLibraryDataForWrite,
+  relinkBookInLibrary,
+  renameCollectionInLibrary,
+} = require('./library') as typeof import('./library');
+const {
+  createSerializedStateUpdater,
+  readLibraryFile,
+  writeLibraryFile,
+} = require('./library-store') as typeof import('./library-store');
+const {
+  createBookCacheKey,
+  isSameBookCacheIdentity,
+} = require('./book-cache') as typeof import('./book-cache');
+const { createSerializedTaskQueue } = require('./async-queue') as typeof import('./async-queue');
+const { isTrustedIpcSender } = require('./ipc-security') as typeof import('./ipc-security');
+const {
+  isAllowedBookFrameNavigation,
+  normalizeExternalWebUrl,
+} = require('./navigation-security') as typeof import('./navigation-security');
+
+const LIBRARY_AVAILABILITY_CONCURRENCY = 16;
+
+const projectLinks = {
+  repository: 'https://github.com/zhongdiandaoda/chm-reader-light',
+  star: 'https://github.com/zhongdiandaoda/chm-reader-light',
+  issues: 'https://github.com/zhongdiandaoda/chm-reader-light/issues',
+  discussions: 'https://github.com/zhongdiandaoda/chm-reader-light/discussions',
+  releaseFeedback: 'https://github.com/zhongdiandaoda/chm-reader-light/discussions/new?category=release-feedback',
+  releases: 'https://github.com/zhongdiandaoda/chm-reader-light/releases',
+  downloadAppleSilicon: 'https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-arm64.zip',
+  downloadIntel: 'https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-x64.zip',
+  securityPolicy: 'https://github.com/zhongdiandaoda/chm-reader-light/security/policy',
+  securityPolicyZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SECURITY.zh-CN.md',
+  bugIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=bug_report.yml',
+  installIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=install_help.yml',
+  featureIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=feature_request.yml',
+  questionIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=question.yml',
+  documentationIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=documentation.yml',
+  performanceIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=performance.yml',
+  accessibilityIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=accessibility.yml',
+  support: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md',
+  supportZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.zh-CN.md',
+  gettingStarted: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/getting-started.md',
+  gettingStartedZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/getting-started.zh-CN.md',
+  featureTour: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/feature-tour.md',
+  useCases: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/use-cases.md',
+  useCasesZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/use-cases.zh-CN.md',
+  comparison: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/comparison.md',
+  comparisonZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/comparison.zh-CN.md',
+  adoptionChecklist: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/adoption-checklist.md',
+  adoptionChecklistZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/adoption-checklist.zh-CN.md',
+  goodFirstContributions: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/good-first-contributions.md',
+  goodFirstContributionsZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/good-first-contributions.zh-CN.md',
+  projectStatus: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/project-status.md',
+  projectStatusZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/project-status.zh-CN.md',
+  roadmap: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/roadmap.md',
+  roadmapZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/roadmap.zh-CN.md',
+  search: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/search.md',
+  searchZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/search.zh-CN.md',
+  shareKit: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/share-kit.md',
+  shareKitZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/share-kit.zh-CN.md',
+  showcase: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/showcase.md',
+  showcaseZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/showcase.zh-CN.md',
+  showcaseIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=showcase.yml',
+  installMac: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/install-macos.md',
+  installMacZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/install-macos.zh-CN.md',
+  privacy: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/privacy.md',
+  privacyZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/privacy.zh-CN.md',
+  compatibility: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/compatibility.md',
+  compatibilityIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=chm_compatibility.yml',
+  compatibilityZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/compatibility.zh-CN.md',
+  accessibility: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/accessibility.md',
+  accessibilityZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/accessibility.zh-CN.md',
+  troubleshooting: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.md',
+  troubleshootingZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.zh-CN.md',
+  faq: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/faq.md',
+  faqZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/faq.zh-CN.md',
+  shortcuts: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/shortcuts.md',
+  shortcutsZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/shortcuts.zh-CN.md',
+};
 
 protocol.registerSchemesAsPrivileged([{
   scheme: 'chm',
@@ -55,7 +143,10 @@ interface LibraryBook {
   filePath?: string;
   storedName?: string;
   addedAt?: number;
+  lastOpenedAt?: number;
   collectionId: string | null;
+  sourceMissing?: boolean;
+  [key: string]: unknown;
 }
 
 interface LibraryCollection {
@@ -97,6 +188,26 @@ let searchIndexGeneration = 0;
 let pendingFile: string | undefined;
 let currentView: 'library' | 'reader' = 'library';
 let isQuitting = false;
+const runBookStateTask = createSerializedTaskQueue();
+
+function configureAboutPanel(): void {
+  app.setAboutPanelOptions({
+    applicationName: 'CHMReaderLight',
+    applicationVersion: app.getVersion(),
+    version: `Electron ${process.versions.electron}`,
+    website: projectLinks.repository,
+    copyright: 'MIT License - liuqi.9867',
+  });
+}
+
+function getLaunchChmPath(argv: readonly string[]): string | undefined {
+  for (const argument of argv) {
+    if (!argument || argument.startsWith('-')) continue;
+    const resolved = path.resolve(argument);
+    if (path.extname(resolved).toLowerCase() === '.chm') return resolved;
+  }
+  return undefined;
+}
 
 function getLiveMainWindow(): BrowserWindowType | null {
   if (!mainWindow) return null;
@@ -113,6 +224,41 @@ function sendToMainWindow(channel: string, ...args: unknown[]): void {
   targetWindow.webContents.send(channel, ...args);
 }
 
+function reportMainProcessError(title: string, error: unknown, showDialog = true): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(title + ': ' + message);
+  if (!showDialog) return;
+  const targetWindow = getLiveMainWindow();
+  const options: Electron.MessageBoxOptions = {
+    type: 'error',
+    title,
+    message,
+  };
+  void Promise.resolve()
+    .then(() => targetWindow
+      ? dialog.showMessageBox(targetWindow, options)
+      : dialog.showMessageBox(options))
+    .catch(() => { });
+}
+
+type TrustedIpcHandler<Args extends unknown[], Result> = (
+  event: IpcMainInvokeEvent,
+  ...args: Args
+) => Result;
+
+function handleTrustedIpc<Args extends unknown[], Result>(
+  channel: string,
+  handler: TrustedIpcHandler<Args, Result>,
+): void {
+  ipcMain.handle(channel, (event: IpcMainInvokeEvent, ...args: unknown[]) => {
+    const targetWindow = getLiveMainWindow();
+    if (!isTrustedIpcSender(event, targetWindow?.webContents || null)) {
+      throw new Error('Unauthorized IPC sender');
+    }
+    return handler(event, ...args as Args);
+  });
+}
+
 function getLibraryDir(): string {
   return path.join(app.getPath('userData'), 'library');
 }
@@ -125,102 +271,290 @@ function getExtractCacheDir(): string {
   return path.join(app.getPath('userData'), 'extracted-books');
 }
 
-async function getExtractCacheRoot(chmPath: string): Promise<string> {
-  const stats = await fs.promises.stat(chmPath);
-  const cacheKey = createHash('sha256')
-    .update(path.resolve(chmPath))
-    .update('\0')
-    .update(String(stats.size))
-    .update('\0')
-    .update(String(Math.trunc(stats.mtimeMs)))
-    .digest('hex');
-  return path.join(getExtractCacheDir(), cacheKey);
-}
-
-function normalizeLibrary(parsed: unknown): LibraryState {
-  if (Array.isArray(parsed)) {
-    return {
-      collections: [],
-      books: parsed.map((book) => ({
-        ...(typeof book === 'object' && book !== null ? book : {}),
-        collectionId: null,
-      })) as LibraryBook[],
-    };
-  }
+async function getExtractCacheTarget(chmPath: string): Promise<{
+  root: string;
+  sourceIdentity: import('./book-cache').BookCacheFileIdentity;
+}> {
+  const stats = await fs.promises.stat(chmPath, { bigint: true });
+  const cacheKey = createBookCacheKey(chmPath, stats);
   return {
-    collections: Array.isArray((parsed as { collections?: unknown[] })?.collections)
-      ? (parsed as { collections: LibraryCollection[] }).collections
-      : [],
-    books: Array.isArray((parsed as { books?: unknown[] })?.books)
-      ? (parsed as { books: LibraryBook[] }).books
-      : [],
+    root: path.join(getExtractCacheDir(), cacheKey),
+    sourceIdentity: stats,
   };
 }
 
-async function readLibrary(): Promise<LibraryState> {
-  try {
-    const raw = await fs.promises.readFile(getLibraryIndexPath(), 'utf-8');
-    return normalizeLibrary(JSON.parse(raw));
-  } catch {
-    return { collections: [], books: [] };
+async function assertBookSourceUnchanged(
+  chmPath: string,
+  expectedIdentity: import('./book-cache').BookCacheFileIdentity,
+): Promise<void> {
+  const currentIdentity = await fs.promises.stat(chmPath, { bigint: true });
+  if (!isSameBookCacheIdentity(expectedIdentity, currentIdentity)) {
+    throw new Error('CHM source changed while it was being opened');
   }
 }
 
+async function readLibrary(): Promise<LibraryState> {
+  const parsed = await readLibraryFile(getLibraryIndexPath());
+  return parsed === null ? { collections: [], books: [] } : normalizeLibraryData(parsed);
+}
+
 async function writeLibrary(library: LibraryState): Promise<void> {
-  await fs.promises.mkdir(getLibraryDir(), { recursive: true });
-  await fs.promises.writeFile(getLibraryIndexPath(), JSON.stringify(library, null, 2));
+  await writeLibraryFile(getLibraryIndexPath(), normalizeLibraryDataForWrite(library));
+}
+
+function getLibraryBookPath(entry: LibraryBook): string {
+  return entry.filePath || (entry.storedName ? path.join(getLibraryDir(), entry.storedName) : '');
+}
+
+async function withBookAvailability(library: LibraryState): Promise<LibraryState> {
+  return {
+    ...library,
+    books: await mapWithConcurrency(
+      library.books,
+      LIBRARY_AVAILABILITY_CONCURRENCY,
+      async (book) => {
+        const bookPath = getLibraryBookPath(book);
+        if (!bookPath) return { ...book, sourceMissing: true };
+
+        try {
+          await fs.promises.access(bookPath, fs.constants.F_OK);
+          return { ...book, sourceMissing: false };
+        } catch {
+          return { ...book, sourceMissing: true };
+        }
+      },
+    ),
+  };
+}
+
+const updateLibrary = createSerializedStateUpdater(readLibrary, writeLibrary, withBookAvailability);
+
+function buildDiagnosticInfo(): string {
+  return [
+    `CHMReaderLight: ${app.getVersion()}`,
+    `Electron: ${process.versions.electron}`,
+    `Node: ${process.versions.node}`,
+    `Platform: ${process.platform}`,
+    `Architecture: ${process.arch}`,
+    `macOS: ${os.release()}`,
+  ].join('\n');
+}
+
+function buildShareText(): string {
+  return [
+    'CHMReaderLight helps macOS users keep offline CHM manuals searchable and organized.',
+    'CHMReaderLight 帮助 macOS 用户整理并搜索离线 CHM 手册。',
+    '',
+    'Library-first workflow, searchable table of contents, body search, reader preferences, and local-only document handling.',
+    '书库优先工作流、可搜索目录、正文搜索、阅读偏好，以及本地优先的文档处理方式。',
+    '',
+    `GitHub repository: ${projectLinks.repository}`,
+    `Star the project: ${projectLinks.star}`,
+    `Share a success story: ${projectLinks.showcaseIssue}`,
+    `中文入门指南: ${projectLinks.gettingStartedZhCn}`,
+    `中文分享素材包: ${projectLinks.shareKitZhCn}`,
+    '',
+    `Try it from GitHub Releases: ${projectLinks.releases}`,
+    `Apple Silicon download: ${projectLinks.downloadAppleSilicon}`,
+    `Intel download: ${projectLinks.downloadIntel}`,
+    `Watch releases: ${projectLinks.releases}`,
+    `Release feedback: ${projectLinks.releaseFeedback}`,
+    '',
+    'If release details would make CHMReaderLight easier to trust, star, watch, or share, tell maintainers what is missing.',
+    '如果 release 说明会影响你是否信任、star、watch 或分享 CHMReaderLight，请告诉维护者还缺什么信息。',
+    '',
+    'If it solves your offline CHM workflow, a GitHub star helps other users find it.',
+    'If a real CHMReaderLight workflow is safe to quote, share it so future users can evaluate the app faster.',
+    '如果它解决了你的离线 CHM 工作流，一个 GitHub star 可以帮助更多用户发现它。',
+    '如果真实使用场景可以公开引用，分享成功案例可以帮助后续用户更快判断是否适合。',
+  ].join('\n');
+}
+
+async function copyDiagnosticInfo(): Promise<void> {
+  clipboard.writeText(buildDiagnosticInfo());
+  await dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'Diagnostic Info Copied',
+    message: 'Diagnostic information has been copied.',
+    detail: 'Paste it into a GitHub issue when reporting a problem.',
+  });
+}
+
+async function copyShareText(): Promise<void> {
+  clipboard.writeText(buildShareText());
+  await dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'Share Text Copied',
+    message: 'Project share text has been copied.',
+    detail: 'Paste it into a release note, social post, or message when sharing CHMReaderLight.',
+  });
+}
+
+async function revealAppDataFolder(): Promise<void> {
+  try {
+    await fs.promises.mkdir(app.getPath('userData'), { recursive: true });
+    const errorMessage = await shell.openPath(app.getPath('userData'));
+    if (!errorMessage) return;
+    throw new Error(errorMessage);
+  } catch (error) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'Unable to Open App Data Folder',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function clearExtractedBookCache(): Promise<void> {
+  const confirmation = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    buttons: ['Clear Cache', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    title: 'Clear Extracted Cache?',
+    message: 'Remove cached extracted CHM contents?',
+    detail: 'Source CHM files and library entries will not be removed.',
+  });
+
+  if (confirmation.response !== 0) return;
+
+  try {
+    await runBookStateTask(async () => {
+      stopSearchIndexWorker();
+      await fs.promises.rm(getExtractCacheDir(), { recursive: true, force: true });
+      if (bookRoot && bookRootIsCached) {
+        bookRoot = undefined;
+        currentBookPath = null;
+        currentBookName = null;
+        currentView = 'library';
+        const targetWindow = getLiveMainWindow();
+        targetWindow?.setRepresentedFilename('');
+        targetWindow?.setTitle('CHMReaderLight');
+        sendToMainWindow('library:show');
+      }
+      bookRootIsCached = false;
+      bookSearchIndex = [];
+    });
+    await dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Extracted Cache Cleared',
+      message: 'Cached extracted CHM contents have been removed.',
+      detail: 'The next time you open a CHM file, CHMReaderLight will extract it again.',
+    });
+  } catch (error) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'Unable to Clear Extracted Cache',
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 async function importBooks(
   filePaths: readonly string[],
   collectionId: string | null = null,
 ): Promise<LibraryState> {
-  const library = await readLibrary();
-
-  for (const filePath of filePaths) {
-    if (path.extname(filePath).toLowerCase() !== '.chm') continue;
-
-    library.books.push({
-      id: randomUUID(),
-      name: path.basename(filePath, path.extname(filePath)),
-      filePath,
-      addedAt: Date.now(),
-      collectionId: collectionId || null,
-    });
-  }
-
-  await writeLibrary(library);
+  const library = await updateLibrary((current) => addBooksToLibrary(
+    current,
+    filePaths,
+    collectionId,
+    randomUUID,
+    Date.now,
+    process.platform === 'darwin',
+  ) as LibraryState);
   return library;
 }
 
 async function removeBook(id: string): Promise<LibraryState> {
-  const library = await readLibrary();
-  library.books = library.books.filter((item) => item.id !== id);
-  await writeLibrary(library);
+  const library = await updateLibrary((current) => ({
+    ...current,
+    books: current.books.filter((item) => item.id !== id),
+  }));
   return library;
 }
 
-async function createCollection(name: string): Promise<LibraryState> {
+async function revealLibraryBook(id: string): Promise<boolean> {
   const library = await readLibrary();
-  const collection = { id: randomUUID(), name: name || '新书库', createdAt: Date.now() };
-  library.collections.push(collection);
-  await writeLibrary(library);
+  const entry = library.books.find((item) => item.id === id);
+  const bookPath = entry ? getLibraryBookPath(entry) : '';
+  if (!bookPath) return false;
+
+  try {
+    await fs.promises.access(bookPath, fs.constants.F_OK);
+    shell.showItemInFolder(bookPath);
+    return true;
+  } catch (error) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: '无法定位 CHM',
+      message: error instanceof Error ? error.message : String(error),
+      detail: '请确认源文件仍存在，或重新添加该 CHM 文档。',
+    });
+    return false;
+  }
+}
+
+async function relinkLibraryBook(id: string): Promise<LibraryState | null> {
+  const library = await readLibrary();
+  const entry = library.books.find((item) => item.id === id);
+  if (!entry) throw new Error('该文档已不在书库中');
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: '重新定位 CHM',
+    buttonLabel: '选择',
+    properties: ['openFile'],
+    filters: [{ name: 'Compiled HTML Help', extensions: ['chm'] }],
+  });
+
+  if (result.canceled) return null;
+
+  const selectedPath = result.filePaths[0];
+  if (!selectedPath) return null;
+
+  try {
+    const updatedLibrary = await updateLibrary((current) => {
+      if (!current.books.some((item) => item.id === id)) {
+        throw new Error('该文档已不在书库中');
+      }
+      return relinkBookInLibrary(current, id, selectedPath, process.platform === 'darwin') as LibraryState;
+    });
+    return updatedLibrary;
+  } catch (error) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: '无法重新定位 CHM',
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return withBookAvailability(await readLibrary());
+  }
+}
+
+async function createCollection(name: string): Promise<LibraryState> {
+  const library = await updateLibrary((current) => ({
+    ...current,
+    collections: [
+      ...current.collections,
+      { id: randomUUID(), name: name || '新书库', createdAt: Date.now() },
+    ],
+  }));
   return library;
 }
 
 async function renameCollection(id: string, name: string): Promise<LibraryState> {
-  const library = normalizeLibrary(renameCollectionInLibrary(await readLibrary(), id, name));
-  await writeLibrary(library);
+  const library = await updateLibrary((current) => (
+    normalizeLibraryData(renameCollectionInLibrary(current, id, name)) as LibraryState
+  ));
   return library;
 }
 
 async function removeCollection(id: string): Promise<LibraryState> {
-  const library = await readLibrary();
-  library.books = library.books.map((item) => (
-    item.collectionId === id ? { ...item, collectionId: null } : item
-  ));
-  library.collections = library.collections.filter((item) => item.id !== id);
-  await writeLibrary(library);
+  const library = await updateLibrary((current) => ({
+    ...current,
+    books: current.books.map((item) => (
+      item.collectionId === id ? { ...item, collectionId: null } : item
+    )),
+    collections: current.collections.filter((item) => item.id !== id),
+  }));
   return library;
 }
 
@@ -241,6 +575,26 @@ function createWindow() {
   });
 
   mainWindow = browserWindow;
+  browserWindow.webContents.session.setPermissionCheckHandler(() => false);
+  browserWindow.webContents.session.setPermissionRequestHandler((
+    _webContents: unknown,
+    _permission: string,
+    callback: (granted: boolean) => void,
+  ) => {
+    callback(false);
+  });
+  browserWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  browserWindow.webContents.on(
+    'will-frame-navigate',
+    (event: Electron.Event<Electron.WebContentsWillFrameNavigateEventParams>) => {
+      if (!isAllowedBookFrameNavigation(event.url, event.isMainFrame)) {
+        event.preventDefault();
+      }
+    },
+  );
+  browserWindow.webContents.on('will-navigate', (event: Electron.Event) => {
+    event.preventDefault();
+  });
   browserWindow.on('close', (event: { preventDefault: () => void }) => {
     if (isQuitting || currentView !== 'reader') return;
     event.preventDefault();
@@ -252,11 +606,35 @@ function createWindow() {
     stopSearchIndexWorker();
     mainWindow = undefined;
   });
-  browserWindow.loadFile(path.join(__dirname, 'index.html'));
+  void browserWindow.loadFile(path.join(__dirname, 'index.html')).catch((error: unknown) => {
+    reportMainProcessError('Unable to Load Application Window', error);
+  });
+}
+
+function guardMenuActionFailures(
+  template: Electron.MenuItemConstructorOptions[],
+): Electron.MenuItemConstructorOptions[] {
+  return template.map((item) => {
+    const guardedItem = { ...item };
+    if (item.click) {
+      const click = item.click;
+      guardedItem.click = (menuItem, browserWindow, event) => {
+        void Promise.resolve()
+          .then(() => click(menuItem, browserWindow, event))
+          .catch((error: unknown) => {
+            reportMainProcessError('Unable to Complete Menu Action', error);
+          });
+      };
+    }
+    if (Array.isArray(item.submenu)) {
+      guardedItem.submenu = guardMenuActionFailures(item.submenu);
+    }
+    return guardedItem;
+  });
 }
 
 function createMenu() {
-  const template = [{
+  const template: Electron.MenuItemConstructorOptions[] = [{
     label: app.name,
     submenu: [
       { role: 'about' },
@@ -272,6 +650,11 @@ function createMenu() {
       label: 'Add CHM to Library...',
       accelerator: 'CmdOrCtrl+O',
       click: () => selectAndImportBooks(),
+    }, {
+      role: 'recentDocuments',
+      submenu: [
+        { role: 'clearRecentDocuments' },
+      ],
     }, {
       label: 'Show Library',
       accelerator: 'CmdOrCtrl+L',
@@ -289,9 +672,19 @@ function createMenu() {
       { role: 'selectAll' },
       { type: 'separator' },
       {
-        label: 'Find in Contents',
+        label: 'Find',
         accelerator: 'CmdOrCtrl+F',
         click: () => sendToMainWindow('navigation:focus-search'),
+      },
+      {
+        label: 'Find Next',
+        accelerator: 'CmdOrCtrl+G',
+        click: () => sendToMainWindow('reader:shortcut', 'find-next'),
+      },
+      {
+        label: 'Find Previous',
+        accelerator: 'Shift+CmdOrCtrl+G',
+        click: () => sendToMainWindow('reader:shortcut', 'find-previous'),
       },
     ],
   }, {
@@ -299,17 +692,248 @@ function createMenu() {
     submenu: [
       { role: 'reload' },
       { type: 'separator' },
-      { role: 'resetZoom' },
-      { role: 'zoomIn' },
-      { role: 'zoomOut' },
+      {
+        label: 'Back',
+        accelerator: 'CmdOrCtrl+[',
+        click: () => sendToMainWindow('reader:shortcut', 'history-back'),
+      },
+      {
+        label: 'Forward',
+        accelerator: 'CmdOrCtrl+]',
+        click: () => sendToMainWindow('reader:shortcut', 'history-forward'),
+      },
+      { type: 'separator' },
+      {
+        label: 'Previous Topic',
+        accelerator: 'CmdOrCtrl+Up',
+        click: () => sendToMainWindow('reader:shortcut', 'previous-topic'),
+      },
+      {
+        label: 'Next Topic',
+        accelerator: 'CmdOrCtrl+Down',
+        click: () => sendToMainWindow('reader:shortcut', 'next-topic'),
+      },
+      {
+        label: 'Toggle Sidebar',
+        accelerator: 'CmdOrCtrl+B',
+        click: () => sendToMainWindow('reader:shortcut', 'toggle-sidebar'),
+      },
+      { type: 'separator' },
+      {
+        label: 'Actual Size',
+        accelerator: 'CmdOrCtrl+0',
+        click: () => sendToMainWindow('reader:shortcut', 'zoom-reset'),
+      },
+      {
+        label: 'Zoom In',
+        accelerator: 'CmdOrCtrl+Plus',
+        click: () => sendToMainWindow('reader:shortcut', 'zoom-in'),
+      },
+      {
+        label: 'Zoom Out',
+        accelerator: 'CmdOrCtrl+-',
+        click: () => sendToMainWindow('reader:shortcut', 'zoom-out'),
+      },
       { type: 'separator' },
       { role: 'togglefullscreen' },
     ],
   }, {
     role: 'windowMenu',
+  }, {
+    label: 'Help',
+    submenu: [{
+      label: 'GitHub Repository',
+      click: () => shell.openExternal(projectLinks.repository),
+    }, {
+      label: 'Star on GitHub',
+      click: () => shell.openExternal(projectLinks.star),
+    }, {
+      label: 'Watch Releases',
+      click: () => shell.openExternal(projectLinks.releases),
+    }, {
+      label: 'GitHub Discussions',
+      click: () => shell.openExternal(projectLinks.discussions),
+    }, {
+      label: 'Release Feedback',
+      click: () => shell.openExternal(projectLinks.releaseFeedback),
+    }, {
+      label: 'Report or Request',
+      submenu: [{
+        label: 'Report a Bug',
+        click: () => shell.openExternal(projectLinks.bugIssue),
+      }, {
+        label: 'Get Install Help',
+        click: () => shell.openExternal(projectLinks.installIssue),
+      }, {
+        label: 'Request a Feature',
+        click: () => shell.openExternal(projectLinks.featureIssue),
+      }, {
+        label: 'Ask a Usage Question',
+        click: () => shell.openExternal(projectLinks.questionIssue),
+      }, {
+        label: 'Report Documentation',
+        click: () => shell.openExternal(projectLinks.documentationIssue),
+      }, {
+        label: 'Share Release Feedback',
+        click: () => shell.openExternal(projectLinks.releaseFeedback),
+      }, {
+        label: 'Report CHM Compatibility',
+        click: () => shell.openExternal(projectLinks.compatibilityIssue),
+      }, {
+        label: 'Share a Success Story',
+        click: () => shell.openExternal(projectLinks.showcaseIssue),
+      }, {
+        label: 'Security Policy',
+        click: () => shell.openExternal(projectLinks.securityPolicy),
+      }, {
+        label: 'Report Performance',
+        click: () => shell.openExternal(projectLinks.performanceIssue),
+      }, {
+        label: 'Report Accessibility',
+        click: () => shell.openExternal(projectLinks.accessibilityIssue),
+      }],
+    }, {
+      label: 'Report an Issue',
+      click: () => shell.openExternal(projectLinks.issues),
+    }, {
+      label: 'Support Guide',
+      click: () => shell.openExternal(projectLinks.support),
+    }, {
+      label: 'Getting Started',
+      click: () => shell.openExternal(projectLinks.gettingStarted),
+    }, {
+      label: 'Feature Tour',
+      click: () => shell.openExternal(projectLinks.featureTour),
+    }, {
+      label: 'Use Cases',
+      click: () => shell.openExternal(projectLinks.useCases),
+    }, {
+      label: 'Comparison',
+      click: () => shell.openExternal(projectLinks.comparison),
+    }, {
+      label: 'Adoption Checklist',
+      click: () => shell.openExternal(projectLinks.adoptionChecklist),
+    }, {
+      label: 'Good First Contributions',
+      click: () => shell.openExternal(projectLinks.goodFirstContributions),
+    }, {
+      label: 'Project Status',
+      click: () => shell.openExternal(projectLinks.projectStatus),
+    }, {
+      label: 'Roadmap',
+      click: () => shell.openExternal(projectLinks.roadmap),
+    }, {
+      label: 'Search Guide',
+      click: () => shell.openExternal(projectLinks.search),
+    }, {
+      label: 'Share Kit',
+      click: () => shell.openExternal(projectLinks.shareKit),
+    }, {
+      label: 'Showcase Guide',
+      click: () => shell.openExternal(projectLinks.showcase),
+    }, {
+      label: 'Chinese Documentation',
+      submenu: [{
+        label: '中文入门指南',
+        click: () => shell.openExternal(projectLinks.gettingStartedZhCn),
+      }, {
+        label: '中文适用场景',
+        click: () => shell.openExternal(projectLinks.useCasesZhCn),
+      }, {
+        label: '中文采用检查清单',
+        click: () => shell.openExternal(projectLinks.adoptionChecklistZhCn),
+      }, {
+        label: '中文首次贡献指南',
+        click: () => shell.openExternal(projectLinks.goodFirstContributionsZhCn),
+      }, {
+        label: '中文项目状态',
+        click: () => shell.openExternal(projectLinks.projectStatusZhCn),
+      }, {
+        label: '中文路线图',
+        click: () => shell.openExternal(projectLinks.roadmapZhCn),
+      }, {
+        label: '中文搜索指南',
+        click: () => shell.openExternal(projectLinks.searchZhCn),
+      }, {
+        label: '中文分享素材包',
+        click: () => shell.openExternal(projectLinks.shareKitZhCn),
+      }, {
+        label: '中文 Showcase 指南',
+        click: () => shell.openExternal(projectLinks.showcaseZhCn),
+      }, {
+        label: '中文 macOS 安装指南',
+        click: () => shell.openExternal(projectLinks.installMacZhCn),
+      }, {
+        label: '中文隐私与本地数据',
+        click: () => shell.openExternal(projectLinks.privacyZhCn),
+      }, {
+        label: '中文兼容性说明',
+        click: () => shell.openExternal(projectLinks.compatibilityZhCn),
+      }, {
+        label: '中文无障碍指南',
+        click: () => shell.openExternal(projectLinks.accessibilityZhCn),
+      }, {
+        label: '中文快捷键指南',
+        click: () => shell.openExternal(projectLinks.shortcutsZhCn),
+      }, {
+        label: '中文故障排查',
+        click: () => shell.openExternal(projectLinks.troubleshootingZhCn),
+      }, {
+        label: '中文 FAQ',
+        click: () => shell.openExternal(projectLinks.faqZhCn),
+      }, {
+        label: '中文支持指南',
+        click: () => shell.openExternal(projectLinks.supportZhCn),
+      }, {
+        label: '中文安全政策',
+        click: () => shell.openExternal(projectLinks.securityPolicyZhCn),
+      }, {
+        label: '中文对比指南',
+        click: () => shell.openExternal(projectLinks.comparisonZhCn),
+      }],
+    }, {
+      label: 'macOS Install Guide',
+      click: () => shell.openExternal(projectLinks.installMac),
+    }, {
+      label: 'Privacy and Local Data',
+      click: () => shell.openExternal(projectLinks.privacy),
+    }, {
+      label: 'Compatibility Notes',
+      click: () => shell.openExternal(projectLinks.compatibility),
+    }, {
+      label: 'Accessibility Guide',
+      click: () => shell.openExternal(projectLinks.accessibility),
+    }, {
+      label: 'Troubleshooting Guide',
+      click: () => shell.openExternal(projectLinks.troubleshooting),
+    }, {
+      label: 'FAQ',
+      click: () => shell.openExternal(projectLinks.faq),
+    }, {
+      label: 'Keyboard Shortcuts',
+      click: () => shell.openExternal(projectLinks.shortcuts),
+    }, {
+      label: 'Download Releases',
+      click: () => shell.openExternal(projectLinks.releases),
+    }, {
+      type: 'separator',
+    }, {
+      label: 'Copy Share Text',
+      accelerator: 'Shift+CmdOrCtrl+C',
+      click: () => copyShareText(),
+    }, {
+      label: 'Copy Diagnostic Info',
+      click: () => copyDiagnosticInfo(),
+    }, {
+      label: 'Reveal App Data Folder',
+      click: () => revealAppDataFolder(),
+    }, {
+      label: 'Clear Extracted Cache',
+      click: () => clearExtractedBookCache(),
+    }],
   }];
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  Menu.setApplicationMenu(Menu.buildFromTemplate(guardMenuActionFailures(template)));
 }
 
 async function locateExtractor() {
@@ -383,7 +1007,9 @@ function createBookResult(
 function stopSearchIndexWorker() {
   searchIndexGeneration += 1;
   if (searchIndexWorker) {
-    searchIndexWorker.terminate();
+    void searchIndexWorker.terminate().catch((error: unknown) => {
+      reportMainProcessError('Unable to Stop Search Index Worker', error, false);
+    });
     searchIndexWorker = undefined;
   }
 }
@@ -395,14 +1021,24 @@ function startSearchIndexBuild(
 ): void {
   stopSearchIndexWorker();
   const generation = searchIndexGeneration;
-  const worker = new Worker(path.join(__dirname, 'search-index-worker.js'), {
-    workerData: {
-      root,
-      contents,
-      textEncoding: textEncoding || null,
-      concurrency: 4,
-    },
-  });
+  let worker: WorkerType;
+  try {
+    worker = new Worker(path.join(__dirname, 'search-index-worker.js'), {
+      workerData: {
+        root,
+        contents,
+        textEncoding: textEncoding || null,
+        concurrency: 4,
+        maxMarkupBytes: DEFAULT_MARKUP_LIMITS.maxMarkupBytes,
+        maxSearchIndexSourceBytes: DEFAULT_MARKUP_LIMITS.maxSearchIndexSourceBytes,
+      },
+    });
+  } catch (error) {
+    console.error(`CHM search index worker could not start: ${
+      error instanceof Error ? error.message : String(error)
+    }`);
+    return;
+  }
   searchIndexWorker = worker;
 
   worker.once('message', (message: SearchIndexWorkerMessage) => {
@@ -443,14 +1079,23 @@ function addSearchHighlightStyles(markup: string): string {
   return /<\/head>/i.test(markup) ? markup.replace(/<\/head>/i, `${styles}</head>`) : `${styles}${markup}`;
 }
 
-async function openBook(chmPath: string, displayName?: string): Promise<OpenedBook> {
+async function removeBookCacheAfterFailure(cacheRoot: string): Promise<void> {
+  try {
+    await fs.promises.rm(cacheRoot, { recursive: true, force: true });
+  } catch (cleanupError) {
+    reportMainProcessError('Unable to Clean Up Extracted Cache', cleanupError, false);
+  }
+}
+
+async function openBookTransaction(chmPath: string, displayName?: string): Promise<OpenedBook> {
   if (!chmPath || path.extname(chmPath).toLowerCase() !== '.chm') {
     throw new Error('请选择有效的 .chm 文件');
   }
 
   const name = displayName || path.basename(chmPath, path.extname(chmPath));
-  const nextRoot = await getExtractCacheRoot(chmPath);
+  const { root: nextRoot, sourceIdentity } = await getExtractCacheTarget(chmPath);
   let stagingRoot: string | null = null;
+  let publishedCacheNeedsCleanup = false;
   try {
     let metadata: BookMetadata;
     try {
@@ -459,17 +1104,24 @@ async function openBook(chmPath: string, displayName?: string): Promise<OpenedBo
         buildSearchIndex: false,
       });
     } catch {
-      const activeStagingRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'chm-reader-cache-'));
+      await fs.promises.mkdir(path.dirname(nextRoot), { recursive: true });
+      const activeStagingRoot = await fs.promises.mkdtemp(
+        path.join(path.dirname(nextRoot), '.chm-reader-cache-'),
+      );
       stagingRoot = activeStagingRoot;
       metadata = await extractBook(chmPath, activeStagingRoot, await locateExtractor(), {
         textEncoding: bookTextEncoding,
         buildSearchIndex: false,
       });
-      await fs.promises.mkdir(path.dirname(nextRoot), { recursive: true });
+      await assertBookSourceUnchanged(chmPath, sourceIdentity);
       await fs.promises.rm(nextRoot, { recursive: true, force: true });
       await fs.promises.rename(activeStagingRoot, nextRoot);
       stagingRoot = null;
+      publishedCacheNeedsCleanup = true;
     }
+
+    await assertBookSourceUnchanged(chmPath, sourceIdentity);
+    publishedCacheNeedsCleanup = false;
 
     const previousRoot = bookRoot;
     const previousRootIsCached = bookRootIsCached;
@@ -488,25 +1140,30 @@ async function openBook(chmPath: string, displayName?: string): Promise<OpenedBo
     const targetWindow = getLiveMainWindow();
     targetWindow?.setRepresentedFilename(chmPath);
     targetWindow?.setTitle(`${result.name} - CHMReaderLight`);
+    app.addRecentDocument(chmPath);
     sendToMainWindow('book:opened', result);
     startSearchIndexBuild(nextRoot, metadata.contents, bookTextEncoding);
     return result;
   } catch (error) {
     if (stagingRoot) {
-      await fs.promises.rm(stagingRoot, { recursive: true, force: true });
+      await removeBookCacheAfterFailure(stagingRoot);
+    }
+    if (publishedCacheNeedsCleanup) {
+      await removeBookCacheAfterFailure(nextRoot);
     }
     throw error;
   }
 }
 
-async function openLibraryBook(id: string): Promise<OpenedBook | null> {
+async function openLibraryBookTransaction(id: string): Promise<OpenedBook | null> {
   const library = await readLibrary();
   const entry = library.books.find((item) => item.id === id);
   if (!entry) throw new Error('该文档已不在书库中');
 
-  const chmPath = entry.filePath || path.join(getLibraryDir(), entry.storedName);
+  const chmPath = getLibraryBookPath(entry);
+  let openedBook: OpenedBook;
   try {
-    return await openBook(chmPath, entry.name);
+    openedBook = await openBookTransaction(chmPath, entry.name);
   } catch (error) {
     await dialog.showMessageBox(mainWindow, {
       type: 'error',
@@ -516,27 +1173,51 @@ async function openLibraryBook(id: string): Promise<OpenedBook | null> {
     });
     return null;
   }
+
+  try {
+    const openedLibrary = await updateLibrary((current) => (
+      markBookOpenedInLibrary(current, id, Date.now()) as LibraryState
+    ));
+    sendToMainWindow('library:updated', openedLibrary);
+  } catch (error) {
+    console.error(`Unable to update last-opened metadata: ${
+      error instanceof Error ? error.message : String(error)
+    }`);
+  }
+  return openedBook;
 }
 
-async function setBookTextEncoding(
+const openLibraryBook = (id: string) => (
+  runBookStateTask(() => openLibraryBookTransaction(id))
+);
+
+async function setBookTextEncodingTransaction(
   encoding: string,
 ): Promise<OpenedBook | { textEncoding: string | null }> {
-  bookTextEncoding = normalizeTextEncoding(encoding);
-  if (!bookRoot || !currentBookPath || !currentBookName) return { textEncoding: bookTextEncoding };
+  const nextEncoding = normalizeTextEncoding(encoding);
+  if (!bookRoot || !currentBookPath || !currentBookName) {
+    bookTextEncoding = nextEncoding;
+    return { textEncoding: bookTextEncoding };
+  }
   const activeRoot = bookRoot;
   const activePath = currentBookPath;
   const activeName = currentBookName;
 
   const metadata = await readExtractedBook(activeRoot, {
-    textEncoding: bookTextEncoding,
+    textEncoding: nextEncoding,
     buildSearchIndex: false,
   });
+  bookTextEncoding = nextEncoding;
   bookSearchIndex = metadata.searchIndex;
   const result = createBookResult(activeName, activePath, metadata);
   sendToMainWindow('book:opened', result);
   startSearchIndexBuild(activeRoot, metadata.contents, bookTextEncoding);
   return result;
 }
+
+const setBookTextEncoding = (encoding: string) => (
+  runBookStateTask(() => setBookTextEncodingTransaction(encoding))
+);
 
 async function selectAndImportBooks(collectionId: string | null = null): Promise<LibraryState | null> {
   const result = await dialog.showOpenDialog(mainWindow, {
@@ -562,6 +1243,29 @@ async function selectAndImportBooks(collectionId: string | null = null): Promise
   }
 }
 
+async function importDroppedBookPaths(
+  filePaths: readonly string[],
+  collectionId: string | null = null,
+): Promise<LibraryState> {
+  try {
+    const chmPaths = filePaths.filter((filePath) => (
+      typeof filePath === 'string' && path.extname(filePath).toLowerCase() === '.chm'
+    ));
+    if (!chmPaths.length) return withBookAvailability(await readLibrary());
+
+    const library = await importBooks(chmPaths, collectionId);
+    sendToMainWindow('library:updated', library);
+    return library;
+  } catch (error) {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: '无法添加到书库',
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return withBookAvailability(await readLibrary());
+  }
+}
+
 function registerBookProtocol(): void {
   protocol.handle('chm', async (request: { url: string }) => {
     try {
@@ -571,17 +1275,24 @@ function registerBookProtocol(): void {
       }
 
       const filePath = resolveBookResource(bookRoot, requestUrl.pathname);
-      const response = await net.fetch(pathToFileURL(filePath).toString());
-      const headers = new Headers(response.headers);
       const searchQuery = requestUrl.searchParams.get('search');
       const isHtml = ['.htm', '.html'].includes(path.extname(filePath).toLowerCase());
       if (isHtml) {
+        let markup: string;
+        try {
+          markup = await readMarkupFile(filePath, bookTextEncoding);
+        } catch (error) {
+          if (error instanceof MarkupTooLargeError) {
+            return new Response('HTML page exceeds the reader safety limit', { status: 413 });
+          }
+          throw error;
+        }
+        const headers = new Headers();
         const scriptNonce = randomUUID();
         headers.set(
           'Content-Security-Policy',
-          `default-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; script-src 'nonce-${scriptNonce}'; font-src chm: data:; media-src chm:; frame-src chm:`,
+          `default-src 'none'; base-uri 'none'; object-src 'none'; connect-src 'none'; form-action 'none'; frame-src 'none'; child-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; script-src 'nonce-${scriptNonce}'; script-src-attr 'none'; font-src chm: data:; media-src chm:`,
         );
-        let markup = decodeMarkup(await fs.promises.readFile(filePath), bookTextEncoding);
         if (searchQuery) {
           const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match') || '', 10) || 0);
           markup = addSearchHighlightStyles(highlightSearchMatches(markup, searchQuery, selectedIndex).markup);
@@ -589,14 +1300,15 @@ function registerBookProtocol(): void {
         markup = injectContentNavigationBridge(markup, scriptNonce);
         headers.set('Content-Type', 'text/html; charset=utf-8');
         return new Response(markup, {
-          status: response.status,
-          statusText: response.statusText,
+          status: 200,
           headers,
         });
       }
+      const response = await net.fetch(pathToFileURL(filePath).toString());
+      const headers = new Headers(response.headers);
       headers.set(
         'Content-Security-Policy',
-        "default-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; font-src chm: data:; media-src chm:; frame-src chm:",
+        "default-src 'none'; base-uri 'none'; object-src 'none'; connect-src 'none'; form-action 'none'; frame-src 'none'; child-src 'none'; img-src chm: data:; style-src chm: 'unsafe-inline'; script-src 'none'; script-src-attr 'none'; font-src chm: data:; media-src chm:",
       );
       return new Response(response.body, {
         status: response.status,
@@ -609,64 +1321,101 @@ function registerBookProtocol(): void {
   });
 }
 
-ipcMain.handle('library:list', (_event: IpcMainInvokeEvent) => readLibrary());
-ipcMain.handle('library:import', (_event: IpcMainInvokeEvent, collectionId: string | null) => selectAndImportBooks(collectionId));
-ipcMain.handle('library:open', (_event: IpcMainInvokeEvent, id: string) => openLibraryBook(id));
-ipcMain.handle('library:remove', (_event: IpcMainInvokeEvent, id: string) => removeBook(id));
-ipcMain.handle('collection:create', (_event: IpcMainInvokeEvent, name: string) => createCollection(name));
-ipcMain.handle('collection:rename', (_event: IpcMainInvokeEvent, id: string, name: string) => renameCollection(id, name));
-ipcMain.handle('collection:remove', (_event: IpcMainInvokeEvent, id: string) => removeCollection(id));
-ipcMain.handle('book:url', (_event: IpcMainInvokeEvent, topicPath: string | null) => createBookUrl(topicPath));
-ipcMain.handle('book:search', (_event: IpcMainInvokeEvent, query: string): SearchResult[] => searchBookContents(bookSearchIndex, query));
-ipcMain.handle('book:encoding', (_event: IpcMainInvokeEvent, encoding: string) => setBookTextEncoding(encoding));
-ipcMain.handle('view:set', (_event: IpcMainInvokeEvent, view: 'library' | 'reader') => {
+handleTrustedIpc('library:list', async (_event: IpcMainInvokeEvent) => withBookAvailability(await readLibrary()));
+handleTrustedIpc('library:import', (_event: IpcMainInvokeEvent, collectionId: string | null) => selectAndImportBooks(collectionId));
+handleTrustedIpc('library:import-paths', (_event: IpcMainInvokeEvent, filePaths: readonly string[], collectionId: string | null) => (
+  importDroppedBookPaths(Array.isArray(filePaths) ? filePaths : [], collectionId)
+));
+handleTrustedIpc('library:open', (_event: IpcMainInvokeEvent, id: string) => openLibraryBook(id));
+handleTrustedIpc('library:remove', (_event: IpcMainInvokeEvent, id: string) => removeBook(id));
+handleTrustedIpc('library:reveal', (_event: IpcMainInvokeEvent, id: string) => revealLibraryBook(id));
+handleTrustedIpc('library:relink', (_event: IpcMainInvokeEvent, id: string) => relinkLibraryBook(id));
+handleTrustedIpc('clipboard:write-text', (_event: IpcMainInvokeEvent, text: string) => clipboard.writeText(String(text || '')));
+handleTrustedIpc('collection:create', (_event: IpcMainInvokeEvent, name: string) => createCollection(name));
+handleTrustedIpc('collection:rename', (_event: IpcMainInvokeEvent, id: string, name: string) => renameCollection(id, name));
+handleTrustedIpc('collection:remove', (_event: IpcMainInvokeEvent, id: string) => removeCollection(id));
+handleTrustedIpc('book:url', (_event: IpcMainInvokeEvent, topicPath: string | null) => createBookUrl(topicPath));
+handleTrustedIpc('book:search', (_event: IpcMainInvokeEvent, query: string): SearchResult[] => searchBookContents(bookSearchIndex, query));
+handleTrustedIpc('book:encoding', (_event: IpcMainInvokeEvent, encoding: string) => setBookTextEncoding(encoding));
+handleTrustedIpc('view:set', (_event: IpcMainInvokeEvent, view: 'library' | 'reader') => {
   currentView = view === 'reader' ? 'reader' : 'library';
 });
-ipcMain.handle('external:open', (_event: IpcMainInvokeEvent, url: string) => {
-  if (/^https?:\/\//i.test(url)) return shell.openExternal(url);
+handleTrustedIpc('external:open', (_event: IpcMainInvokeEvent, url: string) => {
+  const externalUrl = normalizeExternalWebUrl(url);
+  if (externalUrl) return shell.openExternal(externalUrl);
   return undefined;
 });
 
 async function importAndOpen(filePath: string): Promise<void> {
   const library = await importBooks([filePath]);
   sendToMainWindow('library:updated', library);
-  const added = library.books[library.books.length - 1];
-  if (added) await openLibraryBook(added.id);
+  const target = findBookByFilePath(library.books, filePath, process.platform === 'darwin');
+  if (target) await openLibraryBook(target.id);
+}
+
+function importAndOpenFromSystem(filePath: string): void {
+  void importAndOpen(filePath).catch((error: unknown) => {
+    reportMainProcessError('Unable to Open CHM', error);
+  });
 }
 
 app.on('open-file', (event: Electron.Event, filePath: string) => {
   event.preventDefault();
   if (app.isReady()) {
-    importAndOpen(filePath).catch(() => { });
+    importAndOpenFromSystem(filePath);
   } else {
     pendingFile = filePath;
   }
 });
 
-app.whenReady().then(async () => {
-  registerBookProtocol();
-  createWindow();
-  createMenu();
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
-  if (pendingFile) {
-    await importAndOpen(pendingFile).catch(() => { });
-    pendingFile = undefined;
-  }
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  pendingFile = pendingFile || getLaunchChmPath(process.argv);
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  app.on('second-instance', (_event: Electron.Event, argv: string[]) => {
+    const launchedFile = getLaunchChmPath(argv);
+    const targetWindow = getLiveMainWindow();
+    if (targetWindow) {
+      if (targetWindow.isMinimized()) targetWindow.restore();
+      targetWindow.focus();
+    }
+    if (launchedFile) {
+      importAndOpenFromSystem(launchedFile);
+    }
   });
-});
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  void app.whenReady().then(async () => {
+    registerBookProtocol();
+    configureAboutPanel();
+    createWindow();
+    createMenu();
 
-app.on('before-quit', () => {
-  isQuitting = true;
-});
+    if (pendingFile) {
+      importAndOpenFromSystem(pendingFile);
+      pendingFile = undefined;
+    }
 
-app.on('will-quit', () => {
-  stopSearchIndexWorker();
-  if (bookRoot && !bookRootIsCached) fs.rmSync(bookRoot, { recursive: true, force: true });
-});
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  }).catch((error: unknown) => {
+    reportMainProcessError('Unable to Start CHMReaderLight', error);
+    app.quit();
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+  });
+
+  app.on('before-quit', () => {
+    isQuitting = true;
+  });
+
+  app.on('will-quit', () => {
+    stopSearchIndexWorker();
+    if (bookRoot && !bookRootIsCached) fs.rmSync(bookRoot, { recursive: true, force: true });
+  });
+}

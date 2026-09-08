@@ -1,0 +1,51 @@
+- name: bug
+  color: d73a4a
+  description: Reproducible application problems that should work differently.
+
+- name: compatibility
+  color: 5319e7
+  description: CHM-specific opening, navigation, rendering, search, image, or encoding reports.
+
+- name: enhancement
+  color: a2eeef
+  description: Reader, library, search, packaging, or documentation improvements.
+
+- name: documentation
+  color: 0075ca
+  description: Unclear, missing, outdated, or confusing docs.
+
+- name: performance
+  color: fbca04
+  description: Slow opening, extraction, search indexing, search, startup, or large-library workflows.
+
+- name: accessibility
+  color: bfd4f2
+  description: Keyboard, VoiceOver, focus, contrast, or appearance issues.
+
+- name: question
+  color: d876e3
+  description: Usage, setup, release, or workflow support questions.
+
+- name: showcase
+  color: 0e8a16
+  description: Positive offline CHM workflow stories maintainers may route into social proof.
+
+- name: good first issue
+  color: 7057ff
+  description: Small, well-scoped tasks with clear file pointers and verification steps.
+
+- name: help wanted
+  color: 008672
+  description: Issues where maintainers can review or guide outside contributions.
+
+- name: dependencies
+  color: 0366d6
+  description: Dependency update pull requests.
+
+- name: github-actions
+  color: 000000
+  description: GitHub Actions workflow or automation updates.
+
+- name: maintenance
+  color: cfd3d7
+  description: Repository maintenance, cleanup, or non-user-facing upkeep.

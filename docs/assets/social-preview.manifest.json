@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "source": {
+    "path": "docs/assets/social-preview.svg",
+    "sha256": "c7dd5d52a9fad19db4af507ab663badee44d730488de71c32ac56102210aed65"
+  },
+  "output": {
+    "path": "docs/assets/social-preview.png",
+    "sha256": "305217ac1f1ec94a6162f1d36dc114c20aff3ec47d6faafab4e55588daebddfe"
+  }
+}

@@ -4,6 +4,14 @@ export interface NavigationItem {
   children?: NavigationItem[];
 }
 
+function safeDecodeURIComponent(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
 export function normalizeTopicReference(value: string | null | undefined): string | null {
   if (!value) return null;
 
@@ -20,7 +28,10 @@ export function normalizeTopicReference(value: string | null | undefined): strin
   const pathOnly = rawPath.split(/[?#]/, 1)[0].replace(/^[/\\]+/, '');
   if (!pathOnly) return null;
 
-  return decodeURIComponent(pathOnly)
+  const decodedPath = safeDecodeURIComponent(pathOnly);
+  if (decodedPath === null) return null;
+
+  return decodedPath
     .replace(/^[/\\]+/, '')
     .replaceAll('\\', '/')
     .toLocaleLowerCase();
@@ -38,7 +49,8 @@ export function normalizeTopicReferenceWithHash(value: string | null | undefined
     hash = hashIndex >= 0 ? String(value).slice(hashIndex) : '';
   }
 
-  return `${normalizedPath}${decodeURIComponent(hash).toLocaleLowerCase()}`;
+  const decodedHash = safeDecodeURIComponent(hash);
+  return decodedHash === null ? null : `${normalizedPath}${decodedHash.toLocaleLowerCase()}`;
 }
 
 function findTopicPath(

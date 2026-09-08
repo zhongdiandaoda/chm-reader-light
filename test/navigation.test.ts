@@ -16,6 +16,27 @@ test('normalizeTopicReference converts chm URLs to comparable book paths', () =>
   );
 });
 
+test('normalizeTopicReference rejects malformed percent encoding without throwing', () => {
+  assert.equal(normalizeTopicReference('chm://book/guide/%broken.htm'), null);
+  assert.equal(normalizeTopicReference('guide/%E0%A4%A.htm'), null);
+});
+
+test('findTopicPathByUrl ignores malformed CHM topic paths without throwing', () => {
+  const items = [{
+    title: 'Malformed topic',
+    path: 'guide/%broken.htm',
+    children: [],
+  }];
+
+  assert.equal(findTopicPathByUrl(items, 'chm://book/guide/start.htm'), null);
+  assert.equal(findTopicPathByUrl(items, 'chm://book/guide/%broken.htm'), null);
+  assert.equal(findTopicPathByUrl([{
+    title: 'Valid topic',
+    path: 'guide/start.htm#%broken',
+    children: [],
+  }], 'chm://book/guide/start.htm#valid'), 'guide/start.htm#%broken');
+});
+
 test('findTopicPathByUrl matches nested topics by the current iframe page', () => {
   const items = [{
     title: 'Root',
@@ -95,4 +116,29 @@ test('getTopicPathsInReadingOrder traverses nested topics and skips groups witho
     'reference.htm',
     'reference/api.htm',
   ]);
+});
+
+test('navigation helpers traverse the maximum supported contents depth', () => {
+  type TestNavigationItem = {
+    title: string;
+    path: string;
+    children: TestNavigationItem[];
+  };
+  let items: TestNavigationItem[] = [];
+  for (let level = 256; level >= 1; level -= 1) {
+    items = [{
+      title: `Level ${level}`,
+      path: `level-${level}.htm`,
+      children: items,
+    }];
+  }
+
+  const paths = getTopicPathsInReadingOrder(items);
+  assert.equal(paths.length, 256);
+  assert.equal(paths[0], 'level-1.htm');
+  assert.equal(paths[255], 'level-256.htm');
+  assert.equal(
+    findTopicPathByUrl(items, 'chm://book/level-256.htm'),
+    'level-256.htm',
+  );
 });
