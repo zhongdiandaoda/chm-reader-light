@@ -42,7 +42,6 @@ function verifyReleaseTemplate() {
   const releaseTemplate = readText('docs/release-template.md');
   const releaseGuide = readText('docs/release.md');
   const installGuide = readText('docs/install-macos.md');
-  const chineseInstallGuide = readText('docs/install-macos.zh-CN.md');
   const growthGuide = readText('docs/growth-readiness.md');
   const readme = readText('README.md');
   const englishReadme = readText('README.en.md');
@@ -101,33 +100,8 @@ function verifyReleaseTemplate() {
     );
     requireIncludes(readme, zipName, 'README artifact guidance', errors);
     requireIncludes(readme, checksumName, 'README checksum guidance', errors);
-    requireIncludes(
-      readme,
-      'https://github.com/' + repositorySlug + '/releases/latest/download/' + zipName,
-      'README latest artifact download link',
-      errors,
-    );
-    requireIncludes(
-      readme,
-      'https://github.com/' + repositorySlug + '/releases/latest/download/' + checksumName,
-      'README latest checksum download link',
-      errors,
-    );
-    requireIncludes(readme, attestationCommand, 'README attestation guidance', errors);
     requireIncludes(englishReadme, zipName, 'English README artifact guidance', errors);
     requireIncludes(englishReadme, checksumName, 'English README checksum guidance', errors);
-    requireIncludes(
-      englishReadme,
-      'https://github.com/' + repositorySlug + '/releases/latest/download/' + zipName,
-      'English README latest artifact download link',
-      errors,
-    );
-    requireIncludes(
-      englishReadme,
-      'https://github.com/' + repositorySlug + '/releases/latest/download/' + checksumName,
-      'English README latest checksum download link',
-      errors,
-    );
     requireIncludes(
       installGuide,
       'https://github.com/' + repositorySlug + '/releases/latest/download/' + zipName,
@@ -140,19 +114,6 @@ function verifyReleaseTemplate() {
       'install guide latest checksum download link',
       errors,
     );
-    requireIncludes(
-      chineseInstallGuide,
-      'https://github.com/' + repositorySlug + '/releases/latest/download/' + zipName,
-      'Chinese install guide latest artifact download link',
-      errors,
-    );
-    requireIncludes(
-      chineseInstallGuide,
-      'https://github.com/' + repositorySlug + '/releases/latest/download/' + checksumName,
-      'Chinese install guide latest checksum download link',
-      errors,
-    );
-    requireIncludes(englishReadme, attestationCommand, 'English README attestation guidance', errors);
     requireIncludes(releaseArtifactChecker, `'${zipName}'`, 'check-release-artifacts expected artifact', errors);
   }
 
@@ -179,15 +140,14 @@ function verifyReleaseTemplate() {
   requireIncludes(renderedReleaseBody, '## Verify the Download', 'rendered checksum section', errors);
   requireIncludes(renderedReleaseBody, '## First Launch Note', 'rendered first-launch section', errors);
   requireIncludes(renderedReleaseBody, '## What to Try', 'rendered trial section', errors);
-  requireIncludes(renderedReleaseBody, `/blob/v0.0.0-test/docs/showcase.md`, 'rendered tag-pinned documentation link', errors);
   if (/v<version>|\]\(\.\//.test(renderedReleaseBody)) {
     errors.push('Rendered release body still contains a version placeholder or relative documentation link.');
   }
   if (/List benchmark-backed|List keyboard, VoiceOver/.test(renderedReleaseBody)) {
     errors.push('Rendered release body still contains optional-section editing instructions.');
   }
-  requireIncludes(readme, '尚未做 Apple notarization', 'README notarization caveat', errors);
-  requireIncludes(englishReadme, 'not Apple-notarized yet', 'English README notarization caveat', errors);
+  requireIncludes(readme, '尚未完成 Apple notarization', 'README notarization caveat', errors);
+  requireIncludes(englishReadme, 'not Apple-notarized', 'English README notarization caveat', errors);
   requireIncludes(releaseTemplate, 'check:release-artifacts', 'release artifact verification command reference', errors);
   requireIncludes(releaseTemplate, 'npm run stage:release-artifacts -- --input-dir <actions-artifacts-dir>', 'release template artifact staging command', errors);
   requireIncludes(releaseGuide, 'npm run stage:release-artifacts -- --input-dir <actions-artifacts-dir>', 'release guide artifact staging command', errors);

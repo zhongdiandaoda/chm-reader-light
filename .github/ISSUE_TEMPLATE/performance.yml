@@ -6,8 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve CHMReaderLight performance. If you can run local checks, compare timings with the Benchmarking Guide:
-        https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/benchmarking.md
+        Thanks for helping improve CHMReaderLight performance. Include measured timings and the affected workflow.
         Do not attach private CHM files or logs that expose sensitive document content or local paths.
         Search existing Issues and Discussions before filing:
         - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue

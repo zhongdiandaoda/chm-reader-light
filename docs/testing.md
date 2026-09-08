@@ -28,8 +28,6 @@ Use focused checks while iterating, then return to the default pre-PR gate befor
 - `npm run check:docs` after changing Markdown links, headings, README files, support docs, docs under `docs/`, or repository-local links in GitHub templates.
 - `npm run check:audit` after dependency updates or when reviewing moderate severity npm advisories.
 - `npm run check:changelog` after editing `CHANGELOG.md`.
-- `npm run check:readme-scripts` after adding, removing, or renaming npm scripts in `package.json`.
-- `npm run check:docs-index` after adding, removing, renaming, or moving docs guides.
 - `npm run check:metadata` after changing package description, homepage, keywords, GitHub topics, or repository listing copy.
 - `npm run check:remote-listing` after applying GitHub repository About settings, topics, website, or Discussions changes; it is network-backed and intentionally not part of `npm run check`.
 - `npm run apply:repository-listing` to dry-run GitHub repository About, website, topics, and Discussions updates from `docs/repository-listing.md`; set `GITHUB_TOKEN` and pass `-- --confirm` only when a maintainer is ready to apply them.
@@ -46,9 +44,7 @@ Use focused checks while iterating, then return to the default pre-PR gate befor
 - `npm run snapshot:growth` before a visibility push or directory submission to capture a tracker-ready baseline for stars, downloads, watchers, and latest release state; it is network-backed and intentionally not part of `npm run check`.
 - `npm run snapshot:visibility` before opening a visibility-push issue to capture live listing blockers, release blockers, baseline metrics, and next actions in one paste-ready report; it is network-backed, preserves completed audits when another source times out, marks unavailable metrics as blockers, and is intentionally not part of `npm run check`.
 - `npm run prepare:visibility-issue` before filing a promotion task to generate a visibility-push issue draft, prefilled GitHub new-issue URL, and copyable issue body from the live snapshot or a saved `-- --snapshot-file <snapshot-file>`.
-- `npm run prepare:directory-submission` before filling an external app directory form to generate listing fields and a tracker row from the Directory Submissions guide; pass `-- --baseline-file <snapshot-file>` to reuse saved `npm run snapshot:growth` output.
 - `npm run prepare:share-post` before posting a release or social update to generate channel-specific copy from the Share Kit; pass `-- --channel <channel> --audience <audience> --baseline-file <snapshot-file>` to reuse saved `npm run snapshot:growth` output.
-- `npm run prepare:promotion-follow-up` after refreshing `npm run snapshot:growth` for a follow-up check to compare saved baseline and current snapshots, then print tracker-ready metric deltas and an evidence note.
 - `npm run check:workflows` after changing CI, release, CodeQL, Dependency Review, Scorecard, workflow permissions, timeouts, or setup-node caching.
 - `npm run check:templates` after changing issue templates, discussion templates, the pull request template, support routing, privacy reminders, or required report fields.
 - `npm run check:release-artifacts -- <release-dir>` after downloading or staging GitHub Release zip artifacts and checksum files; it also reports stale macOS zip/checksum files that should not be attached to the release.

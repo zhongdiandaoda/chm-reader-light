@@ -87,11 +87,10 @@ type ReaderShortcutCommand =
   | 'zoom-reset';
 
 const onboardingLinks = {
-  gettingStarted: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/getting-started.zh-CN.md',
-  featureTour: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/feature-tour.zh-CN.md',
-  privacy: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/privacy.zh-CN.md',
-  search: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/search.zh-CN.md',
-  troubleshooting: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.zh-CN.md',
+  readme: 'https://github.com/zhongdiandaoda/chm-reader-light#readme',
+  install: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/install-macos.md',
+  privacy: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/privacy.md',
+  troubleshooting: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.md',
 };
 
 interface SearchState {
@@ -1710,10 +1709,10 @@ elements.addBook.addEventListener('click', requestImportBooks);
 elements.emptyAddBook.addEventListener('click', requestImportBooks);
 elements.retryLibraryLoad.addEventListener('click', () => void loadLibrary());
 elements.emptyGettingStarted.addEventListener('click', () => {
-  openExternalLink(onboardingLinks.gettingStarted);
+  openExternalLink(onboardingLinks.readme);
 });
 elements.emptyFeatureTour.addEventListener('click', () => {
-  openExternalLink(onboardingLinks.featureTour);
+  openExternalLink(onboardingLinks.install);
 });
 elements.emptyPrivacy.addEventListener('click', () => {
   openExternalLink(onboardingLinks.privacy);
@@ -1751,7 +1750,7 @@ elements.clearLibrarySearch.addEventListener('click', () => {
   elements.librarySearch.focus();
 });
 elements.emptySearchGuide.addEventListener('click', () => {
-  openExternalLink(onboardingLinks.search);
+  openExternalLink(onboardingLinks.readme);
 });
 elements.backToLibrary.addEventListener('click', () => showView('library'));
 query('#toggle-sidebar').addEventListener('click', toggleReaderSidebar);

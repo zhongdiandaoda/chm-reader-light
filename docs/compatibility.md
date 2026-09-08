@@ -39,7 +39,7 @@ Use the default encoding again when the CHM declares a correct charset.
 
 ## Reporting Gaps
 
-Before opening an issue, check [Troubleshooting](./troubleshooting.md). If the problem still looks like a compatibility gap, use the CHM compatibility issue template. The [Sample CHM Guide](./sample-chm-guide.md) explains how to choose public or synthetic samples without exposing private documents. Include:
+Before opening an issue, check [Troubleshooting](./troubleshooting.md). If the problem still looks like a compatibility gap, use the CHM compatibility issue template. Use a public or synthetic sample when possible and include:
 
 - The smallest reproduction steps.
 - macOS version, Mac architecture, app version, and how CHMReaderLight was installed or run. Use **Help > Copy Diagnostic Info** when possible.

@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve CHMReaderLight docs. Small documentation fixes are a good way to start contributing. See Good First Contributions for scoped starter guidance:
-        https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/good-first-contributions.md
+        Thanks for helping improve CHMReaderLight docs. Start with the contributor guide:
+        https://github.com/zhongdiandaoda/chm-reader-light/blob/main/CONTRIBUTING.md
         Search existing Issues and Discussions before filing:
         - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue
         - https://github.com/zhongdiandaoda/chm-reader-light/discussions

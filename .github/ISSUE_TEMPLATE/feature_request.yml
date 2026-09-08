@@ -6,10 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping shape CHMReaderLight. Please check the roadmap first so requests stay aligned with the project's current focus:
-        https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/roadmap.md
-        Check the project status guide for current platform support, release trust notes, and out-of-scope work:
-        https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/project-status.md
+        Thanks for helping shape CHMReaderLight. Review the README first so requests stay aligned with the current product scope:
+        https://github.com/zhongdiandaoda/chm-reader-light#readme
         Search existing Issues and Discussions before filing:
         - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue
         - https://github.com/zhongdiandaoda/chm-reader-light/discussions

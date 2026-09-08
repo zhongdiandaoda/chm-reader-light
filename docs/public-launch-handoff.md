@@ -108,7 +108,7 @@ npm run snapshot:visibility
 - Save the dated stars, watchers, release downloads, version, and listing URLs in the Directory Submission Tracker. This is the baseline needed to tell whether later Star growth came from a specific channel.
 - Prepare channel-specific copy with the Share Kit tooling and review it manually. Link to the public Release or a relevant evaluation guide, disclose the current ad-hoc signing/notarization status, and ask for a Star only after giving readers a useful trial path.
 - Submit to one relevant community or directory at a time. Record the live URL and avoid repeated cross-posting.
-- After seven days, refresh the growth snapshot and use `npm run prepare:promotion-follow-up` to record deltas, support friction, and release-feedback themes. Use the evidence to improve the next release or listing instead of treating raw impressions as success.
+- After seven days, refresh the growth snapshot and record deltas, support friction, and release-feedback themes in the visibility issue. Use the evidence to improve the next release or listing instead of treating raw impressions as success.
 
 Exit gate: every promotion has a dated baseline, a live URL, a follow-up date, and measured Star/download/watcher deltas.
 

@@ -22,7 +22,6 @@ function verifyLicenseMetadata() {
   const citation = readText('CITATION.cff');
   const readme = readText('README.md');
   const englishReadme = readText('README.en.md');
-  const communityStandards = readText('docs/community-standards.md');
   const thirdPartyNotices = readText('THIRD_PARTY_NOTICES.md');
   const errors = [];
 
@@ -40,12 +39,6 @@ function verifyLicenseMetadata() {
   requireIncludes(thirdPartyNotices, 'LGPL-2.1-or-later', 'CHMLib license identifier', errors);
   requireIncludes(thirdPartyNotices, '2bef8d063ec7d88a8de6fd9f0513ea42ac0fa21f', 'CHMLib source commit', errors);
   requireIncludes(thirdPartyNotices, 'CVE-2025-48172.patch', 'CHMLib modification notice', errors);
-  requireIncludes(
-    communityStandards,
-    '[LICENSE](../LICENSE) keeps the MIT license visible',
-    'community standards license reminder',
-    errors,
-  );
 
   return errors;
 }

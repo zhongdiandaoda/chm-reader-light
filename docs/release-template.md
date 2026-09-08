@@ -70,12 +70,10 @@ List keyboard, VoiceOver, focus, contrast, or appearance fixes here. Remove this
 
 ## Helpful Links
 
-- [Project Status](./project-status.md)
 - [macOS Install Guide](./install-macos.md)
 - [Compatibility Notes](./compatibility.md)
 - [Privacy and Local Data](./privacy.md)
 - [Troubleshooting](./troubleshooting.md)
-- [Showcase Guide](./showcase.md)
 ````
 
 ## After Pasting

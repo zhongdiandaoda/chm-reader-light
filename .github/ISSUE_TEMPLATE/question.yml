@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for using CHMReaderLight. Please check the FAQ and troubleshooting guide before opening a question:
-        - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/faq.md
+        Thanks for using CHMReaderLight. Please check the README and troubleshooting guide before opening a question:
+        - https://github.com/zhongdiandaoda/chm-reader-light#readme
         - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.md
         Search existing Issues and Discussions before filing:
         - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue

@@ -3,7 +3,7 @@
 This guide covers the most common CHMReaderLight setup and document issues on macOS.
 
 For supported CHM patterns, known limits, and issue-report details, see [Compatibility Notes](./compatibility.md).
-For quick answers about downloads, privacy, cache behavior, and reports, see [FAQ](./faq.md).
+For downloads and local data behavior, see the [README](../README.md) and [Privacy](./privacy.md).
 
 ## App Cannot Be Opened
 

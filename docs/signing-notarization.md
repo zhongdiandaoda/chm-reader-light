@@ -24,7 +24,7 @@ Until that process is implemented and verified, release notes, README text, and 
 
 ## Maintainer Checklist
 
-- Do not remove the notarization caveat from README, [macOS Install Guide](./install-macos.md), FAQ, or release notes until notarized artifacts have been verified.
+- Do not remove the notarization caveat from README, [macOS Install Guide](./install-macos.md), or release notes until notarized artifacts have been verified.
 - Keep checksum files attached to every release artifact so users can verify downloads independently.
 - Verify the packaged app with `codesign --verify` before release.
 - Verify Gatekeeper behavior with `spctl --assess` after signing changes.

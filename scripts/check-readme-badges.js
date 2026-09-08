@@ -16,16 +16,8 @@ const requiredBadges = [
     markdown: '[![CodeQL](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml/badge.svg)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml)',
   },
   {
-    name: 'OpenSSF Scorecard',
-    markdown: '[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/zhongdiandaoda/chm-reader-light/badge)](https://scorecard.dev/view/github.com/zhongdiandaoda/chm-reader-light)',
-  },
-  {
     name: 'GitHub stars',
     markdown: '[![GitHub stars](https://img.shields.io/github/stars/zhongdiandaoda/chm-reader-light?style=social)](https://github.com/zhongdiandaoda/chm-reader-light/stargazers)',
-  },
-  {
-    name: 'GitHub downloads',
-    markdown: '[![GitHub downloads](https://img.shields.io/github/downloads/zhongdiandaoda/chm-reader-light/total?label=downloads)](https://github.com/zhongdiandaoda/chm-reader-light/releases)',
   },
   {
     name: 'License: MIT',
@@ -34,14 +26,6 @@ const requiredBadges = [
   {
     name: 'Platform: macOS',
     markdown: '[![Platform: macOS](https://img.shields.io/badge/platform-macOS-111111.svg)]',
-  },
-  {
-    name: 'Node.js 22+',
-    markdown: '[![Node.js 22+](https://img.shields.io/badge/node-%3E%3D22-339933.svg)](./.nvmrc)',
-  },
-  {
-    name: 'GitHub release',
-    markdown: '[![GitHub release](https://img.shields.io/github/v/release/zhongdiandaoda/chm-reader-light?display_name=tag&sort=semver)](https://github.com/zhongdiandaoda/chm-reader-light/releases)',
   },
 ];
 

@@ -10,7 +10,7 @@ body:
         Start with the Growth Readiness guide, Share Kit, and Directory Submission Tracker:
         - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/growth-readiness.md
         - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/share-kit.md
-        - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/directory-submission-tracker.md
+        - https://github.com/zhongdiandaoda/chm-reader-light/issues
         Do not ask for stars until the user has a clear evaluation path. Do not include private CHM content, sensitive file paths, proprietary screenshots, or confidential document text.
   - type: textarea
     id: audience
@@ -53,6 +53,6 @@ body:
     attributes:
       label: What is the follow-up date and evidence plan?
       description: Choose a date to recheck stars, downloads, support issues, Discussions, and listing status.
-      placeholder: "Example: Recheck on 2026-09-11 and update docs/directory-submission-tracker.md."
+      placeholder: "Example: Recheck in seven days and add the metrics to this issue."
     validations:
       required: true

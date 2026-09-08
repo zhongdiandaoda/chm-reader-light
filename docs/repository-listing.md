@@ -122,7 +122,7 @@ Run `npm run check:remote-listing` after applying settings in GitHub to compare 
 - Open the GitHub repository settings and confirm the GitHub About panel uses the description above.
 - Confirm the topics include the CHM, offline documentation, macOS, Electron, and reader keywords.
 - Confirm `llms.txt` still summarizes the project positioning, trust notes, and key links used by search tools and AI assistants.
-- Before external app-directory submissions, review [Directory Submissions](./directory-submissions.md) so listing copy, screenshots, and download links match the repository metadata.
+- Before external promotion, confirm listing copy, screenshots, and download links still match the repository metadata.
 - Confirm issue labels include `bug`, `compatibility`, `enhancement`, `documentation`, `performance`, `accessibility`, `question`, `showcase`, `good first issue`, and `help wanted`.
 - Confirm installed-app support routes still match `Help > Report or Request` and the public issue templates before a visibility push.
 - Confirm GitHub Discussions is enabled with Q&A, Show and tell, and Release feedback categories.

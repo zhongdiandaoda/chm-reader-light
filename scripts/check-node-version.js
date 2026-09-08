@@ -49,10 +49,8 @@ function verifyNodeVersionAlignment() {
   }
 
   requireIncludes(readme, `Node.js ${expectedMajor}`, 'README Node.js requirement', errors);
-  requireIncludes(readme, '[![Node.js 22+]', 'README Node.js badge', errors);
   requireIncludes(englishReadme, `Node.js ${expectedMajor}`, 'English README Node.js requirement', errors);
   requireIncludes(contributing, `Node.js ${expectedMajor}`, 'CONTRIBUTING Node.js requirement', errors);
-  requireIncludes(contributing, 'nvm use', 'CONTRIBUTING nvm guidance', errors);
 
   return errors;
 }

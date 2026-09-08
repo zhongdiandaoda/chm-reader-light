@@ -63,8 +63,8 @@ Choose a small number of relevant channels where people already discuss macOS ut
 - GitHub Release page: publish clear release notes first, then link directly to the release when sharing download artifacts.
 - README or Share Kit link: use this when the audience needs to inspect screenshots, privacy notes, install steps, or source code before trying the app.
 - macOS developer or documentation communities: share only where offline CHM manuals, legacy SDK docs, or local documentation libraries are on topic.
-- Curated app directories or developer-tool lists: use [Directory Submissions](./directory-submissions.md) to prepare accurate listing copy after release artifacts are available, then record each listing in the [Directory Submission Tracker](./directory-submission-tracker.md).
-- Existing user conversations: Reply with the showcase issue template and [Showcase Guide](./showcase.md) when someone shares a successful workflow that could help future users.
+- Curated app directories or developer-tool lists: use the repository description, current screenshot, and verified Release links.
+- Existing user conversations: use the showcase issue template when someone shares a public-safe workflow.
 
 Do not cross-post the same message repeatedly. Prefer one tailored note per channel, answer follow-up questions, and update the copy when a real user story or compatibility report teaches something new.
 
@@ -72,8 +72,8 @@ Do not cross-post the same message repeatedly. Prefer one tailored note per chan
 
 - Route trust, download, checksum, notarization, screenshot, demo, or support hesitation to the [release-feedback Discussion](https://github.com/zhongdiandaoda/chm-reader-light/discussions/new?category=release-feedback) so maintainers can improve the next release page before asking for more stars.
 - Invite successful users to the showcase issue template only after they confirm the story is safe to quote publicly.
-- Update the [Directory Submission Tracker](./directory-submission-tracker.md) with live listing URLs, baseline stars or downloads, and follow-up metrics so future promotion decisions use real evidence.
-- After the follow-up window, run `npm run prepare:promotion-follow-up -- --baseline-file <baseline-file> --current-file <current-file> --channel <channel>` to turn saved and current growth snapshots into a tracker-ready evidence note.
+- Record live listing URLs, baseline stars or downloads, and follow-up metrics in the visibility issue.
+- After the follow-up window, refresh `npm run snapshot:growth` and add the dated metrics to the visibility issue.
 
 ## Promotion Checklist
 
@@ -86,7 +86,7 @@ Do not cross-post the same message repeatedly. Prefer one tailored note per chan
 
 ## Assets and Demo
 
-- Use the [Demo Guide](./demo-guide.md) to record a short library-to-reader walkthrough.
+- Use the real README screenshot or a short public-safe library-to-reader recording.
 - Use the [social preview artwork](./assets/social-preview.svg) as the source image for GitHub repository sharing.
 - Use the [upload-ready social preview PNG](./assets/social-preview.png) when updating GitHub repository settings.
 - Use the README preview image when you need to show the actual app workflow inside GitHub Markdown.

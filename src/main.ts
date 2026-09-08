@@ -79,7 +79,6 @@ const projectLinks = {
   downloadAppleSilicon: 'https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-arm64.zip',
   downloadIntel: 'https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-x64.zip',
   securityPolicy: 'https://github.com/zhongdiandaoda/chm-reader-light/security/policy',
-  securityPolicyZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SECURITY.zh-CN.md',
   bugIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=bug_report.yml',
   installIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=install_help.yml',
   featureIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=feature_request.yml',
@@ -88,44 +87,12 @@ const projectLinks = {
   performanceIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=performance.yml',
   accessibilityIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=accessibility.yml',
   support: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md',
-  supportZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.zh-CN.md',
-  gettingStarted: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/getting-started.md',
-  gettingStartedZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/getting-started.zh-CN.md',
-  featureTour: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/feature-tour.md',
-  useCases: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/use-cases.md',
-  useCasesZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/use-cases.zh-CN.md',
-  comparison: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/comparison.md',
-  comparisonZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/comparison.zh-CN.md',
-  adoptionChecklist: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/adoption-checklist.md',
-  adoptionChecklistZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/adoption-checklist.zh-CN.md',
-  goodFirstContributions: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/good-first-contributions.md',
-  goodFirstContributionsZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/good-first-contributions.zh-CN.md',
-  projectStatus: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/project-status.md',
-  projectStatusZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/project-status.zh-CN.md',
-  roadmap: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/roadmap.md',
-  roadmapZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/roadmap.zh-CN.md',
-  search: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/search.md',
-  searchZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/search.zh-CN.md',
-  shareKit: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/share-kit.md',
-  shareKitZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/share-kit.zh-CN.md',
-  showcase: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/showcase.md',
-  showcaseZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/showcase.zh-CN.md',
   showcaseIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=showcase.yml',
   installMac: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/install-macos.md',
-  installMacZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/install-macos.zh-CN.md',
   privacy: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/privacy.md',
-  privacyZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/privacy.zh-CN.md',
   compatibility: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/compatibility.md',
   compatibilityIssue: 'https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=chm_compatibility.yml',
-  compatibilityZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/compatibility.zh-CN.md',
-  accessibility: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/accessibility.md',
-  accessibilityZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/accessibility.zh-CN.md',
   troubleshooting: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.md',
-  troubleshootingZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.zh-CN.md',
-  faq: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/faq.md',
-  faqZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/faq.zh-CN.md',
-  shortcuts: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/shortcuts.md',
-  shortcutsZhCn: 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/shortcuts.zh-CN.md',
 };
 
 protocol.registerSchemesAsPrivileged([{
@@ -351,8 +318,7 @@ function buildShareText(): string {
     `GitHub repository: ${projectLinks.repository}`,
     `Star the project: ${projectLinks.star}`,
     `Share a success story: ${projectLinks.showcaseIssue}`,
-    `中文入门指南: ${projectLinks.gettingStartedZhCn}`,
-    `中文分享素材包: ${projectLinks.shareKitZhCn}`,
+    `项目说明: ${projectLinks.repository}#readme`,
     '',
     `Try it from GitHub Releases: ${projectLinks.releases}`,
     `Apple Silicon download: ${projectLinks.downloadAppleSilicon}`,
@@ -799,98 +765,8 @@ function createMenu() {
       label: 'Support Guide',
       click: () => shell.openExternal(projectLinks.support),
     }, {
-      label: 'Getting Started',
-      click: () => shell.openExternal(projectLinks.gettingStarted),
-    }, {
-      label: 'Feature Tour',
-      click: () => shell.openExternal(projectLinks.featureTour),
-    }, {
-      label: 'Use Cases',
-      click: () => shell.openExternal(projectLinks.useCases),
-    }, {
-      label: 'Comparison',
-      click: () => shell.openExternal(projectLinks.comparison),
-    }, {
-      label: 'Adoption Checklist',
-      click: () => shell.openExternal(projectLinks.adoptionChecklist),
-    }, {
-      label: 'Good First Contributions',
-      click: () => shell.openExternal(projectLinks.goodFirstContributions),
-    }, {
-      label: 'Project Status',
-      click: () => shell.openExternal(projectLinks.projectStatus),
-    }, {
-      label: 'Roadmap',
-      click: () => shell.openExternal(projectLinks.roadmap),
-    }, {
-      label: 'Search Guide',
-      click: () => shell.openExternal(projectLinks.search),
-    }, {
-      label: 'Share Kit',
-      click: () => shell.openExternal(projectLinks.shareKit),
-    }, {
-      label: 'Showcase Guide',
-      click: () => shell.openExternal(projectLinks.showcase),
-    }, {
-      label: 'Chinese Documentation',
-      submenu: [{
-        label: '中文入门指南',
-        click: () => shell.openExternal(projectLinks.gettingStartedZhCn),
-      }, {
-        label: '中文适用场景',
-        click: () => shell.openExternal(projectLinks.useCasesZhCn),
-      }, {
-        label: '中文采用检查清单',
-        click: () => shell.openExternal(projectLinks.adoptionChecklistZhCn),
-      }, {
-        label: '中文首次贡献指南',
-        click: () => shell.openExternal(projectLinks.goodFirstContributionsZhCn),
-      }, {
-        label: '中文项目状态',
-        click: () => shell.openExternal(projectLinks.projectStatusZhCn),
-      }, {
-        label: '中文路线图',
-        click: () => shell.openExternal(projectLinks.roadmapZhCn),
-      }, {
-        label: '中文搜索指南',
-        click: () => shell.openExternal(projectLinks.searchZhCn),
-      }, {
-        label: '中文分享素材包',
-        click: () => shell.openExternal(projectLinks.shareKitZhCn),
-      }, {
-        label: '中文 Showcase 指南',
-        click: () => shell.openExternal(projectLinks.showcaseZhCn),
-      }, {
-        label: '中文 macOS 安装指南',
-        click: () => shell.openExternal(projectLinks.installMacZhCn),
-      }, {
-        label: '中文隐私与本地数据',
-        click: () => shell.openExternal(projectLinks.privacyZhCn),
-      }, {
-        label: '中文兼容性说明',
-        click: () => shell.openExternal(projectLinks.compatibilityZhCn),
-      }, {
-        label: '中文无障碍指南',
-        click: () => shell.openExternal(projectLinks.accessibilityZhCn),
-      }, {
-        label: '中文快捷键指南',
-        click: () => shell.openExternal(projectLinks.shortcutsZhCn),
-      }, {
-        label: '中文故障排查',
-        click: () => shell.openExternal(projectLinks.troubleshootingZhCn),
-      }, {
-        label: '中文 FAQ',
-        click: () => shell.openExternal(projectLinks.faqZhCn),
-      }, {
-        label: '中文支持指南',
-        click: () => shell.openExternal(projectLinks.supportZhCn),
-      }, {
-        label: '中文安全政策',
-        click: () => shell.openExternal(projectLinks.securityPolicyZhCn),
-      }, {
-        label: '中文对比指南',
-        click: () => shell.openExternal(projectLinks.comparisonZhCn),
-      }],
+      label: 'Project README',
+      click: () => shell.openExternal(projectLinks.repository),
     }, {
       label: 'macOS Install Guide',
       click: () => shell.openExternal(projectLinks.installMac),
@@ -901,17 +777,8 @@ function createMenu() {
       label: 'Compatibility Notes',
       click: () => shell.openExternal(projectLinks.compatibility),
     }, {
-      label: 'Accessibility Guide',
-      click: () => shell.openExternal(projectLinks.accessibility),
-    }, {
       label: 'Troubleshooting Guide',
       click: () => shell.openExternal(projectLinks.troubleshooting),
-    }, {
-      label: 'FAQ',
-      click: () => shell.openExternal(projectLinks.faq),
-    }, {
-      label: 'Keyboard Shortcuts',
-      click: () => shell.openExternal(projectLinks.shortcuts),
     }, {
       label: 'Download Releases',
       click: () => shell.openExternal(projectLinks.releases),

@@ -9,11 +9,11 @@ Download the latest release from [GitHub Releases](https://github.com/zhongdiand
 - Apple Silicon Macs use [CHMReaderLight-mac-arm64.zip](https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-arm64.zip).
 - Intel Macs use [CHMReaderLight-mac-x64.zip](https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-x64.zip).
 
-If GitHub Releases does not have a public build yet, use the source-run path in [Getting Started](./getting-started.md).
+If GitHub Releases does not have a public build yet, use the source-run path in the [README](../README.md).
 
 If you are not sure which Mac you have, choose **Apple menu > About This Mac** and check the chip or processor line.
 
-Homebrew is not a supported install path yet. Maintainers can use the [Homebrew Cask Guide](./homebrew-cask.md) or [Chinese Homebrew Cask Guide](./homebrew-cask.zh-CN.md) when preparing a future cask.
+Homebrew is not a supported install path yet.
 
 ## Verify the Download
 

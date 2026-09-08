@@ -8,10 +8,6 @@ const {
 } = require('./check-live-repository-listing');
 
 const {
-  parseGrowthSnapshot,
-} = require('./prepare-directory-submission');
-
-const {
   formatLocalIsoDate,
 } = require('./snapshot-growth-metrics');
 
@@ -125,6 +121,19 @@ function fillReleaseAnnouncement(template, version) {
     );
 }
 
+function parseGrowthSnapshot(snapshotText) {
+  function readField(name) {
+    const prefix = `${name}: `;
+    return snapshotText.split('\n').find((line) => line.startsWith(prefix))?.slice(prefix.length).trim();
+  }
+
+  return {
+    date: readField('Date'),
+    release: readField('Release'),
+    trackerBaseline: readField('Tracker baseline'),
+  };
+}
+
 function buildTrackerNote({ baseline, channel, variant, today }) {
   const date = baseline.date || formatLocalIsoDate(today);
   const metrics = baseline.trackerBaseline || '<stars> stars / <downloads> downloads / <watchers> watchers';
@@ -188,7 +197,7 @@ function formatSharePostDraft(plan) {
     'Safety reminders:',
     '- Do not post until npm run snapshot:visibility reports ready.',
     '- Ask for a GitHub star only after explaining the offline CHM workflow value.',
-    '- Update docs/directory-submission-tracker.md or the visibility-push issue after sharing and after the follow-up check.',
+    '- Record follow-up metrics in the visibility-push issue.',
   ].join('\n');
 }
 

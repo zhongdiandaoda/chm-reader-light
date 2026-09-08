@@ -1,7 +1,5 @@
 # Security Policy
 
-[中文安全政策](./SECURITY.zh-CN.md)
-
 CHMReaderLight opens local documentation files, extracts CHM archives, and renders extracted pages through a restricted Electron protocol. Security reports are welcome, especially when they involve file boundary checks, archive extraction, renderer isolation, or unsafe content execution. For a plain-language summary of local data storage, see [Privacy and Local Data](./docs/privacy.md); for implementation trust boundaries, see [Security Model](./docs/security-model.md).
 
 ## Supported Versions

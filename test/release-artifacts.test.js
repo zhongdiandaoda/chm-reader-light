@@ -103,32 +103,11 @@ const {
 } = require('../scripts/prepare-visibility-issue');
 
 const {
-  buildDirectorySubmissionPacket,
-  extractDirectorySubmissionCopy,
-  formatDirectorySubmissionPacket,
-  parseArgs: parsePrepareDirectorySubmissionArgs,
-  parseGrowthSnapshot,
-} = require('../scripts/prepare-directory-submission');
-
-const {
-  buildHomebrewCaskDraft,
-  formatHomebrewCaskPreparation,
-  parseArgs: parsePrepareHomebrewCaskArgs,
-  parseChecksumText,
-} = require('../scripts/prepare-homebrew-cask');
-
-const {
   buildSharePostDraft,
   extractShareKitCopy,
   formatSharePostDraft,
   parseArgs: parsePrepareSharePostArgs,
 } = require('../scripts/prepare-share-post');
-
-const {
-  buildPromotionFollowUp,
-  formatPromotionFollowUp,
-  parseArgs: parsePreparePromotionFollowUpArgs,
-} = require('../scripts/prepare-promotion-follow-up');
 
 function makeTempReleaseDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'chm-release-artifacts-'));
@@ -993,11 +972,11 @@ test('parsePrepareVisibilityIssueArgs accepts explicit issue field values', () =
     '--assets',
     'docs/share-kit.md short copy',
     '--follow-up',
-    'Recheck on 2026-09-11 and update docs/directory-submission-tracker.md.',
+    'Recheck on 2026-09-11 and add metrics to the visibility issue.',
   ]), {
     assets: 'docs/share-kit.md short copy',
     audience: 'macOS app directory',
-    followUp: 'Recheck on 2026-09-11 and update docs/directory-submission-tracker.md.',
+    followUp: 'Recheck on 2026-09-11 and add metrics to the visibility issue.',
     snapshotFile: 'dist/visibility.txt',
   });
 });
@@ -1046,7 +1025,7 @@ test('buildVisibilityIssuePlan turns the readiness snapshot into issue-form fiel
   });
 
   assert.equal(plan.title, '[Visibility]: macOS open-source app directory');
-  assert.equal(plan.followUp, 'Recheck on 2026-09-11 and update docs/directory-submission-tracker.md with stars, downloads, watchers, support issues, Discussions, and listing status.');
+  assert.equal(plan.followUp, 'Recheck on 2026-09-11 and add stars, downloads, watchers, support issues, Discussions, and listing status to this issue.');
   assert.match(plan.issueUrl, /template=visibility_push\.yml/);
   assert.equal(new URL(plan.issueUrl).searchParams.get('title'), '[Visibility]: macOS open-source app directory');
   assert.equal(new URL(plan.issueUrl).searchParams.has('body'), false);
@@ -1111,306 +1090,6 @@ test('formatVisibilityIssuePlan prints a ready-to-file draft without opening Git
   assert.match(output, /Issue URL:/);
   assert.match(output, /Copyable issue body:/);
   assert.match(output, /GitHub issue forms may not prefill custom fields from URL parameters/);
-});
-
-test('parsePrepareDirectorySubmissionArgs defaults to a safe listing packet', () => {
-  assert.deepEqual(parsePrepareDirectorySubmissionArgs(['node', 'scripts/prepare-directory-submission.js']), {
-    baselineFile: undefined,
-    copy: 'long',
-    directory: '<directory name>',
-    priority: 'High',
-    source: '<saved search or referral>',
-    url: '<directory url>',
-  });
-});
-
-test('parsePrepareDirectorySubmissionArgs accepts explicit directory fields', () => {
-  assert.deepEqual(parsePrepareDirectorySubmissionArgs([
-    'node',
-    'scripts/prepare-directory-submission.js',
-    '--directory',
-    'Open Source Mac Apps',
-    '--url=https://example.com/submit',
-    '--priority',
-    'Medium',
-    '--source',
-    '"open source macOS apps" CHM reader',
-    '--copy=short',
-    '--baseline-file',
-    'dist/growth.txt',
-  ]), {
-    baselineFile: 'dist/growth.txt',
-    copy: 'short',
-    directory: 'Open Source Mac Apps',
-    priority: 'Medium',
-    source: '"open source macOS apps" CHM reader',
-    url: 'https://example.com/submit',
-  });
-});
-
-test('parsePrepareDirectorySubmissionArgs rejects missing and invalid values', () => {
-  assert.throws(
-    () => parsePrepareDirectorySubmissionArgs(['node', 'scripts/prepare-directory-submission.js', '--directory', '--url', 'https://example.com']),
-    /--directory requires a value\./,
-  );
-  assert.throws(
-    () => parsePrepareDirectorySubmissionArgs(['node', 'scripts/prepare-directory-submission.js', '--priority=Urgent']),
-    /--priority must be High, Medium, or Low\./,
-  );
-  assert.throws(
-    () => parsePrepareDirectorySubmissionArgs(['node', 'scripts/prepare-directory-submission.js', '--copy=summary']),
-    /--copy must be short or long\./,
-  );
-});
-
-test('extractDirectorySubmissionCopy reads the guide descriptions and listing packet', () => {
-  const copy = extractDirectorySubmissionCopy(`
-## Submission Copy
-
-Short description:
-
-\`\`\`text
-A lightweight offline CHM reader and library for macOS.
-\`\`\`
-
-Longer description:
-
-\`\`\`text
-CHMReaderLight helps macOS users keep local CHM manuals searchable and organized.
-\`\`\`
-
-## Listing Packet
-
-\`\`\`text
-Project URL: https://github.com/zhongdiandaoda/chm-reader-light
-Download URL: https://github.com/zhongdiandaoda/chm-reader-light/releases
-Support URL: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md
-Suggested tags: chm, offline-documentation, macos, electron, reader
-\`\`\`
-  `);
-
-  assert.deepEqual(copy, {
-    shortDescription: 'A lightweight offline CHM reader and library for macOS.',
-    longDescription: 'CHMReaderLight helps macOS users keep local CHM manuals searchable and organized.',
-    listingPacket: {
-      'Project URL': 'https://github.com/zhongdiandaoda/chm-reader-light',
-      'Download URL': 'https://github.com/zhongdiandaoda/chm-reader-light/releases',
-      'Support URL': 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md',
-      'Suggested tags': 'chm, offline-documentation, macos, electron, reader',
-    },
-  });
-});
-
-test('parseGrowthSnapshot extracts tracker fields from snapshot:growth output', () => {
-  assert.deepEqual(parseGrowthSnapshot([
-    'Growth metrics snapshot',
-    'Date: 2026-09-04',
-    'Repository: zhongdiandaoda/chm-reader-light',
-    'Source: GitHub API',
-    'Stars: 3',
-    'Downloads: 7',
-    'Watchers: 2',
-    'Release: v0.1.0',
-    'Listing URL: https://github.com/zhongdiandaoda/chm-reader-light',
-    'Release URL: https://github.com/zhongdiandaoda/chm-reader-light/releases/tag/v0.1.0',
-    'Tracker baseline: 3 stars / 7 downloads / 2 watchers',
-  ].join('\n')), {
-    date: '2026-09-04',
-    downloads: '7',
-    release: 'v0.1.0',
-    repository: 'zhongdiandaoda/chm-reader-light',
-    stars: '3',
-    trackerBaseline: '3 stars / 7 downloads / 2 watchers',
-    watchers: '2',
-  });
-});
-
-test('buildDirectorySubmissionPacket creates copy-ready fields and a tracker row', () => {
-  const plan = buildDirectorySubmissionPacket({
-    directoryGuide: fs.readFileSync(path.join(process.cwd(), 'docs', 'directory-submissions.md'), 'utf-8'),
-    packageJson: {
-      repository: {
-        url: 'git+https://github.com/zhongdiandaoda/chm-reader-light.git',
-      },
-    },
-    baselineText: [
-      'Growth metrics snapshot',
-      'Date: 2026-09-04',
-      'Repository: zhongdiandaoda/chm-reader-light',
-      'Stars: 3',
-      'Downloads: 7',
-      'Watchers: 2',
-      'Release: v0.1.0',
-      'Tracker baseline: 3 stars / 7 downloads / 2 watchers',
-    ].join('\n'),
-    options: {
-      copy: 'short',
-      directory: 'Open Source Mac Apps',
-      priority: 'Medium',
-      source: '"open source macOS apps" CHM reader',
-      url: 'https://example.com/submit',
-    },
-  });
-
-  assert.equal(plan.repositorySlug, 'zhongdiandaoda/chm-reader-light');
-  assert.equal(plan.selectedDescription, 'A lightweight offline CHM reader and library for macOS.');
-  assert.equal(plan.fields['Project URL'], 'https://github.com/zhongdiandaoda/chm-reader-light');
-  assert.equal(plan.fields['Download URL'], 'https://github.com/zhongdiandaoda/chm-reader-light/releases');
-  assert.equal(plan.fields['Suggested tags'], 'chm, offline-documentation, macos, electron, reader');
-  assert.equal(plan.trackerRow, '| Medium | "open source macOS apps" CHM reader | Open Source Mac Apps | https://example.com/submit | Short copy from prepare:directory-submission | v0.1.0 | 2026-09-04 | 3 stars / 7 downloads / 2 watchers | Recheck after 7 days | Planned | Recheck after approval | 2026-09-04: prepared listing packet |');
-});
-
-test('formatDirectorySubmissionPacket prints submission fields and safety reminders', () => {
-  const output = formatDirectorySubmissionPacket({
-    repositorySlug: 'zhongdiandaoda/chm-reader-light',
-    directory: 'Open Source Mac Apps',
-    url: 'https://example.com/submit',
-    priority: 'High',
-    source: '"open source macOS apps" CHM reader',
-    copy: 'long',
-    selectedDescription: 'CHMReaderLight helps macOS users keep local CHM manuals searchable and organized.',
-    fields: {
-      'Project URL': 'https://github.com/zhongdiandaoda/chm-reader-light',
-      'Download URL': 'https://github.com/zhongdiandaoda/chm-reader-light/releases',
-      'Support URL': 'https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md',
-      'Suggested tags': 'chm, offline-documentation, macos, electron, reader',
-    },
-    trackerRow: '| High | "open source macOS apps" CHM reader | Open Source Mac Apps | https://example.com/submit | Long copy from prepare:directory-submission | v0.1.0 | 2026-09-04 | 3 stars / 7 downloads / 2 watchers | Recheck after 7 days | Planned | Recheck after approval | 2026-09-04: prepared listing packet |',
-  });
-
-  assert.match(output, /Directory submission packet/);
-  assert.match(output, /Directory: Open Source Mac Apps/);
-  assert.match(output, /Copy variant: long/);
-  assert.match(output, /Project URL: https:\/\/github\.com\/zhongdiandaoda\/chm-reader-light/);
-  assert.match(output, /Description:/);
-  assert.match(output, /Tracker row:/);
-  assert.match(output, /Do not submit private CHM screenshots/);
-  assert.match(output, /Ask for a GitHub star only after explaining the offline CHM workflow value/);
-});
-
-test('parsePrepareHomebrewCaskArgs defaults to staged release artifacts', () => {
-  assert.deepEqual(parsePrepareHomebrewCaskArgs(['node', 'scripts/prepare-homebrew-cask.js']), {
-    releaseDir: path.join('dist', 'release'),
-    tag: undefined,
-  });
-});
-
-test('parsePrepareHomebrewCaskArgs accepts release directory and tag overrides', () => {
-  assert.deepEqual(parsePrepareHomebrewCaskArgs([
-    'node',
-    'scripts/prepare-homebrew-cask.js',
-    '--release-dir',
-    'dist/releases',
-    '--tag=v0.2.0',
-  ]), {
-    releaseDir: 'dist/releases',
-    tag: 'v0.2.0',
-  });
-});
-
-test('parsePrepareHomebrewCaskArgs rejects missing values', () => {
-  assert.throws(
-    () => parsePrepareHomebrewCaskArgs(['node', 'scripts/prepare-homebrew-cask.js', '--release-dir', '--tag', 'v0.2.0']),
-    /--release-dir requires a value\./,
-  );
-  assert.throws(
-    () => parsePrepareHomebrewCaskArgs(['node', 'scripts/prepare-homebrew-cask.js', '--tag=']),
-    /--tag requires a release tag\./,
-  );
-});
-
-test('parseChecksumText reads the sha256 hash from checksum files', () => {
-  assert.equal(parseChecksumText(`${'a'.repeat(64)}  CHMReaderLight-mac-arm64.zip\n`), 'a'.repeat(64));
-  assert.throws(() => parseChecksumText('not-a-checksum\n'), /Could not find a SHA-256 checksum/);
-});
-
-test('buildHomebrewCaskDraft creates a dual-architecture cask from release artifacts', () => {
-  const releaseDir = makeTempReleaseDir();
-  const arm64Checksum = crypto.createHash('sha256').update('arm build').digest('hex');
-  const x64Checksum = crypto.createHash('sha256').update('intel build').digest('hex');
-
-  writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-arm64.zip', 'arm build');
-  writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-x64.zip', 'intel build');
-
-  const plan = buildHomebrewCaskDraft({
-    packageJson: {
-      version: '0.2.0',
-      repository: {
-        url: 'git+https://github.com/zhongdiandaoda/chm-reader-light.git',
-      },
-      description: 'A lightweight offline CHM reader and library for macOS',
-    },
-    releaseDir,
-  });
-
-  assert.equal(plan.repositorySlug, 'zhongdiandaoda/chm-reader-light');
-  assert.equal(plan.version, '0.2.0');
-  assert.equal(plan.tag, 'v0.2.0');
-  assert.deepEqual(plan.artifactErrors, []);
-  assert.match(plan.caskText, /cask "chmreaderlight" do/);
-  assert.match(plan.caskText, /arch arm: "arm64", intel: "x64"/);
-  assert.match(plan.caskText, /version "0\.2\.0"/);
-  assert.match(plan.caskText, new RegExp(`sha256 arm: "${arm64Checksum}",`));
-  assert.match(plan.caskText, new RegExp(`intel: "${x64Checksum}"`));
-  assert.match(plan.caskText, /CHMReaderLight-mac-#\{arch\}\.zip/);
-  assert.match(plan.caskText, /verified: "github\.com\/zhongdiandaoda\/chm-reader-light\/"/);
-  assert.match(plan.caskText, /desc "Lightweight offline CHM reader and library for macOS"/);
-  assert.match(plan.caskText, /depends_on macos: ">= :monterey"/);
-});
-
-test('buildHomebrewCaskDraft reports release artifact blockers before drafting', () => {
-  const releaseDir = makeTempReleaseDir();
-
-  writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-arm64.zip', 'arm build');
-
-  const plan = buildHomebrewCaskDraft({
-    packageJson: {
-      version: '0.2.0',
-      repository: {
-        url: 'git+https://github.com/zhongdiandaoda/chm-reader-light.git',
-      },
-      description: 'A lightweight offline CHM reader and library for macOS',
-    },
-    releaseDir,
-  });
-
-  assert.equal(plan.caskText, '');
-  assert.deepEqual(plan.artifactErrors, [
-    'Missing release artifact: CHMReaderLight-mac-x64.zip',
-    'Missing checksum file: CHMReaderLight-mac-x64.zip.sha256',
-  ]);
-});
-
-test('prepare-homebrew-cask command exits nonzero when release artifacts are blocked', () => {
-  const missingReleaseDir = path.join(os.tmpdir(), `missing-chm-release-${process.pid}-${Date.now()}`);
-  const result = spawnSync(
-    process.execPath,
-    [path.join(process.cwd(), 'scripts', 'prepare-homebrew-cask.js'), '--release-dir', missingReleaseDir],
-    { encoding: 'utf8' },
-  );
-
-  assert.equal(result.status, 1, result.stdout + result.stderr);
-  assert.match(result.stdout, /Artifact blockers:/);
-});
-
-test('formatHomebrewCaskPreparation prints cask draft and verification steps', () => {
-  const output = formatHomebrewCaskPreparation({
-    repositorySlug: 'zhongdiandaoda/chm-reader-light',
-    releaseDir: '/tmp/release',
-    version: '0.2.0',
-    tag: 'v0.2.0',
-    artifactErrors: [],
-    caskText: 'cask "chmreaderlight" do\nend',
-  });
-
-  assert.match(output, /Homebrew cask preparation/);
-  assert.match(output, /Repository: zhongdiandaoda\/chm-reader-light/);
-  assert.match(output, /Release directory: \/tmp\/release/);
-  assert.match(output, /Cask draft:/);
-  assert.match(output, /cask "chmreaderlight" do/);
-  assert.match(output, /brew audit --cask chmreaderlight/);
-  assert.match(output, /brew install --cask chmreaderlight/);
-  assert.match(output, /Do not announce Homebrew install support until the cask is published and verified/);
 });
 
 test('parsePrepareSharePostArgs defaults to a social post draft', () => {
@@ -1569,152 +1248,6 @@ test('formatSharePostDraft prints copy and safety reminders', () => {
   assert.match(output, /Tracker note:/);
   assert.match(output, /prepared social share draft/);
   assert.match(output, /Do not post until npm run snapshot:visibility reports ready/);
-});
-
-test('parsePreparePromotionFollowUpArgs requires baseline and current snapshots', () => {
-  assert.deepEqual(parsePreparePromotionFollowUpArgs([
-    'node',
-    'scripts/prepare-promotion-follow-up.js',
-    '--baseline-file',
-    'dist/growth-baseline.txt',
-    '--current-file=dist/growth-current.txt',
-    '--channel',
-    'MacAdmins Slack',
-    '--status',
-    'Live',
-    '--note',
-    'Listing accepted with release feedback.',
-  ]), {
-    baselineFile: 'dist/growth-baseline.txt',
-    channel: 'MacAdmins Slack',
-    currentFile: 'dist/growth-current.txt',
-    note: 'Listing accepted with release feedback.',
-    status: 'Live',
-  });
-});
-
-test('parsePreparePromotionFollowUpArgs rejects missing and invalid values', () => {
-  assert.throws(
-    () => parsePreparePromotionFollowUpArgs(['node', 'scripts/prepare-promotion-follow-up.js']),
-    /--baseline-file is required\./,
-  );
-  assert.throws(
-    () => parsePreparePromotionFollowUpArgs(['node', 'scripts/prepare-promotion-follow-up.js', '--baseline-file', 'dist/base.txt']),
-    /--current-file is required\./,
-  );
-  assert.throws(
-    () => parsePreparePromotionFollowUpArgs([
-      'node',
-      'scripts/prepare-promotion-follow-up.js',
-      '--baseline-file',
-      'dist/base.txt',
-      '--current-file',
-      'dist/current.txt',
-      '--status=Queued',
-    ]),
-    /--status must be Planned, Submitted, Live, Needs update, Rejected, or Retired\./,
-  );
-});
-
-test('buildPromotionFollowUp compares baseline and current growth snapshots', () => {
-  const plan = buildPromotionFollowUp({
-    baselineText: [
-      'Growth metrics snapshot',
-      'Date: 2026-09-04',
-      'Repository: zhongdiandaoda/chm-reader-light',
-      'Stars: 3',
-      'Downloads: 7',
-      'Watchers: 2',
-      'Release: v0.1.0',
-      'Tracker baseline: 3 stars / 7 downloads / 2 watchers',
-    ].join('\n'),
-    currentText: [
-      'Growth metrics snapshot',
-      'Date: 2026-09-11',
-      'Repository: zhongdiandaoda/chm-reader-light',
-      'Stars: 8',
-      'Downloads: 19',
-      'Watchers: 4',
-      'Release: v0.1.0',
-      'Tracker baseline: 8 stars / 19 downloads / 4 watchers',
-    ].join('\n'),
-    options: {
-      channel: 'MacAdmins Slack',
-      note: 'Listing accepted with release feedback.',
-      status: 'Live',
-    },
-  });
-
-  assert.equal(plan.repository, 'zhongdiandaoda/chm-reader-light');
-  assert.equal(plan.channel, 'MacAdmins Slack');
-  assert.equal(plan.baselineMetrics, '3 stars / 7 downloads / 2 watchers');
-  assert.equal(plan.currentMetrics, '8 stars / 19 downloads / 4 watchers');
-  assert.deepEqual(plan.deltas, {
-    stars: '+5',
-    downloads: '+12',
-    watchers: '+2',
-  });
-  assert.equal(plan.followUpCell, '8 stars / 19 downloads / 4 watchers (+5 stars / +12 downloads / +2 watchers)');
-  assert.equal(plan.evidenceNote, '2026-09-11: MacAdmins Slack follow-up Live; 8 stars / 19 downloads / 4 watchers (+5 stars / +12 downloads / +2 watchers); Listing accepted with release feedback.');
-});
-
-test('buildPromotionFollowUp handles unavailable numeric values conservatively', () => {
-  const plan = buildPromotionFollowUp({
-    baselineText: [
-      'Growth metrics snapshot',
-      'Date: 2026-09-04',
-      'Repository: zhongdiandaoda/chm-reader-light',
-      'Stars: 3',
-      'Downloads: unavailable via HTML fallback',
-      'Watchers: 2',
-      'Release: v0.1.0',
-    ].join('\n'),
-    currentText: [
-      'Growth metrics snapshot',
-      'Date: 2026-09-11',
-      'Repository: zhongdiandaoda/chm-reader-light',
-      'Stars: 4',
-      'Downloads: unavailable via HTML fallback',
-      'Watchers: 2',
-      'Release: v0.1.0',
-    ].join('\n'),
-    options: {
-      channel: 'MacAdmins Slack',
-      note: '<follow-up evidence>',
-      status: 'Submitted',
-    },
-  });
-
-  assert.deepEqual(plan.deltas, {
-    stars: '+1',
-    downloads: 'n/a',
-    watchers: '+0',
-  });
-  assert.equal(plan.followUpCell, '4 stars / unavailable via HTML fallback downloads / 2 watchers (+1 stars / n/a downloads / +0 watchers)');
-});
-
-test('formatPromotionFollowUp prints tracker-ready follow-up fields', () => {
-  const output = formatPromotionFollowUp({
-    repository: 'zhongdiandaoda/chm-reader-light',
-    channel: 'MacAdmins Slack',
-    status: 'Live',
-    baselineDate: '2026-09-04',
-    currentDate: '2026-09-11',
-    baselineMetrics: '3 stars / 7 downloads / 2 watchers',
-    currentMetrics: '8 stars / 19 downloads / 4 watchers',
-    deltaSummary: '+5 stars / +12 downloads / +2 watchers',
-    followUpCell: '8 stars / 19 downloads / 4 watchers (+5 stars / +12 downloads / +2 watchers)',
-    evidenceNote: '2026-09-11: MacAdmins Slack follow-up Live; 8 stars / 19 downloads / 4 watchers (+5 stars / +12 downloads / +2 watchers); Listing accepted with release feedback.',
-  });
-
-  assert.match(output, /Promotion follow-up/);
-  assert.match(output, /Repository: zhongdiandaoda\/chm-reader-light/);
-  assert.match(output, /Baseline date: 2026-09-04/);
-  assert.match(output, /Current date: 2026-09-11/);
-  assert.match(output, /Delta: \+5 stars \/ \+12 downloads \/ \+2 watchers/);
-  assert.match(output, /Follow-Up Stars\/Downloads\/Watchers cell:/);
-  assert.match(output, /Evidence cell:/);
-  assert.match(output, /Update docs\/directory-submission-tracker.md/);
 });
 
 test('buildRepositoryListingUpdate plans metadata and topic updates', () => {
@@ -1945,7 +1478,7 @@ test('repository release template renders a complete tag-specific release body',
     );
   }
   assert.ok(
-    releaseBody.includes('https://github.com/zhongdiandaoda/chm-reader-light/blob/v0.2.0/docs/showcase.md'),
+    releaseBody.includes('https://github.com/zhongdiandaoda/chm-reader-light/blob/v0.2.0/docs/privacy.md'),
   );
   assert.doesNotMatch(releaseBody, /v<version>|\]\(\.\//);
   assert.doesNotMatch(releaseBody, /List benchmark-backed|List keyboard, VoiceOver/);

@@ -31,7 +31,6 @@ npm run package:mac
 - Confirm packaging finishes with `codesign --verify --deep --strict` so the ad-hoc signature covers the final app bundle and vendored native files. The release gate also inspects every Mach-O file in the app and rejects any non-ad-hoc signature, unexpected TeamIdentifier, or hardened-runtime flag, because ad-hoc components cannot satisfy macOS library validation without a shared Developer ID team.
 - Confirm packaging flips the production Electron fuses before the final signature and that release-bundle verification reads them back and verifies the expected Electron fuse states. `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS`, command-line debugging, and non-ASAR app loading must remain unavailable in production packages; embedded ASAR integrity validation must be enabled and its `Info.plist` hash must match the packaged `app.asar` header.
 - Confirm `app.asar` contains only `build/`, production `node_modules/`, `package.json`, `LICENSE`, and `THIRD_PARTY_NOTICES.md`; repository zips, tests, source files, docs, and build tooling must not ship inside the runtime payload.
-- If planning package-manager distribution, review the [Homebrew Cask Guide](./homebrew-cask.md) before drafting cask metadata.
 
 ## Publishing
 
@@ -79,12 +78,8 @@ npm run check:release-bundle:mac -- CHMReaderLight-mac-x64.zip x64
 - Pin the current release-feedback Discussion before wider announcements so release visitors see the feedback path without opening duplicate issues.
 - Link the pinned release-feedback thread from the release notes if trust, download, or first-launch questions repeat after publishing.
 - Confirm the GitHub repository About panel still matches [Repository Listing](./repository-listing.md).
-- Keep any Homebrew notes aligned with the [Homebrew Cask Guide](./homebrew-cask.md); do not announce a Homebrew install command until the cask is published and verified.
 - Review [Signing and Notarization](./signing-notarization.md) before changing any Gatekeeper, signing, or notarization wording in release notes.
-- Confirm the release body links to [Project Status](./project-status.md) so download visitors can check current platform support, trust caveats, and scope.
-- Use [Demo Guide](./demo-guide.md) if the release announcement needs a short app walkthrough.
-- Use [Share Kit](./share-kit.md) for reusable release announcement copy and social post text. Use [Chinese Share Kit](./share-kit.zh-CN.md) for localized release and social copy.
-- Work through the [Share Kit](./share-kit.md) sharing channels and promotion checklist before posting release links publicly.
+- Use [Share Kit](./share-kit.md) for concise release announcement copy after live verification passes.
 - Verify that Finder recognizes `.chm` files as documents that can be opened with CHMReaderLight.
 - Add any known limitations to the release notes, especially signing, notarization, or CHM compatibility caveats.
 - Keep the `Unreleased` changelog section ready for the next change after the tag is published.

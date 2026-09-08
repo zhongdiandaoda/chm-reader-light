@@ -13,13 +13,8 @@
 /.github/dependabot.yml @zhongdiandaoda
 /CITATION.cff @zhongdiandaoda
 /CODE_OF_CONDUCT.md @zhongdiandaoda
-/CODE_OF_CONDUCT.zh-CN.md @zhongdiandaoda
 /CONTRIBUTING.md @zhongdiandaoda
-/CONTRIBUTING.zh-CN.md @zhongdiandaoda
-/docs/governance.zh-CN.md @zhongdiandaoda
 /SECURITY.md @zhongdiandaoda
-/SECURITY.zh-CN.md @zhongdiandaoda
 /SUPPORT.md @zhongdiandaoda
-/SUPPORT.zh-CN.md @zhongdiandaoda
 /scripts/package-macos.sh @zhongdiandaoda
 /scripts/install-macos.sh @zhongdiandaoda

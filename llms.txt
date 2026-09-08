@@ -4,44 +4,21 @@ A lightweight offline CHM reader and library for macOS.
 
 ## What It Does
 
-CHMReaderLight helps macOS users collect local `.chm` manuals in a library-first workflow, then read them with a searchable table of contents, body search, reading history, zoom, text encoding controls, and safer defaults for unknown files.
-
-It keeps source CHM files in place, stores only local library metadata and reading preferences, and is designed for local-only documentation reading rather than cloud sync or hosted document storage.
-
-## Best For
-
-- Managing legacy SDK manuals, vendor help files, Microsoft HTML Help archives, and offline API reference on macOS.
-- Reading privacy-sensitive or internal documentation collections without uploading document content.
-- Evaluating a focused CHM viewer with macOS menus, Finder integration, release artifacts, checksum files, and contributor-friendly docs.
+CHMReaderLight provides a library-first workflow, searchable table of contents, body search, reading history, zoom, text encoding controls, and local-only CHM reading on Apple Silicon and Intel Macs.
 
 ## Trust Notes
 
 - No telemetry, accounts, cloud sync, or hosted document storage.
-- CHM-authored scripts are disabled, network access is blocked from rendered CHM content, and local resources are constrained to the extracted book.
-- Release downloads are published on GitHub Releases with SHA-256 checksum files and GitHub artifact attestations for Apple Silicon and Intel Mac builds.
-- Direct latest downloads are available for Apple Silicon and Intel Mac builds as `CHMReaderLight-mac-arm64.zip` and `CHMReaderLight-mac-x64.zip`.
-- Homebrew is not a supported install path yet; the Homebrew Cask Guide is maintainer-facing preparation for a future cask.
-- Installed app users can start from Help > Report or Request for question, install help, bug, compatibility, feature request, performance, accessibility, documentation, release feedback, showcase, and security-policy routes.
-- Installed app users can use Help > Star on GitHub after a successful local workflow trial.
-- Help > Copy Share Text creates bilingual sharing copy with release, star, feedback, and showcase links.
-- Help > Release Feedback opens the release-feedback Discussion when release trust details are the blocker.
+- CHM-authored scripts and network access are blocked.
+- Release archives include SHA-256 checksum files.
+- Current builds are not Apple-notarized.
 
 ## Key Links
 
 - README: https://github.com/zhongdiandaoda/chm-reader-light#readme
 - Releases: https://github.com/zhongdiandaoda/chm-reader-light/releases
-- Apple Silicon download: https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-arm64.zip
-- Intel download: https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-x64.zip
-- Homebrew Cask Guide: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/homebrew-cask.md
 - Issues: https://github.com/zhongdiandaoda/chm-reader-light/issues/new/choose
-- Discussions: https://github.com/zhongdiandaoda/chm-reader-light/discussions
-- Release feedback: https://github.com/zhongdiandaoda/chm-reader-light/discussions/new?category=release-feedback
 - Support: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md
-- Contributing: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/CONTRIBUTING.md
-- Documentation feedback: https://github.com/zhongdiandaoda/chm-reader-light/issues/new?template=documentation.yml
-- Use cases: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/use-cases.md
-- Comparison: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/comparison.md
-- Adoption checklist: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/adoption-checklist.md
-- Privacy and local data: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/privacy.md
+- Privacy: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/privacy.md
 - Security model: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/security-model.md
-- Good first contributions: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/good-first-contributions.md
+- Troubleshooting: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.md

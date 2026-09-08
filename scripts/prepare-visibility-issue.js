@@ -129,7 +129,7 @@ function getDefaultFollowUp(snapshotText, today = new Date()) {
     ? addDays(today, defaultFollowUpDays)
     : addDays(baseDate, defaultFollowUpDays);
 
-  return `Recheck on ${formatLocalIsoDate(followUpDate)} and update docs/directory-submission-tracker.md with stars, downloads, watchers, support issues, Discussions, and listing status.`;
+  return `Recheck on ${formatLocalIsoDate(followUpDate)} and add stars, downloads, watchers, support issues, Discussions, and listing status to this issue.`;
 }
 
 function buildVisibilityIssueBody(plan) {
