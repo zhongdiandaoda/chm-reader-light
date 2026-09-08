@@ -59,7 +59,6 @@ interface ChmReaderApi {
   removeLibraryBook: (id: string) => Promise<LibraryState>;
   revealLibraryBook: (id: string) => Promise<unknown>;
   relinkLibraryBook: (id: string) => Promise<LibraryState | null>;
-  copyText: (text: string) => Promise<unknown>;
   createCollection: (name: string) => Promise<LibraryState>;
   renameCollection: (id: string, name: string) => Promise<LibraryState>;
   removeCollection: (id: string) => Promise<LibraryState>;
@@ -103,7 +102,6 @@ const chmReader: ChmReaderApi = {
   removeLibraryBook: (id) => ipcRenderer.invoke('library:remove', id) as Promise<LibraryState>,
   revealLibraryBook: (id) => ipcRenderer.invoke('library:reveal', id),
   relinkLibraryBook: (id) => ipcRenderer.invoke('library:relink', id) as Promise<LibraryState | null>,
-  copyText: (text) => ipcRenderer.invoke('clipboard:write-text', text),
   createCollection: (name) => ipcRenderer.invoke('collection:create', name) as Promise<LibraryState>,
   renameCollection: (id, name) => ipcRenderer.invoke('collection:rename', id, name) as Promise<LibraryState>,
   removeCollection: (id) => ipcRenderer.invoke('collection:remove', id) as Promise<LibraryState>,

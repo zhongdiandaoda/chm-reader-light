@@ -53,7 +53,7 @@ test('README presents a GitHub-friendly first screen', () => {
   assert.match(readme, /只保存本地路径和阅读偏好，不上传、不同步 CHM 内容/);
   assert.match(readme, /把兼容性、安装、隐私和发版流程都写进仓库文档/);
   assert.match(readme, /## 亮点/);
-  assert.match(readme, /支持拖拽导入、多书库分组、书库搜索、目录搜索、阅读历史、正文缩放、Finder 定位、复制源文件路径和缺失源文件提示/);
+  assert.match(readme, /支持拖拽导入、多书库分组、书库搜索、目录搜索、阅读历史、正文缩放、Finder 定位和缺失源文件提示/);
   assert.match(readme, /## 60 秒试用路径/);
   assert.match(readme, /从 \[GitHub Releases\]\(https:\/\/github\.com\/zhongdiandaoda\/chm-reader-light\/releases\) 下载/);
   assert.match(readme, /如果 Releases 暂无可下载构件，请按\[本地运行\]\(#本地运行\)中的两条命令从源码启动/);
@@ -839,7 +839,7 @@ test('accessibility guide documents current keyboard and appearance expectations
   assert.match(accessibilityGuide, /## Current Support/);
   assert.match(accessibilityGuide, /Keyboard-first library and reader workflows are supported through native macOS menus and documented shortcuts/);
   assert.match(accessibilityGuide, /Visible focus states help track keyboard movement through library cards, toolbar controls, dialogs, and menus/);
-  assert.match(accessibilityGuide, /Status changes such as library counts, empty-search results, topic progress, and copy actions use polite announcements/);
+  assert.match(accessibilityGuide, /Status changes such as library counts, empty-search results, and topic progress use polite announcements/);
   assert.match(accessibilityGuide, /## Known Limits/);
   assert.match(accessibilityGuide, /CHMReaderLight currently uses a light appearance/);
   assert.match(accessibilityGuide, /Dark mode and high-contrast theme switches are not available yet/);
@@ -3778,7 +3778,7 @@ test('library mutation requests report IPC failures without unhandled event prom
   const slices = [
     ['async function requestImportBooks(): Promise<void>', 'function getDroppedFiles('],
     ['async function importDroppedBooks(files: readonly File[]): Promise<void>', 'function initializeLibraryDropImport('],
-    ['async function relinkLibraryBook(entry: LibraryBook, trigger: HTMLButtonElement): Promise<void>', 'async function copyLibraryBookPath('],
+    ['async function relinkLibraryBook(entry: LibraryBook, trigger: HTMLButtonElement): Promise<void>', 'async function confirmAndRemoveLibraryBook('],
     ['async function revealLibraryBook(entry: LibraryBook): Promise<void>', 'async function relinkLibraryBook('],
     ['async function confirmAndRemoveLibraryBook(entry: LibraryBook): Promise<void>', 'async function openLibraryBook('],
     ['async function confirmAndRemoveCollection(collection: LibraryCollection, count: number): Promise<void>', 'function openCollectionDialog('],
@@ -3875,29 +3875,16 @@ test('reader sidebar shows the available topic count', () => {
   assert.match(changelog, /reader sidebar topic count/);
 });
 
-test('reader toolbar can copy the current topic reference', () => {
+test('reader toolbar omits the copy-current-topic action', () => {
   const html = fs.readFileSync(path.join(projectRoot, 'src', 'index.html'), 'utf-8');
   const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
   const readme = fs.readFileSync(path.join(projectRoot, 'README.md'), 'utf-8');
-  const changelog = fs.readFileSync(path.join(projectRoot, 'CHANGELOG.md'), 'utf-8');
 
-  assert.match(html, /<button class="icon-button" id="copy-topic-reference" type="button" aria-label="复制当前章节引用" title="复制当前章节引用" disabled>/);
-  assert.match(html, /<output class="sr-only" id="copy-status" aria-live="polite"><\/output>/);
-  assert.match(renderer, /copyTopicReference: query\('#copy-topic-reference'\)/);
-  assert.match(renderer, /copyStatus: query\('#copy-status'\)/);
-  assert.match(renderer, /function findTopicTitleByPath\(items: readonly BookContentsItem\[\], topicPath: string\): string \| null/);
-  assert.match(renderer, /async function copyCurrentTopicReference\(\): Promise<void>/);
-  assert.match(renderer, /elements\.copyTopicReference\.disabled = currentIndex < 0/);
-  assert.match(renderer, /elements\.copyTopicReference\.title = currentIndex >= 0\s*\?\s*'复制当前章节引用'\s*:\s*'没有可复制的当前章节'/);
-  assert.match(renderer, /const topicTitle = findTopicTitleByPath\(currentBook\.contents, currentTopicPath\) \|\| currentTopicPath/);
-  assert.match(renderer, /await window\.chmReader\.copyText\(`\$\{currentBook\.name\} - \$\{topicTitle\}\\n\$\{currentTopicPath\}`\)/);
-  assert.match(renderer, /elements\.copyTopicReference\.title = '已复制章节引用'/);
-  assert.match(renderer, /elements\.copyStatus\.textContent = '已复制当前章节引用'/);
-  assert.match(renderer, /elements\.copyStatus\.textContent = '复制当前章节引用失败'/);
-  assert.match(renderer, /elements\.copyTopicReference\.addEventListener\('click', \(\) => \{/);
-  assert.match(readme, /复制当前章节引用/);
-  assert.match(changelog, /copy the current topic reference/);
-  assert.match(changelog, /copy-action status announcements/);
+  assert.doesNotMatch(html, /id="copy-topic-reference"/);
+  assert.doesNotMatch(renderer, /copyTopicReference/);
+  assert.doesNotMatch(renderer, /copyCurrentTopicReference/);
+  assert.doesNotMatch(renderer, /已复制当前章节引用|复制当前章节引用失败/);
+  assert.doesNotMatch(readme, /复制当前章节引用/);
 });
 
 test('roadmap makes project direction discoverable to contributors', () => {
@@ -4884,7 +4871,6 @@ test('all renderer invoke endpoints enforce the trusted IPC sender boundary', ()
     'library:remove',
     'library:reveal',
     'library:relink',
-    'clipboard:write-text',
     'collection:create',
     'collection:rename',
     'collection:remove',
@@ -5238,7 +5224,7 @@ test('library cards surface continue-reading state', () => {
   assert.match(changelog, /continue-reading badges on library cards/);
 });
 
-test('library cards can reveal or copy the source CHM path', () => {
+test('library cards reveal source CHM files without a copy-path action', () => {
   const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
   const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
   const preload = fs.readFileSync(path.join(projectRoot, 'src', 'preload.ts'), 'utf-8');
@@ -5247,30 +5233,19 @@ test('library cards can reveal or copy the source CHM path', () => {
 
   assert.match(main, /handleTrustedIpc\('library:reveal'/);
   assert.match(main, /shell\.showItemInFolder\(bookPath\)/);
-  assert.match(main, /clipboard,/);
-  assert.match(main, /handleTrustedIpc\('clipboard:write-text'/);
-  assert.match(main, /clipboard\.writeText\(String\(text \|\| ''\)\)/);
   assert.match(preload, /revealLibraryBook: \(id\) => ipcRenderer\.invoke\('library:reveal', id\)/);
-  assert.doesNotMatch(preload, /clipboard: \{/);
-  assert.match(preload, /copyText: \(text\) => ipcRenderer\.invoke\('clipboard:write-text', text\)/);
+  assert.doesNotMatch(preload, /copyText:|clipboard:write-text/);
   assert.match(renderer, /revealLibraryBook: \(id: string\) => Promise<unknown>/);
-  assert.match(renderer, /copyText: \(text: string\) => Promise<unknown>/);
   assert.match(renderer, /className = 'library-card-reveal'/);
-  assert.match(renderer, /className = 'library-card-copy'/);
   assert.match(renderer, /reveal\.setAttribute\('aria-label', `在 Finder 中显示 \$\{entry\.name\}`\)/);
-  assert.match(renderer, /copyPath\.setAttribute\('aria-label', `复制 \$\{entry\.name\} 的源文件路径`\)/);
-  assert.match(renderer, /copyPath\.disabled = !entry\.filePath/);
   assert.match(renderer, /window\.chmReader\.revealLibraryBook\(entry\.id\)/);
-  assert.match(renderer, /async function copyLibraryBookPath\(entry: LibraryBook, trigger: HTMLButtonElement\): Promise<void>/);
-  assert.match(renderer, /await window\.chmReader\.copyText\(entry\.filePath\)/);
-  assert.match(renderer, /trigger\.title = '已复制路径'/);
-  assert.match(renderer, /elements\.copyStatus\.textContent = `已复制 \$\{entry\.name\} 的源文件路径`/);
-  assert.match(renderer, /elements\.copyStatus\.textContent = `复制 \$\{entry\.name\} 的源文件路径失败`/);
+  assert.doesNotMatch(renderer, /copyPath|copyLibraryBookPath|library-card-copy|copyText:/);
+  assert.doesNotMatch(main, /handleTrustedIpc\('clipboard:write-text'/);
   assert.match(css, /\.library-card-actions\s*{/);
-  assert.match(css, /\.library-card-reveal,\n\.library-card-copy,\n\.library-card-relink\s*{/);
+  assert.doesNotMatch(css, /library-card-copy/);
   assert.match(css, /padding: 8px 70px 8px 10px;/);
   assert.match(css, /\.library-card:focus-within \.library-card-actions/s);
-  assert.match(readme, /复制源文件路径/);
+  assert.doesNotMatch(readme, /复制源文件路径/);
 });
 
 test('library cards warn when the saved CHM source file is missing', () => {

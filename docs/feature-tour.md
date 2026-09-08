@@ -10,7 +10,7 @@ The library keeps source paths, folder labels, layout preference, selected colle
 
 ## Reader Workflow
 
-Open a library item to enter the reader. The sidebar shows a searchable table of contents with a topic count, while the toolbar shows reading position and controls for history, previous or next topic navigation, zoom, text encoding, and copying the current topic reference.
+Open a library item to enter the reader. The sidebar shows a searchable table of contents with a topic count, while the toolbar shows reading position and controls for history, previous or next topic navigation, zoom, and text encoding.
 
 Reader preferences such as zoom, text encoding, sidebar width, sidebar visibility, and the last-read topic for each CHM are saved locally between launches. `Command+F` focuses search in whichever view is active; see the [Search Guide](./search.md) for body search, directory filtering, match navigation, and indexing limits.
 

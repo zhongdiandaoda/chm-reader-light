@@ -57,7 +57,6 @@ interface ChmReaderApi {
   removeLibraryBook: (id: string) => Promise<LibraryState>;
   revealLibraryBook: (id: string) => Promise<unknown>;
   relinkLibraryBook: (id: string) => Promise<LibraryState | null>;
-  copyText: (text: string) => Promise<unknown>;
   createCollection: (name: string) => Promise<LibraryState>;
   renameCollection: (id: string, name: string) => Promise<LibraryState>;
   removeCollection: (id: string) => Promise<LibraryState>;
@@ -185,8 +184,6 @@ const elements = {
   searchPrevious: query('#search-previous'),
   searchNext: query('#search-next'),
   searchMatchPosition: query('#search-match-position'),
-  copyTopicReference: query('#copy-topic-reference'),
-  copyStatus: query('#copy-status'),
   back: query('#go-back'),
   forward: query('#go-forward'),
   previousPage: query('#previous-page'),
@@ -646,22 +643,6 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
     void revealLibraryBook(entry);
   });
 
-  const copyPath = document.createElement('button');
-  copyPath.className = 'library-card-copy';
-  copyPath.type = 'button';
-  copyPath.disabled = !entry.filePath;
-  copyPath.setAttribute('aria-label', `复制 ${entry.name} 的源文件路径`);
-  copyPath.title = entry.filePath ? '复制源文件路径' : '没有可复制的源文件路径';
-  copyPath.innerHTML = `
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <rect x="7" y="5" width="9" height="11" rx="1.5"></rect>
-      <path d="M4 12.5V4.5A1.5 1.5 0 0 1 5.5 3H12"></path>
-    </svg>`;
-  copyPath.addEventListener('click', (event) => {
-    event.stopPropagation();
-    void copyLibraryBookPath(entry, copyPath);
-  });
-
   const relink = document.createElement('button');
   relink.className = 'library-card-relink';
   relink.type = 'button';
@@ -682,7 +663,7 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
 
   const actions = document.createElement('div');
   actions.className = 'library-card-actions';
-  actions.append(relink, copyPath, reveal, remove);
+  actions.append(relink, reveal, remove);
 
   card.append(open, actions);
   return card;
@@ -710,18 +691,6 @@ async function relinkLibraryBook(entry: LibraryBook, trigger: HTMLButtonElement)
     showLibraryActionError('无法重新定位源文件', error);
   } finally {
     trigger.disabled = false;
-  }
-}
-
-async function copyLibraryBookPath(entry: LibraryBook, trigger: HTMLButtonElement): Promise<void> {
-  if (!entry.filePath) return;
-  try {
-    await window.chmReader.copyText(entry.filePath);
-    trigger.title = '已复制路径';
-    elements.copyStatus.textContent = `已复制 ${entry.name} 的源文件路径`;
-  } catch {
-    trigger.title = '复制路径失败';
-    elements.copyStatus.textContent = `复制 ${entry.name} 的源文件路径失败`;
   }
 }
 
@@ -1118,10 +1087,6 @@ function updatePageButtons(): void {
   const currentIndex = currentTopicPath ? readingOrder.indexOf(currentTopicPath) : -1;
   elements.previousPage.disabled = currentIndex <= 0;
   elements.nextPage.disabled = currentIndex < 0 || currentIndex >= readingOrder.length - 1;
-  elements.copyTopicReference.disabled = currentIndex < 0;
-  elements.copyTopicReference.title = currentIndex >= 0
-    ? '复制当前章节引用'
-    : '没有可复制的当前章节';
   updateReaderProgress(currentIndex);
 }
 
@@ -1139,20 +1104,6 @@ function findTopicTitleByPath(items: readonly BookContentsItem[], topicPath: str
     if (childTitle) return childTitle;
   }
   return null;
-}
-
-async function copyCurrentTopicReference(): Promise<void> {
-  if (!currentBook || !currentTopicPath) return;
-
-  const topicTitle = findTopicTitleByPath(currentBook.contents, currentTopicPath) || currentTopicPath;
-  try {
-    await window.chmReader.copyText(`${currentBook.name} - ${topicTitle}\n${currentTopicPath}`);
-    elements.copyTopicReference.title = '已复制章节引用';
-    elements.copyStatus.textContent = '已复制当前章节引用';
-  } catch {
-    elements.copyTopicReference.title = '复制章节引用失败';
-    elements.copyStatus.textContent = '复制当前章节引用失败';
-  }
 }
 
 function updateSidebarTopicCount(): void {
@@ -1984,10 +1935,6 @@ document.addEventListener('keydown', (event) => {
 query('#zoom-out').addEventListener('click', () => setZoom(zoom - 0.1, true));
 query('#zoom-in').addEventListener('click', () => setZoom(zoom + 0.1, true));
 elements.zoomReset.addEventListener('click', () => setZoom(1, true));
-elements.copyTopicReference.addEventListener('click', () => {
-  void copyCurrentTopicReference();
-});
-
 window.chmReader.onBookOpened(applyBook);
 window.chmReader.onBookIndexReady(({ searchablePageCount }) => {
   if (!currentBook) return;

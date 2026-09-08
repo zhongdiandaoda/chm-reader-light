@@ -4,6 +4,7 @@ All notable user-facing changes to CHMReaderLight are documented here.
 
 ## Unreleased
 
+- Removed copy actions from the reader toolbar and library cards to keep navigation and file-management controls focused.
 - Fixed the GitHub social preview title and supporting copy being obscured by the product window, added a reproducible 1280 x 640 PNG generation command, and made asset checks reject stale SVG/PNG pairs.
 - Star calls to action now open the repository page where GitHub exposes the Star control instead of the read-only stargazer list.
 - Security: replaced Homebrew CHMLib release vendoring with a pinned, SHA-256-verified source build carrying the CVE-2025-48172 bounds-check backport, bundled corresponding source, and final-binary provenance verification.
@@ -382,13 +383,11 @@ All notable user-facing changes to CHMReaderLight are documented here.
 - Documented last-opened library metadata in local-data and contributor docs.
 - Clarified moved-file troubleshooting to use the missing-source relink action before removing entries.
 - Made library card metadata available to assistive technologies.
-- Added copy-action status announcements for assistive technologies.
 - Added library result count and empty-search status announcements for assistive technologies.
 - Exposed the selected library collection to assistive technologies.
 - Added continue-reading badges on library cards for CHMs with a saved last-read topic.
 - Added a reader toolbar current topic title indicator.
 - Added a library card action to reveal the source CHM file in Finder.
-- Added a library card action to copy the source CHM file path.
 - Added a library card warning when a saved CHM source file can no longer be found.
 - Added a clear-search action for empty library search results.
 - Relink missing CHM source files without deleting and re-adding the library entry.
@@ -441,7 +440,6 @@ All notable user-facing changes to CHMReaderLight are documented here.
 - Added a feature request issue template for focused product feedback.
 - Added a pull request template review checklist for change type, user impact, verification, and screenshots.
 - Added README badges for CI, license, macOS support, Node.js, and releases.
-- Added a reader toolbar action to copy the current topic reference.
 - Added a README quick navigation section for the most important project links.
 - Added a README use-case section to help first-time visitors evaluate the app quickly.
 - Added a macOS install guide for release downloads, checksum verification, first launch, updates, and removal.

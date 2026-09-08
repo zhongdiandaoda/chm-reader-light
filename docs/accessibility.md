@@ -6,7 +6,7 @@ This guide summarizes CHMReaderLight's current keyboard, assistive technology, a
 
 - Keyboard-first library and reader workflows are supported through native macOS menus and documented shortcuts.
 - Visible focus states help track keyboard movement through library cards, toolbar controls, dialogs, and menus.
-- Status changes such as library counts, empty-search results, topic progress, and copy actions use polite announcements.
+- Status changes such as library counts, empty-search results, and topic progress use polite announcements.
 - Reader zoom and text encoding preferences persist between launches, which can make repeated CHM reading more comfortable.
 
 ## Known Limits

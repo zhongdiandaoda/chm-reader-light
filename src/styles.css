@@ -847,7 +847,6 @@ button {
 
 .library-card-remove,
 .library-card-reveal,
-.library-card-copy,
 .library-card-relink {
   display: grid;
   place-items: center;
@@ -864,13 +863,8 @@ button {
 }
 
 .library-card-reveal,
-.library-card-copy,
 .library-card-relink {
   background: rgba(48, 55, 51, 0.88);
-}
-
-.library-card-copy:disabled {
-  opacity: 0.45;
 }
 
 .library-card-reveal:disabled {
@@ -878,7 +872,6 @@ button {
 }
 
 .library-card-reveal svg,
-.library-card-copy svg,
 .library-card-relink svg {
   width: 14px;
   height: 14px;
@@ -893,7 +886,6 @@ button {
 .library-card:focus-within .library-card-actions,
 .library-card-remove:focus-visible,
 .library-card-reveal:focus-visible,
-.library-card-copy:focus-visible,
 .library-card-relink:focus-visible {
   opacity: 1;
 }

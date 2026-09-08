@@ -111,7 +111,7 @@ gh attestation verify CHMReaderLight-mac-x64.zip --repo zhongdiandaoda/chm-reade
 
 1. Download the latest build from [GitHub Releases](https://github.com/zhongdiandaoda/chm-reader-light/releases) for your Mac, then verify the `.sha256` checksum if needed. If Releases has no downloadable build yet, use the two commands in [Development](#development) to run from source.
 2. Open the app. Drag one or more `.chm` files into the library window to confirm local manuals are easy to collect.
-3. Open a book, then try table-of-contents search and body search before switching topics, adjusting zoom, or copying a topic reference.
+3. Open a book, then try table-of-contents search and body search before switching topics or adjusting zoom.
 4. Check [Privacy and Local Data](./docs/privacy.md), [Chinese Privacy and Local Data](./docs/privacy.zh-CN.md), [Security Model](./docs/security-model.md), and [Chinese Security Model](./docs/security-model.zh-CN.md) when you need to confirm the local data and reader boundaries.
 5. If it solves your offline CHM workflow, use `Help > Star on GitHub` so more users can find it, use `Help > Watch Releases` to follow future updates, or use `Help > Copy Share Text` to copy a ready-made bilingual project summary.
 
@@ -119,7 +119,7 @@ gh attestation verify CHMReaderLight-mac-x64.zip --repo zhongdiandaoda/chm-reade
 
 - Library-first startup for managing local CHM manuals without copying or moving source files.
 - Multi-collection organization, library search, recently opened books first, grid/list layout preference, drag-and-drop import, source folder labels, added date labels, last-opened date labels, continue-reading badges, Finder reveal, path copy, missing-file warnings, and relink support.
-- Reader view with nested `.hhc` table of contents, searchable table of contents, full-text search, reading position, current topic title, topic count, previous/next topic navigation, history navigation, last-read topic restore, window title with the current book and topic, zoom persistence, text encoding persistence, search scope preference, and copy-current-topic reference.
+- Reader view with nested `.hhc` table of contents, searchable table of contents, full-text search, reading position, current topic title, topic count, previous/next topic navigation, history navigation, last-read topic restore, window title with the current book and topic, zoom persistence, text encoding persistence, and search scope preference.
 - Safer defaults for unknown CHM files: CHM-authored scripts, inline event handlers, form submissions, popups, nested frames, plugin objects, and network connections are blocked.
 - macOS integration for native menus, recent documents, Finder `.chm` document association, and Apple Silicon or Intel packaging.
 

@@ -1330,7 +1330,6 @@ handleTrustedIpc('library:open', (_event: IpcMainInvokeEvent, id: string) => ope
 handleTrustedIpc('library:remove', (_event: IpcMainInvokeEvent, id: string) => removeBook(id));
 handleTrustedIpc('library:reveal', (_event: IpcMainInvokeEvent, id: string) => revealLibraryBook(id));
 handleTrustedIpc('library:relink', (_event: IpcMainInvokeEvent, id: string) => relinkLibraryBook(id));
-handleTrustedIpc('clipboard:write-text', (_event: IpcMainInvokeEvent, text: string) => clipboard.writeText(String(text || '')));
 handleTrustedIpc('collection:create', (_event: IpcMainInvokeEvent, name: string) => createCollection(name));
 handleTrustedIpc('collection:rename', (_event: IpcMainInvokeEvent, id: string, name: string) => renameCollection(id, name));
 handleTrustedIpc('collection:remove', (_event: IpcMainInvokeEvent, id: string) => removeCollection(id));

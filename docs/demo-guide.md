@@ -8,7 +8,7 @@ Use this guide when recording a short README video, release-note clip, or social
 - Drag one or more `.chm` files into the library window and show that the app keeps the original source file in place.
 - Switch between grid and list layout, then filter the library by book name or source path.
 - Open a book and filter the searchable table of contents.
-- Run a body search, move between matches, and copy the current topic reference.
+- Run a body search and move between matches.
 - Change zoom or text encoding to show reader preferences without leaving the document.
 - Use **Help > Star on GitHub** at the end if the demo is meant for project sharing.
 
