@@ -4,7 +4,7 @@ A lightweight offline CHM reader and library for macOS.
 
 ## What It Does
 
-CHMReaderLight provides a library-first workflow, searchable table of contents, body search, reading history, zoom, text encoding controls, and local-only CHM reading on Apple Silicon and Intel Macs.
+CHMReaderLight provides a library-first workflow, searchable table of contents, body search, reading history, zoom, text encoding controls, and local-only CHM reading on Apple Silicon Macs.
 
 ## Trust Notes
 

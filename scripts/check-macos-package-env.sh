@@ -1,15 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-host_arch="$(uname -m)"
-default_arch="x64"
-if [[ "$host_arch" == "arm64" ]]; then
-  default_arch="arm64"
-fi
-arch="${1:-$default_arch}"
+arch="${1:-arm64}"
 case "$arch" in
-  arm64|x64) ;;
-  *) printf "Usage: %s [arm64|x64]\n" "$0" >&2; exit 2 ;;
+  arm64) ;;
+  *) printf "Usage: %s [arm64]\n" "$0" >&2; exit 2 ;;
 esac
 
 if [[ "$(uname -s)" != "Darwin" ]]; then

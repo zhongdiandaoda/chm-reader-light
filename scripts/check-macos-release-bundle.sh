@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
-  printf "Usage: %s <release.zip> <arm64|x64>\n" "$0" >&2
+  printf "Usage: %s <release.zip> <arm64>\n" "$0" >&2
   exit 2
 fi
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,9 +12,8 @@ artifact_path="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 arch="$2"
 case "$arch" in
   arm64) macho_arch="arm64" ;;
-  x64) macho_arch="x86_64" ;;
   *)
-    printf "Unsupported architecture: %s (expected arm64 or x64).\n" "$arch" >&2
+    printf "Unsupported architecture: %s (expected arm64).\n" "$arch" >&2
     exit 2
     ;;
 esac

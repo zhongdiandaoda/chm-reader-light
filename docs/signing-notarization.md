@@ -29,7 +29,7 @@ Until that process is implemented and verified, release notes, README text, and 
 - Verify the packaged app with `codesign --verify` before release.
 - Verify Gatekeeper behavior with `spctl --assess` after signing changes.
 - Record the `notarytool` submission and staple steps in [Release Checklist](./release.md) before publishing notarized artifacts.
-- Test both `CHMReaderLight-mac-arm64.zip` and `CHMReaderLight-mac-x64.zip` after any signing, entitlement, or packaging change.
+- Test `CHMReaderLight-mac-arm64.zip` after any signing, entitlement, or packaging change.
 
 ## User-Safe Messaging
 

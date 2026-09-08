@@ -405,30 +405,28 @@ test('verifyPackagedAppAsar rejects manifest metadata that differs from the rele
   ]);
 });
 
-test('verifyReleaseArtifacts accepts both macOS release zips with matching checksums', () => {
+test('verifyReleaseArtifacts accepts the Apple Silicon release zip with a matching checksum', () => {
   const releaseDir = makeTempReleaseDir();
 
   writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-arm64.zip', 'arm build');
-  writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-x64.zip', 'intel build');
 
-  assert.equal(EXPECTED_RELEASE_ARTIFACTS.length, 2);
+  assert.deepEqual(EXPECTED_RELEASE_ARTIFACTS, ['CHMReaderLight-mac-arm64.zip']);
   assert.deepEqual(verifyReleaseArtifacts(releaseDir), []);
 });
 
 test('verifyReleaseArtifacts reports missing artifacts and checksum mismatches', () => {
   const releaseDir = makeTempReleaseDir();
   const incorrectChecksum = '0'.repeat(64);
-  const intelBuild = 'intel build';
-  const actualChecksum = crypto.createHash('sha256').update(intelBuild).digest('hex');
+  const armBuild = 'arm build';
+  const actualChecksum = crypto.createHash('sha256').update(armBuild).digest('hex');
 
-  writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-arm64.zip', 'arm build');
-  fs.writeFileSync(path.join(releaseDir, 'CHMReaderLight-mac-x64.zip'), intelBuild);
-  fs.writeFileSync(path.join(releaseDir, 'CHMReaderLight-mac-x64.zip.sha256'), `${incorrectChecksum}  CHMReaderLight-mac-x64.zip\n`);
+  fs.writeFileSync(path.join(releaseDir, 'CHMReaderLight-mac-arm64.zip'), armBuild);
+  fs.writeFileSync(path.join(releaseDir, 'CHMReaderLight-mac-arm64.zip.sha256'), `${incorrectChecksum}  CHMReaderLight-mac-arm64.zip\n`);
 
   const errors = verifyReleaseArtifacts(releaseDir);
 
   assert.deepEqual(errors, [
-    `Checksum mismatch for CHMReaderLight-mac-x64.zip: expected ${incorrectChecksum}, got ${actualChecksum}.`,
+    `Checksum mismatch for CHMReaderLight-mac-arm64.zip: expected ${incorrectChecksum}, got ${actualChecksum}.`,
   ]);
 });
 
@@ -441,9 +439,8 @@ test('verifyReleaseArtifacts rejects a checksum naming a different release artif
   fs.writeFileSync(path.join(releaseDir, artifactName), content);
   fs.writeFileSync(
     path.join(releaseDir, `${artifactName}.sha256`),
-    `${checksum}  CHMReaderLight-mac-x64.zip\n`,
+    `${checksum}  CHMReaderLight-mac-universal.zip\n`,
   );
-  writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-x64.zip', 'intel build');
 
   assert.deepEqual(verifyReleaseArtifacts(releaseDir), [
     `Invalid checksum file format or artifact name: ${artifactName}.sha256`,
@@ -453,13 +450,11 @@ test('verifyReleaseArtifacts rejects a checksum naming a different release artif
 test('verifyReleaseArtifacts reports missing release files', () => {
   const releaseDir = makeTempReleaseDir();
 
-  writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-arm64.zip', 'arm build');
-
   const errors = verifyReleaseArtifacts(releaseDir);
 
   assert.deepEqual(errors, [
-    'Missing release artifact: CHMReaderLight-mac-x64.zip',
-    'Missing checksum file: CHMReaderLight-mac-x64.zip.sha256',
+    'Missing release artifact: CHMReaderLight-mac-arm64.zip',
+    'Missing checksum file: CHMReaderLight-mac-arm64.zip.sha256',
   ]);
 });
 
@@ -467,7 +462,6 @@ test('verifyReleaseArtifacts reports unexpected macOS release files', () => {
   const releaseDir = makeTempReleaseDir();
 
   writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-arm64.zip', 'arm build');
-  writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-x64.zip', 'intel build');
   fs.writeFileSync(path.join(releaseDir, 'CHMReaderLight-mac-universal.zip'), 'old universal build');
   fs.writeFileSync(path.join(releaseDir, 'CHMReaderLight-mac-universal.zip.sha256'), `${'1'.repeat(64)}  CHMReaderLight-mac-universal.zip\n`);
   fs.writeFileSync(path.join(releaseDir, 'notes.txt'), 'release notes draft');
@@ -560,7 +554,6 @@ test('parseCheckLiveReleaseArgs rejects missing and malformed release tags', () 
 test('snapshotExpectedLiveReleaseAssets records verified local sizes and SHA-256 digests', () => {
   const releaseDir = makeTempReleaseDir();
   writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-arm64.zip', 'arm build');
-  writeArtifactWithChecksum(releaseDir, 'CHMReaderLight-mac-x64.zip', 'intel build');
   const expected = snapshotExpectedLiveReleaseAssets(releaseDir);
 
   assert.deepEqual(Object.keys(expected).sort(), EXPECTED_LIVE_RELEASE_ASSETS.slice().sort());
@@ -610,8 +603,6 @@ test('verifyLiveReleaseAssets reports missing and stale latest release assets', 
   });
 
   assert.deepEqual(errors, [
-    'Missing latest release asset: CHMReaderLight-mac-x64.zip',
-    'Missing latest release asset: CHMReaderLight-mac-x64.zip.sha256',
     'Unexpected latest release macOS asset: CHMReaderLight-mac-universal.zip',
     'Unexpected latest release macOS asset: CHMReaderLight-mac-universal.zip.sha256',
   ]);
@@ -629,7 +620,7 @@ test('verifyLiveReleaseAssets validates the requested published tag and uploaded
       name,
       size: index === 0 ? 0 : 128,
       state: index === 1 ? 'new' : 'uploaded',
-      digest: index === 2 ? `sha256:${'b'.repeat(64)}` : `sha256:${'a'.repeat(64)}`,
+      digest: index === 1 ? `sha256:${'b'.repeat(64)}` : `sha256:${'a'.repeat(64)}`,
       browser_download_url: `https://github.com/zhongdiandaoda/chm-reader-light/releases/download/v0.1.1/${name}`,
     })),
   }, { expectedTag: 'v0.1.0', requirePublishedMetadata: true, expectedAssetSnapshots });
@@ -641,7 +632,7 @@ test('verifyLiveReleaseAssets validates the requested published tag and uploaded
     'Release asset is empty: CHMReaderLight-mac-arm64.zip',
     'Release asset is not uploaded: CHMReaderLight-mac-arm64.zip.sha256 (state: new)',
     'Release asset size mismatch for CHMReaderLight-mac-arm64.zip: expected 128 bytes, found 0.',
-    `Release asset digest mismatch for CHMReaderLight-mac-x64.zip: expected sha256:${'a'.repeat(64)}, found sha256:${'b'.repeat(64)}.`,
+    `Release asset digest mismatch for CHMReaderLight-mac-arm64.zip.sha256: expected sha256:${'a'.repeat(64)}, found sha256:${'b'.repeat(64)}.`,
   ]);
 });
 
@@ -684,8 +675,6 @@ test('parseLiveReleaseHtml extracts visible macOS release assets', () => {
   const errors = verifyLiveReleaseAssets(parsedRelease);
 
   assert.deepEqual(errors, [
-    'Missing latest release asset: CHMReaderLight-mac-x64.zip',
-    'Missing latest release asset: CHMReaderLight-mac-x64.zip.sha256',
     'Unexpected latest release macOS asset: CHMReaderLight-mac-universal.zip',
   ]);
 });
@@ -693,7 +682,6 @@ test('parseLiveReleaseHtml extracts visible macOS release assets', () => {
 test('formatLiveReleaseRemediation points maintainers to the safe publish helper', () => {
   assert.deepEqual(formatLiveReleaseRemediation(), [
     'npm run package:mac:arm64',
-    'npm run package:mac:x64',
     'npm run stage:release-artifacts -- --input-dir <actions-artifacts-dir>',
     'npm run check:release-artifacts -- <release-dir>',
     'npm run publish:release -- --release-dir <release-dir>',
@@ -701,8 +689,6 @@ test('formatLiveReleaseRemediation points maintainers to the safe publish helper
     'Create or update a non-draft GitHub Release with:',
     '  - CHMReaderLight-mac-arm64.zip',
     '  - CHMReaderLight-mac-arm64.zip.sha256',
-    '  - CHMReaderLight-mac-x64.zip',
-    '  - CHMReaderLight-mac-x64.zip.sha256',
     'Run npm run check:remote-release again before sharing download links.',
   ]);
 });
@@ -1410,8 +1396,7 @@ test('buildReleaseBody links release artifacts to the selected tag', () => {
       '## Download',
       '',
       '- Apple Silicon: `CHMReaderLight-mac-arm64.zip`',
-      '- Intel: `CHMReaderLight-mac-x64.zip`',
-      '- Checksums: `CHMReaderLight-mac-arm64.zip.sha256` and `CHMReaderLight-mac-x64.zip.sha256`',
+      '- Checksum: `CHMReaderLight-mac-arm64.zip.sha256`',
     ].join('\n'),
     tag: 'v0.2.0',
   });
@@ -1422,8 +1407,7 @@ test('buildReleaseBody links release artifacts to the selected tag', () => {
       '## Download',
       '',
       '- Apple Silicon: [CHMReaderLight-mac-arm64.zip](https://github.com/zhongdiandaoda/chm-reader-light/releases/download/v0.2.0/CHMReaderLight-mac-arm64.zip)',
-      '- Intel: [CHMReaderLight-mac-x64.zip](https://github.com/zhongdiandaoda/chm-reader-light/releases/download/v0.2.0/CHMReaderLight-mac-x64.zip)',
-      '- Checksums: [CHMReaderLight-mac-arm64.zip.sha256](https://github.com/zhongdiandaoda/chm-reader-light/releases/download/v0.2.0/CHMReaderLight-mac-arm64.zip.sha256) and [CHMReaderLight-mac-x64.zip.sha256](https://github.com/zhongdiandaoda/chm-reader-light/releases/download/v0.2.0/CHMReaderLight-mac-x64.zip.sha256)',
+      '- Checksum: [CHMReaderLight-mac-arm64.zip.sha256](https://github.com/zhongdiandaoda/chm-reader-light/releases/download/v0.2.0/CHMReaderLight-mac-arm64.zip.sha256)',
     ].join('\n'),
   );
 });
@@ -1460,15 +1444,13 @@ test('repository release template renders a complete tag-specific release body',
   });
 
   assert.match(releaseBody, /^# CHMReaderLight v0\.2\.0/);
-  assert.match(releaseBody, /shasum -a 256 -c CHMReaderLight-mac-x64\.zip\.sha256/);
+  assert.match(releaseBody, /shasum -a 256 -c CHMReaderLight-mac-arm64\.zip\.sha256/);
   assert.match(releaseBody, /gh attestation verify CHMReaderLight-mac-arm64\.zip/);
   assert.match(releaseBody, /## First Launch Note/);
   assert.match(releaseBody, /## What to Try/);
   for (const assetName of [
     'CHMReaderLight-mac-arm64.zip',
     'CHMReaderLight-mac-arm64.zip.sha256',
-    'CHMReaderLight-mac-x64.zip',
-    'CHMReaderLight-mac-x64.zip.sha256',
   ]) {
     assert.ok(
       releaseBody.includes(
@@ -1547,8 +1529,6 @@ test('buildReleasePublishPlan includes the release payload and expected upload a
   assert.deepEqual(plan.assets.map((assetPath) => path.basename(assetPath)), [
     'CHMReaderLight-mac-arm64.zip',
     'CHMReaderLight-mac-arm64.zip.sha256',
-    'CHMReaderLight-mac-x64.zip',
-    'CHMReaderLight-mac-x64.zip.sha256',
   ]);
   assert.deepEqual(plan.assetSnapshots.map(({ path: assetPath, size, sha256 }) => ({
     name: path.basename(assetPath),
@@ -1636,10 +1616,10 @@ test('publishRelease keeps the release private until every asset upload succeeds
     releaseName: 'CHMReaderLight v0.2.0',
     releaseBody: '# CHMReaderLight v0.2.0',
     artifactErrors: [],
-    assets: ['/tmp/arm64.zip', '/tmp/x64.zip'],
+    assets: ['/tmp/primary.zip', '/tmp/secondary.zip'],
     assetSnapshots: [
-      { path: '/tmp/arm64.zip', size: 1, sha256: 'arm64' },
-      { path: '/tmp/x64.zip', size: 1, sha256: 'x64' },
+      { path: '/tmp/primary.zip', size: 1, sha256: 'primary' },
+      { path: '/tmp/secondary.zip', size: 1, sha256: 'secondary' },
     ],
   };
 
@@ -2068,7 +2048,7 @@ test('uploadReleaseAsset rejects GitHub asset metadata that does not match uploa
 });
 
 test('verifyRemoteReleaseAssetSnapshots rejects an incomplete or replaced draft asset set', () => {
-  const assets = ['/tmp/arm64.zip', '/tmp/x64.zip'];
+  const assets = ['/tmp/primary.zip', '/tmp/secondary.zip'];
   const snapshots = [
     { path: assets[0], size: 10, sha256: 'a'.repeat(64) },
     { path: assets[1], size: 20, sha256: 'b'.repeat(64) },
@@ -2078,11 +2058,11 @@ test('verifyRemoteReleaseAssetSnapshots rejects an incomplete or replaced draft 
     () => verifyRemoteReleaseAssetSnapshots({
       draft: true,
       assets: [
-        { name: 'arm64.zip', size: 10, state: 'uploaded', digest: `sha256:${'0'.repeat(64)}` },
+        { name: 'primary.zip', size: 10, state: 'uploaded', digest: `sha256:${'0'.repeat(64)}` },
         { name: 'unexpected.zip', size: 20, state: 'uploaded', digest: `sha256:${'b'.repeat(64)}` },
       ],
     }, assets, snapshots),
-    /missing x64[.]zip.*unexpected unexpected[.]zip.*digest mismatch for arm64[.]zip/is,
+    /missing secondary[.]zip.*unexpected unexpected[.]zip.*digest mismatch for primary[.]zip/is,
   );
 });
 
@@ -2208,10 +2188,10 @@ test('publishRelease leaves a failed upload as a draft instead of exposing a par
     releaseName: 'CHMReaderLight v0.2.0',
     releaseBody: '# CHMReaderLight v0.2.0',
     artifactErrors: [],
-    assets: ['/tmp/arm64.zip', '/tmp/x64.zip'],
+    assets: ['/tmp/primary.zip', '/tmp/secondary.zip'],
     assetSnapshots: [
-      { path: '/tmp/arm64.zip', size: 1, sha256: 'arm64' },
-      { path: '/tmp/x64.zip', size: 1, sha256: 'x64' },
+      { path: '/tmp/primary.zip', size: 1, sha256: 'primary' },
+      { path: '/tmp/secondary.zip', size: 1, sha256: 'secondary' },
     ],
   };
 
@@ -2226,7 +2206,7 @@ test('publishRelease leaves a failed upload as a draft instead of exposing a par
         return { id: 42, upload_url: 'https://uploads.github.test/assets{?name,label}' };
       },
       uploadReleaseAsset: async (_uploadUrl, assetPath) => {
-        if (assetPath.endsWith('x64.zip')) throw new Error('upload interrupted');
+        if (assetPath.endsWith('secondary.zip')) throw new Error('upload interrupted');
       },
       verifyAssetSnapshot: () => {},
     }),
@@ -2248,10 +2228,10 @@ test('publishRelease safely replaces expected assets when resuming a matching dr
     releaseName: 'CHMReaderLight v0.2.0',
     releaseBody: '# CHMReaderLight v0.2.0',
     artifactErrors: [],
-    assets: ['/tmp/arm64.zip', '/tmp/x64.zip'],
+    assets: ['/tmp/primary.zip', '/tmp/secondary.zip'],
     assetSnapshots: [
-      { path: '/tmp/arm64.zip', size: 1, sha256: 'arm64' },
-      { path: '/tmp/x64.zip', size: 1, sha256: 'x64' },
+      { path: '/tmp/primary.zip', size: 1, sha256: 'primary' },
+      { path: '/tmp/secondary.zip', size: 1, sha256: 'secondary' },
     ],
   };
 
@@ -2264,8 +2244,8 @@ test('publishRelease safely replaces expected assets when resuming a matching dr
       draft: true,
       upload_url: 'https://uploads.github.test/assets{?name,label}',
       assets: [
-        { id: 7, name: 'arm64.zip' },
-        { id: 8, name: 'x64.zip' },
+        { id: 7, name: 'primary.zip' },
+        { id: 8, name: 'secondary.zip' },
       ],
     }),
     requestJson: async (url, options) => {
@@ -2331,10 +2311,10 @@ test('publishRelease refuses to overwrite a public release or an unexpected draf
     releaseName: 'CHMReaderLight v0.2.0',
     releaseBody: '# CHMReaderLight v0.2.0',
     artifactErrors: [],
-    assets: ['/tmp/arm64.zip', '/tmp/x64.zip'],
+    assets: ['/tmp/primary.zip', '/tmp/secondary.zip'],
     assetSnapshots: [
-      { path: '/tmp/arm64.zip', size: 1, sha256: 'arm64' },
-      { path: '/tmp/x64.zip', size: 1, sha256: 'x64' },
+      { path: '/tmp/primary.zip', size: 1, sha256: 'primary' },
+      { path: '/tmp/secondary.zip', size: 1, sha256: 'secondary' },
     ],
   };
 
@@ -2406,7 +2386,6 @@ test('buildReleaseArtifactStagePlan finds downloaded workflow artifacts in neste
   const outputDir = path.join(inputDir, 'release');
 
   writeArtifactWithChecksum(path.join(inputDir, 'CHMReaderLight-mac-arm64'), 'CHMReaderLight-mac-arm64.zip', 'arm build');
-  writeArtifactWithChecksum(path.join(inputDir, 'CHMReaderLight-mac-x64'), 'CHMReaderLight-mac-x64.zip', 'intel build');
 
   const plan = buildReleaseArtifactStagePlan({ inputDir, outputDir });
   const output = formatReleaseArtifactStagePlan(plan, false);
@@ -2415,8 +2394,6 @@ test('buildReleaseArtifactStagePlan finds downloaded workflow artifacts in neste
   assert.deepEqual(plan.copyOperations.map((operation) => path.basename(operation.to)), [
     'CHMReaderLight-mac-arm64.zip',
     'CHMReaderLight-mac-arm64.zip.sha256',
-    'CHMReaderLight-mac-x64.zip',
-    'CHMReaderLight-mac-x64.zip.sha256',
   ]);
   assert.match(output, /Release artifact staging plan/);
   assert.match(output, /Mode: dry run/);
@@ -2432,7 +2409,6 @@ test('applyReleaseArtifactStagePlan copies a verified flat release directory', (
   const outputDir = path.join(inputDir, 'release');
 
   writeArtifactWithChecksum(path.join(inputDir, 'CHMReaderLight-mac-arm64'), 'CHMReaderLight-mac-arm64.zip', 'arm build');
-  writeArtifactWithChecksum(path.join(inputDir, 'CHMReaderLight-mac-x64'), 'CHMReaderLight-mac-x64.zip', 'intel build');
 
   const plan = buildReleaseArtifactStagePlan({ inputDir, outputDir });
   const errors = applyReleaseArtifactStagePlan(plan);
@@ -2441,15 +2417,13 @@ test('applyReleaseArtifactStagePlan copies a verified flat release directory', (
   assert.deepEqual(fs.readdirSync(outputDir).sort(), [
     'CHMReaderLight-mac-arm64.zip',
     'CHMReaderLight-mac-arm64.zip.sha256',
-    'CHMReaderLight-mac-x64.zip',
-    'CHMReaderLight-mac-x64.zip.sha256',
   ]);
 
   const repeatPlan = buildReleaseArtifactStagePlan({ inputDir, outputDir });
   assert.deepEqual(repeatPlan.blockers, []);
 });
 
-test('buildReleaseArtifactStagePlan reports missing and duplicate downloads before copying', () => {
+test('buildReleaseArtifactStagePlan reports duplicate downloads before copying', () => {
   const inputDir = makeTempReleaseDir();
   const outputDir = path.join(inputDir, 'release');
 
@@ -2460,6 +2434,5 @@ test('buildReleaseArtifactStagePlan reports missing and duplicate downloads befo
 
   assert.deepEqual(plan.copyOperations, []);
   assert.match(plan.blockers.join('\n'), /Multiple downloaded release files named CHMReaderLight-mac-arm64\.zip/);
-  assert.match(plan.blockers.join('\n'), /Missing downloaded release file: CHMReaderLight-mac-x64\.zip/);
   assert.throws(() => applyReleaseArtifactStagePlan(plan), /Release artifact staging blockers must be fixed/);
 });

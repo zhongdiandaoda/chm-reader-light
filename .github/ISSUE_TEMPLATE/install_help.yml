@@ -32,7 +32,6 @@ body:
       label: Which release artifact did you use?
       options:
         - CHMReaderLight-mac-arm64.zip
-        - CHMReaderLight-mac-x64.zip
         - Built locally
         - Running from source
         - Not sure

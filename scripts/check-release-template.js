@@ -13,15 +13,15 @@ function readText(relativePath) {
 }
 
 function extractReleaseArtifactNames(releaseWorkflow) {
-  const artifactNames = [];
-  const artifactPattern = /^\s+artifact-name:\s*(\S+)$/gm;
+  const artifactNames = new Set();
+  const artifactPattern = /^\s+(?:artifact-name|name):\s*(CHMReaderLight-mac-[A-Za-z0-9_-]+)\s*$/gm;
   let match;
 
   while ((match = artifactPattern.exec(releaseWorkflow)) !== null) {
-    artifactNames.push(match[1]);
+    artifactNames.add(match[1]);
   }
 
-  return artifactNames.sort();
+  return [...artifactNames].sort();
 }
 
 function requireIncludes(content, expectedText, description, errors) {
@@ -84,6 +84,8 @@ function verifyReleaseTemplate() {
 
     requireIncludes(releaseTemplate, zipName, 'release template artifact', errors);
     requireIncludes(releaseTemplate, checksumName, 'release template checksum file', errors);
+    requireIncludes(releaseWorkflow, zipName, 'release workflow artifact', errors);
+    requireIncludes(releaseWorkflow, checksumName, 'release workflow checksum file', errors);
     requireIncludes(releaseTemplate, `shasum -a 256 -c ${checksumName}`, 'release template checksum command', errors);
     requireIncludes(releaseTemplate, attestationCommand, 'release template attestation command', errors);
     requireIncludes(
@@ -123,7 +125,6 @@ function verifyReleaseTemplate() {
     'pinned release workflow attestation action',
     errors,
   );
-  requireIncludes(releaseWorkflow, '${{ matrix.artifact-name }}.zip.sha256', 'release workflow checksum files', errors);
   requireIncludes(
     releaseWorkflow,
     'node scripts/publish-release.js --release-dir dist/release --tag "$RELEASE_TAG" --target-commitish "$GITHUB_SHA" --confirm',

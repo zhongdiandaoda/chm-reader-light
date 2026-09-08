@@ -2,8 +2,6 @@
 
 [中文](./README.md)
 
-[![CI](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/ci.yml/badge.svg)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml/badge.svg)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml)
 [![GitHub stars](https://img.shields.io/github/stars/zhongdiandaoda/chm-reader-light?style=social)](https://github.com/zhongdiandaoda/chm-reader-light/stargazers)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Platform: macOS](https://img.shields.io/badge/platform-macOS-111111.svg)](#requirements)
@@ -23,20 +21,16 @@ A lightweight, offline CHM reader for macOS. Organize local manuals in a library
 - Persistent zoom, text encoding, sidebar, search scope, and per-book reading position.
 - Finder reveal and relink support without moving or deleting source CHM files.
 - CHM-authored scripts, forms, popups, nested frames, and network access are blocked.
-- Apple Silicon and Intel support with no telemetry, accounts, or cloud sync.
+- Focused Apple Silicon support with no telemetry, accounts, or cloud sync.
 
 ## Download and Install
 
-Download the matching archive from [GitHub Releases](https://github.com/zhongdiandaoda/chm-reader-light/releases):
-
-- Apple Silicon: `CHMReaderLight-mac-arm64.zip`
-- Intel: `CHMReaderLight-mac-x64.zip`
+Download `CHMReaderLight-mac-arm64.zip` from [GitHub Releases](https://github.com/zhongdiandaoda/chm-reader-light/releases).
 
 Each archive has a matching `.zip.sha256` file. Verify both files from the same directory:
 
 ```bash
 shasum -a 256 -c CHMReaderLight-mac-arm64.zip.sha256
-shasum -a 256 -c CHMReaderLight-mac-x64.zip.sha256
 ```
 
 Current builds are not Apple-notarized. If macOS blocks the first launch, review the app under **System Settings > Privacy & Security**. See the [install guide](./docs/install-macos.md) for complete steps.
@@ -53,7 +47,7 @@ The app stores source paths and reading preferences only. See [Privacy](./docs/p
 ## Requirements
 
 - macOS 12 or newer
-- Apple Silicon or Intel Mac
+- Apple Silicon Mac
 - Node.js 22 or newer for source builds
 
 ## Run from Source

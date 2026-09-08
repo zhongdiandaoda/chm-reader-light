@@ -12,7 +12,7 @@ body:
     attributes:
       label: Which release did you try?
       description: Include the version, tag, or artifact name.
-      placeholder: "Example: v0.1.0, CHMReaderLight-mac-arm64.zip, or CHMReaderLight-mac-x64.zip"
+      placeholder: "Example: v0.1.0 or CHMReaderLight-mac-arm64.zip"
     validations:
       required: true
   - type: textarea

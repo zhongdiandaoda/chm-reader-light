@@ -2,8 +2,6 @@
 
 [English](./README.en.md)
 
-[![CI](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/ci.yml/badge.svg)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml/badge.svg)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml)
 [![GitHub stars](https://img.shields.io/github/stars/zhongdiandaoda/chm-reader-light?style=social)](https://github.com/zhongdiandaoda/chm-reader-light/stargazers)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Platform: macOS](https://img.shields.io/badge/platform-macOS-111111.svg)](#系统要求)
@@ -23,20 +21,16 @@
 - 保存缩放、文本编码、侧栏状态、搜索范围和每本书的阅读位置。
 - 在 Finder 中定位源文件；源文件移动后可重新定位，移除条目不会删除原文件。
 - 默认阻止 CHM 内脚本、表单、弹窗、嵌套 frame 和网络连接。
-- 支持 Apple Silicon 与 Intel Mac，应用界面不提供遥测、账号或云同步。
+- 专注支持 Apple Silicon Mac，应用界面不提供遥测、账号或云同步。
 
 ## 下载与安装
 
-从 [GitHub Releases](https://github.com/zhongdiandaoda/chm-reader-light/releases) 下载与你的 Mac 匹配的文件：
-
-- Apple Silicon: `CHMReaderLight-mac-arm64.zip`
-- Intel: `CHMReaderLight-mac-x64.zip`
+从 [GitHub Releases](https://github.com/zhongdiandaoda/chm-reader-light/releases) 下载 `CHMReaderLight-mac-arm64.zip`。
 
 每个 zip 都配有 `.zip.sha256`。下载到同一目录后运行：
 
 ```bash
 shasum -a 256 -c CHMReaderLight-mac-arm64.zip.sha256
-shasum -a 256 -c CHMReaderLight-mac-x64.zip.sha256
 ```
 
 当前构建尚未完成 Apple notarization。首次启动如被拦截，请在 **系统设置 > 隐私与安全性** 中确认打开。完整步骤见 [安装指南](./docs/install-macos.md)。
@@ -53,7 +47,7 @@ shasum -a 256 -c CHMReaderLight-mac-x64.zip.sha256
 ## 系统要求
 
 - macOS 12 或更高版本
-- Apple Silicon 或 Intel Mac
+- Apple Silicon Mac
 - 从源码运行需要 Node.js 22 或更高版本
 
 ## 从源码运行

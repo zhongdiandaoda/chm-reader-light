@@ -9,8 +9,6 @@ const REPOSITORY_SLUG = 'zhongdiandaoda/chm-reader-light';
 const EXPECTED_LIVE_RELEASE_ASSETS = [
   'CHMReaderLight-mac-arm64.zip',
   'CHMReaderLight-mac-arm64.zip.sha256',
-  'CHMReaderLight-mac-x64.zip',
-  'CHMReaderLight-mac-x64.zip.sha256',
 ];
 const EXPECTED_LIVE_RELEASE_ASSET_SET = new Set(EXPECTED_LIVE_RELEASE_ASSETS);
 const LATEST_RELEASE_URL = `https://github.com/${REPOSITORY_SLUG}/releases/latest`;
@@ -290,7 +288,6 @@ function canUseHtmlFallback(targetCommitish, releaseDir) {
 function formatRemediation() {
   const lines = [
     'npm run package:mac:arm64',
-    'npm run package:mac:x64',
     'npm run stage:release-artifacts -- --input-dir <actions-artifacts-dir>',
     'npm run check:release-artifacts -- <release-dir>',
     'npm run publish:release -- --release-dir <release-dir>',
@@ -362,7 +359,7 @@ async function main(argv = process.argv) {
     console.error('Live release asset check failed:');
     if (error.message.includes('GitHub API request failed with 404')) {
       console.error('- No latest public GitHub Release was found for zhongdiandaoda/chm-reader-light.');
-      console.error('- Publish a non-draft, non-prerelease GitHub Release with both macOS zips and checksum files before announcing download links.');
+      console.error('- Publish a non-draft, non-prerelease GitHub Release with the Apple Silicon zip and checksum before announcing download links.');
       printRemediation();
       process.exitCode = 1;
       return;

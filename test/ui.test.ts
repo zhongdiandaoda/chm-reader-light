@@ -41,7 +41,7 @@ test('share kit gives maintainers reusable launch copy', () => {
   assert.match(shareKit, /# Share Kit/);
   assert.match(shareKit, /## Social Post Template/);
   assert.match(shareKit, /CHMReaderLight-mac-arm64.zip/);
-  assert.match(shareKit, /CHMReaderLight-mac-x64.zip/);
+  assert.doesNotMatch(shareKit, /Intel|mac-x64/i);
   assert.match(shareKit, /Ask for a GitHub star only after explaining the offline CHM workflow value/);
   assert.match(sharePostScript, /function buildSharePostDraft/);
   assert.match(sharePostScript, /Do not post until npm run snapshot:visibility reports ready/);
@@ -54,14 +54,11 @@ test('macOS install guide sets clear release expectations', () => {
   assert.match(installGuide, /# macOS Install Guide/);
   assert.match(installGuide, /## Choose the Right Download/);
   assert.match(installGuide, /CHMReaderLight-mac-arm64\.zip/);
-  assert.match(installGuide, /CHMReaderLight-mac-x64\.zip/);
   assert.match(installGuide, /https:\/\/github\.com\/zhongdiandaoda\/chm-reader-light\/releases\/latest\/download\/CHMReaderLight-mac-arm64\.zip/);
-  assert.match(installGuide, /https:\/\/github\.com\/zhongdiandaoda\/chm-reader-light\/releases\/latest\/download\/CHMReaderLight-mac-x64\.zip/);
   assert.match(installGuide, /\[CHMReaderLight-mac-arm64\.zip\.sha256\]\(https:\/\/github\.com\/zhongdiandaoda\/chm-reader-light\/releases\/latest\/download\/CHMReaderLight-mac-arm64\.zip\.sha256\)/);
-  assert.match(installGuide, /\[CHMReaderLight-mac-x64\.zip\.sha256\]\(https:\/\/github\.com\/zhongdiandaoda\/chm-reader-light\/releases\/latest\/download\/CHMReaderLight-mac-x64\.zip\.sha256\)/);
   assert.match(installGuide, /## Verify the Download/);
   assert.match(installGuide, /shasum -a 256 -c CHMReaderLight-mac-arm64\.zip\.sha256/);
-  assert.match(installGuide, /shasum -a 256 -c CHMReaderLight-mac-x64\.zip\.sha256/);
+  assert.doesNotMatch(installGuide, /Intel|mac-x64/i);
   assert.match(installGuide, /GitHub artifact attestation/);
   assert.match(installGuide, /gh attestation verify CHMReaderLight-mac-arm64\.zip --repo zhongdiandaoda\/chm-reader-light/);
   assert.match(installGuide, /## First Launch/);
@@ -218,7 +215,7 @@ test('repository listing guide helps maintainers configure GitHub discovery', ()
   assert.match(listingGuide, /Confirm installed-app support routes still match `Help > Report or Request`/);
   assert.match(listingGuide, /Confirm GitHub Discussions is enabled with Q&A, Show and tell, and Release feedback categories/);
   assert.match(listingGuide, /Confirm pinned community items point visitors to a current release feedback thread, a scoped good first issue, and a safe showcase story/);
-  assert.match(listingGuide, /CI, CodeQL, stars, downloads, license, platform, Node.js, and release badges/);
+  assert.match(listingGuide, /stars, license, and platform badges/);
   assert.equal(socialPreviewPng.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   assert.equal(socialPreviewPng.readUInt32BE(16), 1280);
   assert.equal(socialPreviewPng.readUInt32BE(20), 640);
@@ -437,9 +434,7 @@ test('release template stays aligned with release workflow artifacts', () => {
   assert.equal(packageJson.scripts['publish:release'], 'node scripts/publish-release.js');
   for (const name of [
     'CHMReaderLight-mac-arm64.zip',
-    'CHMReaderLight-mac-x64.zip',
     'CHMReaderLight-mac-arm64.zip.sha256',
-    'CHMReaderLight-mac-x64.zip.sha256',
   ]) assert.match(releaseTemplate, new RegExp(name.replaceAll('.', '[.]')));
   assert.match(releaseTemplate, /gh attestation verify/);
   assert.match(releaseTemplate, /not Apple-notarized yet/);
@@ -1678,9 +1673,9 @@ test('macOS packaging vendors chmlib into the app bundle', () => {
   const signScript = fs.readFileSync(path.join(projectRoot, 'scripts', 'sign-macos-app.js'), 'utf-8');
   const vendorScript = fs.readFileSync(path.join(projectRoot, 'scripts', 'vendor-chmlib-macos.sh'), 'utf-8');
 
-  assert.equal(packageJson.scripts['check:package:mac'], 'bash scripts/check-macos-package-env.sh');
+  assert.equal(packageJson.scripts['check:package:mac'], 'bash scripts/check-macos-package-env.sh arm64');
   assert.equal(packageJson.scripts['check:package:mac:arm64'], 'bash scripts/check-macos-package-env.sh arm64');
-  assert.equal(packageJson.scripts['check:package:mac:x64'], 'bash scripts/check-macos-package-env.sh x64');
+  assert.equal(packageJson.scripts['check:package:mac:x64'], undefined);
   assert.ok(
     packageScript.indexOf('check-macos-package-env.sh') < packageScript.indexOf('npm test'),
     'target-architecture preflight should run before the expensive test suite',
@@ -1780,7 +1775,7 @@ test('macOS packaging builds and verifies a pinned CVE-patched CHMLib', () => {
   const referenceFix = '08179946a745cf1605e4b9670942ec1a6e1f4c5d';
 
   assert.equal(packageJson.scripts['build:chmlib:mac:arm64'], 'bash scripts/build-chmlib-macos.sh arm64');
-  assert.equal(packageJson.scripts['build:chmlib:mac:x64'], 'bash scripts/build-chmlib-macos.sh x64');
+  assert.equal(packageJson.scripts['build:chmlib:mac:x64'], undefined);
   assert.equal(packageJson.scripts['check:chmlib:mac'], 'bash scripts/check-chmlib-macos.sh');
   assert.match(buildScript, new RegExp(upstreamCommit));
   assert.match(buildScript, new RegExp(archiveSha256));
@@ -1849,7 +1844,7 @@ test('macOS packaging builds and verifies a pinned CVE-patched CHMLib', () => {
   assert.match(signScript, /ignore: \[new RegExp/);
   assert.match(signScript, /Resources.+native/);
   assert.doesNotMatch(releaseWorkflow, /brew install chmlib/);
-  assert.ok(releaseWorkflow.includes('npm run package:release:mac:${{ matrix.arch }}'));
+  assert.ok(releaseWorkflow.includes('npm run package:release:mac:arm64'));
   assert.doesNotMatch(workflowChecker, /release CHMLib install step/);
   assert.match(workflowChecker, /pinned patched CHMLib build/);
   assert.match(thirdPartyNotice, /CHMLib/);
@@ -1892,7 +1887,7 @@ test('public launch handoff keeps source, repository settings, and release autho
   assert.match(handoff, /# Public Launch Handoff/);
   assert.match(handoff, /## 1\. Review and merge source changes to `main`/);
   assert.match(handoff, /## 2\. Apply repository About, topics, and Discussions settings/);
-  assert.match(handoff, /## 3\. Build and publish the first dual-architecture Release/);
+  assert.match(handoff, /## 3\. Build and publish the first Apple Silicon Release/);
   assert.match(handoff, /## 4\. Promote only after live verification/);
   assert.match(handoff, /`npm test`/);
   assert.match(handoff, /`npm run check`/);
@@ -1900,7 +1895,7 @@ test('public launch handoff keeps source, repository settings, and release autho
   assert.match(handoff, /`npm run check:remote-listing`/);
   assert.match(handoff, /`npm run check:remote-release`/);
   assert.match(handoff, /`npm run snapshot:growth`/);
-  assert.match(handoff, /`macos-15-intel`/);
+  assert.match(handoff, /`macos-15`/);
   assert.match(handoff, /Do not use `git add \.`/);
   assert.match(handoff, /`CHMReaderLight-mac-arm64\.zip`/);
   assert.match(handoff, /`Report`/);

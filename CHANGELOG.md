@@ -8,13 +8,14 @@ Notable user-facing changes to CHMReaderLight are documented here.
 
 - Added a persistent library with collections, search, grid/list layouts, drag-and-drop import, recent-reading state, Finder reveal, missing-file warnings, and relink support.
 - Added reader navigation history, previous/next topic controls, full-text search, topic progress, persistent zoom, text encoding, sidebar, search scope, and last-read position.
-- Added Apple Silicon and Intel macOS packaging with bundled CHMLib, checksums, GitHub artifact attestations, and a draft-first Release workflow.
+- Added Apple Silicon macOS packaging with bundled CHMLib, checksums, GitHub artifact attestations, and a draft-first Release workflow.
 - Added CI, CodeQL, Dependency Review, OpenSSF Scorecard, issue forms, discussion templates, contribution guidance, support routing, and security reporting.
 - Added repository listing, social preview, release verification, growth snapshots, and responsible sharing tools.
 
 ### Changed
 
 - Replaced the illustrated README preview with a real 1280 x 760 screenshot captured from the current Electron app.
+- Removed Intel Mac packaging and release artifacts; supported builds now target Apple Silicon only.
 - Reduced the documentation set to core user, security, contributor, release, and repository-operation guides.
 - Simplified the Help menu and empty-library links to stable core documentation.
 - Removed copy actions from the reader toolbar and library cards to keep navigation and file-management controls focused.

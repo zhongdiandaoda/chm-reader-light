@@ -20,8 +20,7 @@ A lightweight offline CHM reader and library for macOS.
 ## Download
 
 - Apple Silicon: `CHMReaderLight-mac-arm64.zip`
-- Intel: `CHMReaderLight-mac-x64.zip`
-- Checksums: `CHMReaderLight-mac-arm64.zip.sha256` and `CHMReaderLight-mac-x64.zip.sha256`
+- Checksum: `CHMReaderLight-mac-arm64.zip.sha256`
 
 If you are not sure which Mac you have, choose **Apple menu > About This Mac** and check the chip or processor line.
 
@@ -31,7 +30,6 @@ Download the zip and its matching checksum file into the same folder, then run o
 
 ```bash
 shasum -a 256 -c CHMReaderLight-mac-arm64.zip.sha256
-shasum -a 256 -c CHMReaderLight-mac-x64.zip.sha256
 ```
 
 An `OK` result means the zip matches the checksum attached to this release.
@@ -40,7 +38,6 @@ Optional provenance check with GitHub artifact attestation:
 
 ```bash
 gh attestation verify CHMReaderLight-mac-arm64.zip --repo zhongdiandaoda/chm-reader-light
-gh attestation verify CHMReaderLight-mac-x64.zip --repo zhongdiandaoda/chm-reader-light
 ```
 
 This confirms the zip was produced by this repository's GitHub Actions release workflow.
@@ -78,10 +75,10 @@ List keyboard, VoiceOver, focus, contrast, or appearance fixes here. Remove this
 
 ## After Pasting
 
-- Use `npm run prepare:release-body -- --tag <tag> --output <file>` so all four artifact names become direct downloads for that tag and relative documentation links become tag-pinned GitHub URLs. The renderer also removes untouched Performance and Accessibility placeholder sections; GitHub-generated notes still include any categorized changes.
+- Use `npm run prepare:release-body -- --tag <tag> --output <file>` so the zip and checksum names become direct downloads for that tag and relative documentation links become tag-pinned GitHub URLs. The renderer also removes untouched Performance and Accessibility placeholder sections; GitHub-generated notes still include any categorized changes.
 - Run `npm run check:release-template` before publishing if download, checksum, provenance, or first-launch wording changed.
 - Run `npm run stage:release-artifacts -- --input-dir <actions-artifacts-dir>` to dry-run a flat release staging directory when publishing from downloaded GitHub Actions artifacts; add `--confirm` to copy files into `dist/release`.
 - Run `npm run check:release-artifacts -- <release-dir>` after downloading or staging the attached macOS zip and checksum files.
 - Run `npm run publish:release -- --release-dir <release-dir>` for a dry-run GitHub Release payload before using `--confirm` with `GITHUB_TOKEN`.
-- Confirm all four files are attached before announcing the release: two zip artifacts and two `.zip.sha256` checksum files.
+- Confirm both files are attached before announcing the release: the Apple Silicon zip and its `.zip.sha256` checksum file.
 - Keep generated release notes below the curated download block so visitors see the install path before scanning the change list.

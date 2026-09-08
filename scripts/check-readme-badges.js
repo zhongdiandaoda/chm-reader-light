@@ -8,14 +8,6 @@ const rootDir = path.resolve(__dirname, '..');
 
 const requiredBadges = [
   {
-    name: 'CI',
-    markdown: '[![CI](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/ci.yml/badge.svg)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/ci.yml)',
-  },
-  {
-    name: 'CodeQL',
-    markdown: '[![CodeQL](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml/badge.svg)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml)',
-  },
-  {
     name: 'GitHub stars',
     markdown: '[![GitHub stars](https://img.shields.io/github/stars/zhongdiandaoda/chm-reader-light?style=social)](https://github.com/zhongdiandaoda/chm-reader-light/stargazers)',
   },

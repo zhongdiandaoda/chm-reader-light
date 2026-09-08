@@ -6,7 +6,7 @@ Use this guide when preparing a CHMReaderLight visibility push, release announce
 
 - The live GitHub repository baseline is 0 stars, so every promotion pass should record the starting `stargazers_count`, release downloads, watchers, and date before sharing.
 - The live repository About panel still needs the expected description, website, topics, and Discussions settings from the Repository Listing guide.
-- There is no public latest GitHub Release yet, so direct download links should not be promoted until the Apple Silicon and Intel zip files plus matching checksum files are visible.
+- There is no public latest GitHub Release yet, so direct download links should not be promoted until the Apple Silicon zip and matching checksum are visible.
 - The release-feedback Discussion path depends on Discussions being enabled before it can collect trust, download, screenshot, demo, or support blockers.
 
 ## Promotion Sequence
@@ -14,7 +14,7 @@ Use this guide when preparing a CHMReaderLight visibility push, release announce
 1. Apply the Repository Listing guide in GitHub settings, including description, website, topics, social preview, pinned community items, and Discussions. Use `npm run apply:repository-listing` for a safe dry run, then `GITHUB_TOKEN=repo_administration_token npm run apply:repository-listing -- --confirm` when a maintainer token is available.
 2. Run `npm run check:remote-listing` and fix any live description, website, topics, or Discussions mismatch before announcing the repository.
 3. Publish a non-draft GitHub Release using the Release Checklist and Release Page Template. If publishing from downloaded GitHub Actions artifacts, first run `npm run stage:release-artifacts -- --input-dir <actions-artifacts-dir>` to preview a flat `dist/release` directory, then add `--confirm` before running `npm run publish:release -- --release-dir <release-dir>` for a dry run and `GITHUB_TOKEN=repo_contents_token npm run publish:release -- --release-dir <release-dir> --target-commitish <40-character-build-commit-sha> --confirm` to publish.
-4. Run `npm run check:remote-release` and confirm the latest public release exposes `CHMReaderLight-mac-arm64.zip`, `CHMReaderLight-mac-x64.zip`, and both `.zip.sha256` files.
+4. Run `npm run check:remote-release` and confirm the latest public release exposes `CHMReaderLight-mac-arm64.zip` and its `.zip.sha256` file.
 5. Run `npm run snapshot:growth` and record the baseline `stargazers_count`, watchers, release downloads, release version, and current date in the visibility issue before posting externally.
 6. Run `npm run snapshot:visibility` so listing blockers, release blockers, baseline metrics, and next actions are captured in one report.
 7. Run `npm run prepare:visibility-issue` to generate the issue draft; pass `-- --snapshot-file <snapshot-file>` when reusing a saved snapshot.

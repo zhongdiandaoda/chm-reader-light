@@ -6,7 +6,6 @@ const path = require('node:path');
 
 const EXPECTED_RELEASE_ARTIFACTS = [
   'CHMReaderLight-mac-arm64.zip',
-  'CHMReaderLight-mac-x64.zip',
 ];
 const EXPECTED_RELEASE_FILES = new Set(
   EXPECTED_RELEASE_ARTIFACTS.flatMap((artifactName) => [

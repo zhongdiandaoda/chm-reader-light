@@ -9,7 +9,7 @@ This snapshot was recorded on 2026-09-07. Refresh it before acting if the branch
 - The working branch is `develop` at `cb887e8`; `origin/main` is at `f5812cb`. Their merge base is `9c6426c`, with two commits unique to `main` and one commit unique to `develop`. Reconcile through a reviewed pull request instead of force-pushing either branch.
 - The local tree contains substantial tracked and untracked work. Refresh `git status --short` before review; most public-facing documentation, community files, quality checks, and release automation are not on `main` yet.
 - The public repository has no downloadable Release, while the Release workflow itself is only present in the local worktree. GitHub cannot run that workflow from the default branch until the source changes are reviewed and merged.
-- The root `CHMReaderLight-mac-arm64.zip` is a large local release artifact and is not a substitute for the dual-architecture Release. Its checksum is local evidence only. The empty root `Report` file is also not project source. Release artifacts must remain outside Git history regardless of whether a particular archive is below GitHub's per-file limit.
+- The root `CHMReaderLight-mac-arm64.zip` is a large local release artifact and is not a substitute for a commit-bound Release. Its checksum is local evidence only. The empty root `Report` file is also not project source. Release artifacts must remain outside Git history regardless of whether a particular archive is below GitHub's per-file limit.
 - No commit, push, tag, Release, issue, or repository-setting mutation was performed while preparing this handoff.
 
 ## 1. Review and merge source changes to `main`
@@ -71,28 +71,26 @@ npm run check:remote-listing
 
 Exit gate: the live description, homepage, topics, social preview, and Discussions surface match the repository guide, and `npm run check:remote-listing` passes.
 
-## 3. Build and publish the first dual-architecture Release
+## 3. Build and publish the first Apple Silicon Release
 
 Owner: a maintainer with tag/Actions/Release authority.
 
 - Confirm `package.json` and `CHANGELOG.md` agree on the intended semantic version. For the current package version, the tag must be `v0.1.0`. Do not reuse a tag that points to another commit.
-- Run the Release workflow from the merged default branch with publishing disabled first. The matrix must build arm64 on `macos-15` and x64 on `macos-15-intel`; this machine's arm64 archive cannot prove the Intel build.
-- Require both architecture jobs and the aggregate artifact check to pass. The complete set is:
+- Run the Release workflow from the merged default branch with publishing disabled first. The job must build arm64 on `macos-15`.
+- Require the Apple Silicon build and aggregate artifact check to pass. The complete set is:
   - `CHMReaderLight-mac-arm64.zip`
   - `CHMReaderLight-mac-arm64.zip.sha256`
-  - `CHMReaderLight-mac-x64.zip`
-  - `CHMReaderLight-mac-x64.zip.sha256`
 - Inspect the build-only artifacts and the generated release body. Follow [Release Checklist](./release.md) for bundle signature, architecture, CHMLib linkage, checksum, icon, and manual open/import/search checks.
-- Publish only through an explicitly approved tag push or confirmed manual workflow run. The aggregate job must remain the only publisher so a partial one-architecture Release cannot become public.
+- Publish only through an explicitly approved tag push or confirmed manual workflow run. The aggregate job must remain the only publisher so an incomplete Release cannot become public.
 - Verify the live Release with `npm run check:remote-release`, pinned to the intended tag:
 
 ```bash
 npm run check:remote-release -- --tag v0.1.0 --target-commitish <40-character-build-commit-sha> --release-dir dist/release
 ```
 
-- Download both public zips and checksum files, verify them on matching Apple Silicon and Intel machines, and confirm the Release is neither a draft nor a prerelease. If verification fails, remove or draft the broken Release before sharing its links; fix forward with a reviewed patch and a new version rather than moving an already public tag.
+- Download the public zip and checksum, verify them on an Apple Silicon Mac, and confirm the Release is neither a draft nor a prerelease. If verification fails, remove or draft the broken Release before sharing its links; fix forward with a reviewed patch and a new version rather than moving an already public tag.
 
-Exit gate: one public Release exposes all four verified files, both architectures have smoke-test evidence, and the tag-and-commit-pinned `npm run check:remote-release` command above passes.
+Exit gate: one public Release exposes the verified zip and checksum, Apple Silicon smoke-test evidence exists, and the tag-and-commit-pinned `npm run check:remote-release` command above passes.
 
 ## 4. Promote only after live verification
 
@@ -116,5 +114,5 @@ Exit gate: every promotion has a dated baseline, a live URL, a follow-up date, a
 
 - Stop before Phase 2 if the source and workflows are not on `main`.
 - Stop before Phase 3 if live repository listing verification fails.
-- Stop before Phase 4 if either architecture, checksum set, or live Release verification fails.
+- Stop before Phase 4 if the Apple Silicon build, checksum, or live Release verification fails.
 - Stop and request maintainer direction whenever a step needs a token, tag, merge, public post, or settings mutation that has not been explicitly authorized.

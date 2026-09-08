@@ -192,7 +192,7 @@ async function buildReleaseAudit() {
         source: 'GitHub API',
         errors: [
           'No latest public GitHub Release was found for zhongdiandaoda/chm-reader-light.',
-          'Publish a non-draft, non-prerelease GitHub Release with both macOS zips and checksum files before announcing download links.',
+          'Publish a non-draft, non-prerelease GitHub Release with the Apple Silicon zip and checksum before announcing download links.',
         ],
         remediation: formatReleaseRemediation(),
       };

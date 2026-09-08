@@ -109,7 +109,7 @@ function verifyWorkflowTrustSettings() {
   requirePattern(releaseWorkflow, /^permissions:\n  contents: read$/m, 'read-only default release permissions', errors);
   requirePattern(
     releaseWorkflow,
-    /macos:\n    name: macOS \$\{\{ matrix\.arch \}\}\n    needs: validate_release\n    runs-on: \$\{\{ matrix\.runner \}\}\n    timeout-minutes: 45\n    permissions:\n      contents: read/,
+    /macos:\n    name: macOS arm64\n    needs: validate_release\n    runs-on: macos-15\n    timeout-minutes: 45\n    permissions:\n      contents: read/,
     'read-only release build permissions',
     errors,
   );
@@ -160,7 +160,7 @@ function verifyWorkflowTrustSettings() {
   );
   requirePattern(
     preparePublishJob,
-    /name: Upload minimal release publication input\n        id: publish_input(?:.|\n)*?name: release-publish-input\n          path: \|\n            package[.]json\n            docs\/release-template[.]md\n            scripts\/check-release-artifacts[.]js\n            scripts\/publish-release[.]js\n            dist\/release\/CHMReaderLight-mac-arm64[.]zip\n            dist\/release\/CHMReaderLight-mac-arm64[.]zip[.]sha256\n            dist\/release\/CHMReaderLight-mac-x64[.]zip\n            dist\/release\/CHMReaderLight-mac-x64[.]zip[.]sha256\n          if-no-files-found: error\n          retention-days: 1\n          compression-level: 0/,
+    /name: Upload minimal release publication input\n        id: publish_input(?:.|\n)*?name: release-publish-input\n          path: \|\n            package[.]json\n            docs\/release-template[.]md\n            scripts\/check-release-artifacts[.]js\n            scripts\/publish-release[.]js\n            dist\/release\/CHMReaderLight-mac-arm64[.]zip\n            dist\/release\/CHMReaderLight-mac-arm64[.]zip[.]sha256\n          if-no-files-found: error\n          retention-days: 1\n          compression-level: 0/,
     'allowlisted minimal release publication input artifact',
     errors,
   );
@@ -229,7 +229,7 @@ function verifyWorkflowTrustSettings() {
   );
   requirePattern(
     releaseWorkflow,
-    /validate_release:\n    name: Validate release request(?:.|\n)*?outputs:\n      release_tag: \$\{\{ steps\.release_tag\.outputs\.tag \}\}(?:.|\n)*?macos:\n    name: macOS \$\{\{ matrix\.arch \}\}\n    needs: validate_release/,
+    /validate_release:\n    name: Validate release request(?:.|\n)*?outputs:\n      release_tag: \$\{\{ steps\.release_tag\.outputs\.tag \}\}(?:.|\n)*?macos:\n    name: macOS arm64\n    needs: validate_release/,
     'release request validation before macOS builds',
     errors,
   );
@@ -239,18 +239,18 @@ function verifyWorkflowTrustSettings() {
   requireIncludes(releaseWorkflow, 'timeout-minutes: 45', 'release job timeout', errors);
   requireIncludes(
     releaseWorkflow,
-    'npm run package:release:mac:${{ matrix.arch }}',
+    'npm run package:release:mac:arm64',
     'pinned patched CHMLib build through the release package command',
     errors,
   );
   if (releaseWorkflow.includes('brew install chmlib')) {
     errors.push('Release workflow must build the pinned patched CHMLib source instead of installing Homebrew CHMLib.');
   }
-  requireIncludes(releaseWorkflow, 'npm run package:release:mac:${{ matrix.arch }}', 'release architecture-specific artifact command', errors);
+  requireIncludes(releaseWorkflow, 'npm run package:release:mac:arm64', 'Apple Silicon release artifact command', errors);
   requirePattern(releaseWorkflow, /actions\/attest@[a-f0-9]{40} # v4/, 'pinned release artifact attestation action', errors);
   requirePattern(
     releaseWorkflow,
-    /attest:(?:.|\n)*?subject-path: \|\n\s+dist\/attest\/CHMReaderLight-mac-arm64[.]zip\n\s+dist\/attest\/CHMReaderLight-mac-arm64[.]zip[.]sha256\n\s+dist\/attest\/CHMReaderLight-mac-x64[.]zip\n\s+dist\/attest\/CHMReaderLight-mac-x64[.]zip[.]sha256/,
+    /attest:(?:.|\n)*?subject-path: \|\n\s+dist\/attest\/CHMReaderLight-mac-arm64[.]zip\n\s+dist\/attest\/CHMReaderLight-mac-arm64[.]zip[.]sha256/,
     'complete isolated release artifact attestation subjects',
     errors,
   );
@@ -345,7 +345,9 @@ function verifyWorkflowTrustSettings() {
     errors,
   );
   requireIncludes(releaseWorkflow, 'CHMReaderLight-mac-arm64', 'Apple Silicon release artifact name', errors);
-  requireIncludes(releaseWorkflow, 'CHMReaderLight-mac-x64', 'Intel release artifact name', errors);
+  if (/x64|macos-15-intel|matrix[.]arch/i.test(releaseWorkflow)) {
+    errors.push('Release workflow must target Apple Silicon only.');
+  }
 
   for (const title of [
     'New Features',

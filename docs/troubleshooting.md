@@ -31,7 +31,7 @@ Check the local environment:
 npm run doctor
 ```
 
-If you are packaging the app yourself, run `npm run check:package:mac:arm64` or `npm run check:package:mac:x64` to verify the required Xcode tools. The package command then builds and validates the pinned CHMLib source for that runner's architecture. Use the matching GitHub Actions release job when you do not have that hardware architecture locally.
+If you are packaging the app yourself, run `npm run check:package:mac:arm64` to verify the required Xcode tools. The package command then builds and validates the pinned CHMLib source for Apple Silicon. Use the GitHub Actions release job when you do not have Apple Silicon hardware locally.
 
 ## Text Looks Garbled
 

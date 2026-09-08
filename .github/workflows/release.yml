@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_release:
-        description: Publish a GitHub Release after both macOS builds pass
+        description: Publish a GitHub Release after the Apple Silicon build passes
         required: true
         type: boolean
         default: false
@@ -77,23 +77,12 @@ jobs:
           echo "tag=$release_tag" >> "$GITHUB_OUTPUT"
 
   macos:
-    name: macOS ${{ matrix.arch }}
+    name: macOS arm64
     needs: validate_release
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-15
     timeout-minutes: 45
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: arm64
-            runner: macos-15
-            artifact-name: CHMReaderLight-mac-arm64
-          - arch: x64
-            runner: macos-15-intel
-            artifact-name: CHMReaderLight-mac-x64
-
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -110,15 +99,15 @@ jobs:
         run: npm ci
 
       - name: Package release artifact
-        run: npm run package:release:mac:${{ matrix.arch }}
+        run: npm run package:release:mac:arm64
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: ${{ matrix.artifact-name }}
+          name: CHMReaderLight-mac-arm64
           path: |
-            ${{ matrix.artifact-name }}.zip
-            ${{ matrix.artifact-name }}.zip.sha256
+            CHMReaderLight-mac-arm64.zip
+            CHMReaderLight-mac-arm64.zip.sha256
           if-no-files-found: error
 
   attest:
@@ -145,8 +134,6 @@ jobs:
           subject-path: |
             dist/attest/CHMReaderLight-mac-arm64.zip
             dist/attest/CHMReaderLight-mac-arm64.zip.sha256
-            dist/attest/CHMReaderLight-mac-x64.zip
-            dist/attest/CHMReaderLight-mac-x64.zip.sha256
 
   prepare_publish:
     name: Prepare GitHub Release publication
@@ -192,8 +179,6 @@ jobs:
             scripts/publish-release.js
             dist/release/CHMReaderLight-mac-arm64.zip
             dist/release/CHMReaderLight-mac-arm64.zip.sha256
-            dist/release/CHMReaderLight-mac-x64.zip
-            dist/release/CHMReaderLight-mac-x64.zip.sha256
           if-no-files-found: error
           retention-days: 1
           compression-level: 0

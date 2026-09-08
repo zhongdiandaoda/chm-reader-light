@@ -11,14 +11,13 @@ limits_patch_path="$root_dir/vendor/chmlib/extraction-limits.patch"
 deployment_target="12.0"
 
 if [[ $# -ne 1 ]]; then
-  printf "Usage: %s <arm64|x64>\n" "$0" >&2
+  printf "Usage: %s <arm64>\n" "$0" >&2
   exit 2
 fi
 arch="$1"
 output_dir="$root_dir/.native-build/darwin-$arch"
 case "$arch" in
   arm64) macho_arch="arm64" ;;
-  x64) macho_arch="x86_64" ;;
   *) printf "Unsupported architecture: %s.\n" "$arch" >&2; exit 2 ;;
 esac
 

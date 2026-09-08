@@ -7,7 +7,6 @@ Use this guide when installing a release build from GitHub. Local development an
 Download the latest release from [GitHub Releases](https://github.com/zhongdiandaoda/chm-reader-light/releases):
 
 - Apple Silicon Macs use [CHMReaderLight-mac-arm64.zip](https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-arm64.zip).
-- Intel Macs use [CHMReaderLight-mac-x64.zip](https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-x64.zip).
 
 If GitHub Releases does not have a public build yet, use the source-run path in the [README](../README.md).
 
@@ -20,13 +19,11 @@ Homebrew is not a supported install path yet.
 Each release zip is published with a matching checksum. Download the pair for your architecture into the same folder:
 
 - Apple Silicon checksum: [CHMReaderLight-mac-arm64.zip.sha256](https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-arm64.zip.sha256)
-- Intel checksum: [CHMReaderLight-mac-x64.zip.sha256](https://github.com/zhongdiandaoda/chm-reader-light/releases/latest/download/CHMReaderLight-mac-x64.zip.sha256)
 
 Then run the matching command:
 
 ```bash
 shasum -a 256 -c CHMReaderLight-mac-arm64.zip.sha256
-shasum -a 256 -c CHMReaderLight-mac-x64.zip.sha256
 ```
 
 An `OK` result means the zip matches the checksum published with the release.
@@ -35,7 +32,6 @@ For an optional provenance check, use GitHub artifact attestation after installi
 
 ```bash
 gh attestation verify CHMReaderLight-mac-arm64.zip --repo zhongdiandaoda/chm-reader-light
-gh attestation verify CHMReaderLight-mac-x64.zip --repo zhongdiandaoda/chm-reader-light
 ```
 
 This confirms the zip was produced by this repository's GitHub Actions release workflow.

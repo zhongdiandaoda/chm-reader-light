@@ -9,14 +9,13 @@ patch_path="$root_dir/vendor/chmlib/CVE-2025-48172.patch"
 limits_patch_path="$root_dir/vendor/chmlib/extraction-limits.patch"
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
-  printf "Usage: %s <arm64|x64> [native-build-directory]\n" "$0" >&2
+  printf "Usage: %s <arm64> [native-build-directory]\n" "$0" >&2
   exit 2
 fi
 arch="$1"
 native_dir="${2:-$root_dir/.native-build/darwin-$arch}"
 case "$arch" in
   arm64) macho_arch="arm64" ;;
-  x64) macho_arch="x86_64" ;;
   *) printf "Unsupported architecture: %s.\n" "$arch" >&2; exit 2 ;;
 esac
 

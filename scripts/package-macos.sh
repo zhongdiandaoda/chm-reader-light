@@ -4,17 +4,11 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root_dir"
 
-host_arch="$(uname -m)"
-default_arch="x64"
-if [[ "$host_arch" == "arm64" ]]; then
-  default_arch="arm64"
-fi
-
-arch="${1:-$default_arch}"
+arch="${1:-arm64}"
 case "$arch" in
-  arm64|x64) ;;
+  arm64) ;;
   *)
-    printf "用法: %s [arm64|x64]\n" "$0"
+    printf "用法: %s [arm64]\n" "$0"
     exit 2
     ;;
 esac

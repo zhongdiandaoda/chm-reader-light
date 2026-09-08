@@ -129,4 +129,4 @@ Run `npm run check:remote-listing` after applying settings in GitHub to compare 
 - Confirm pinned community items point visitors to a current release feedback thread, a scoped good first issue, and a safe showcase story.
 - Confirm the website field points to the README.
 - Confirm the social preview uses current CHMReaderLight product imagery from `docs/assets/social-preview.png`.
-- After a release, check that the public repository page still shows CI, CodeQL, stars, downloads, license, platform, Node.js, and release badges near the top of the README.
+- After a release, check that the public repository page still shows stars, license, and platform badges near the top of the README.

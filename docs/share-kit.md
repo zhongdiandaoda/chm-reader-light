@@ -24,7 +24,6 @@ Highlights:
 
 Download:
 - Apple Silicon: CHMReaderLight-mac-arm64.zip
-- Intel: CHMReaderLight-mac-x64.zip
 
 Get it from GitHub Releases:
 https://github.com/zhongdiandaoda/chm-reader-light/releases

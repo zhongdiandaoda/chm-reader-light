@@ -2,14 +2,14 @@
 set -euo pipefail
 
 if [[ $# -lt 2 || $# -gt 3 ]]; then
-  printf "Usage: %s <CHMReaderLight.app> <arm64|x64> [native-build-directory]\n" "$0" >&2
+  printf "Usage: %s <CHMReaderLight.app> <arm64> [native-build-directory]\n" "$0" >&2
   exit 2
 fi
 
 app_path="$1"
 arch="$2"
 case "$arch" in
-  arm64|x64) ;;
+  arm64) ;;
   *) printf "Unsupported architecture: %s.\n" "$arch" >&2; exit 2 ;;
 esac
 if [[ ! -d "$app_path/Contents/Resources" ]]; then

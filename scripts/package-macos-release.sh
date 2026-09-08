@@ -6,9 +6,9 @@ arch="${1:-}"
 output_dir="${2:-$root_dir}"
 
 case "$arch" in
-  arm64|x64) ;;
+  arm64) ;;
   *)
-    printf "Usage: %s <arm64|x64> [output-directory]\n" "$0" >&2
+    printf "Usage: %s <arm64> [output-directory]\n" "$0" >&2
     exit 2
     ;;
 esac

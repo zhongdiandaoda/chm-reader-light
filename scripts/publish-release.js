@@ -250,7 +250,7 @@ function formatReleasePublishPlan(plan, confirmed) {
   lines.push('- PATCH the draft to publish only after every asset upload succeeds');
 
   if (!confirmed) {
-    lines.push('', 'Dry run only. Build both architecture packages, fix artifact blockers, set GITHUB_TOKEN, and rerun `npm run publish:release -- --release-dir <release-dir> --target-commitish <40-character-build-commit-sha> --confirm` to publish.');
+    lines.push('', 'Dry run only. Build the Apple Silicon package, fix artifact blockers, set GITHUB_TOKEN, and rerun `npm run publish:release -- --release-dir <release-dir> --target-commitish <40-character-build-commit-sha> --confirm` to publish.');
   }
 
   return lines.join('\n');
