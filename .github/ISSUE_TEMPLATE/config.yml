@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support guide
+    url: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md
+    about: Find installation, usage, compatibility, and reporting guidance.
+  - name: Project README
+    url: https://github.com/zhongdiandaoda/chm-reader-light#readme
+    about: Review features, downloads, basic usage, privacy, and source setup.
+  - name: GitHub Discussions
+    url: https://github.com/zhongdiandaoda/chm-reader-light/discussions
+    about: Ask open-ended questions or share a public-safe workflow.
+  - name: Security Policy
+    url: https://github.com/zhongdiandaoda/chm-reader-light/security/policy
+    about: Report suspected vulnerabilities privately.

@@ -4,5 +4,12 @@ build/
 .test-build/
 .build-node/
 .build-browser/
+.native-build/
+.env
+.env.*
+*.chm
 .DS_Store
 *.log
+/CHMReaderLight-mac-*.zip
+/CHMReaderLight-mac-*.zip.sha256
+/Report

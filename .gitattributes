@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+package-lock.json text eol=lf
+README*.md text eol=lf
+docs/** text eol=lf
+
+*.chm binary
+*.zip binary
+*.png binary

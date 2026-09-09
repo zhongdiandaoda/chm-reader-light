@@ -1,0 +1,44 @@
+name: Showcase
+description: Share how CHMReaderLight helps your offline CHM workflow.
+title: "[Showcase]: "
+labels: ["showcase"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing a CHMReaderLight workflow. Positive use cases help future users understand where the app fits.
+        Do not include private document content, proprietary screenshots, sensitive file paths, or confidential CHM text.
+  - type: textarea
+    id: workflow
+    attributes:
+      label: What changed for your workflow?
+      description: Describe the offline CHM workflow, team context, or documentation habit that improved.
+      placeholder: "Example: I can keep legacy SDK CHM manuals in one local library and jump back to recent topics quickly."
+    validations:
+      required: true
+  - type: textarea
+    id: helped
+    attributes:
+      label: What helped most?
+      description: Mention the reader, library, search, local-data, packaging, or documentation detail that made the workflow easier.
+      placeholder: "Example: Library search plus the last-opened label made it easier to resume the right manual."
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: Share safe context such as macOS version, Mac architecture, install source, CHM language, and approximate library size.
+      placeholder: "Example: macOS 15.2, Apple Silicon, GitHub release zip, mostly Simplified Chinese CHM files."
+  - type: dropdown
+    id: quote-permission
+    attributes:
+      label: May maintainers quote this in project docs or release notes?
+      description: Choose whether maintainers can reuse this story when improving README, release notes, or share materials.
+      options:
+        - Yes, with my GitHub username
+        - Yes, anonymously
+        - Please ask me first
+        - No
+    validations:
+      required: true

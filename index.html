@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; frame-src chm:">
+    <title>CHMReaderLight</title>
+    <link rel="icon" href="./assets/app-logo.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body data-view="library">
+    <div class="app-shell">
+      <header class="app-header" id="library-toolbar">
+        <div class="titlebar">
+          <div class="window-drag-region" aria-hidden="true"></div>
+          <div class="titlebar-brand" aria-label="CHMReaderLight">
+            <img class="titlebar-logo" src="./assets/app-logo.svg" alt="">
+            <div class="titlebar-title">CHMReaderLight</div>
+          </div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <span class="library-heading" id="library-heading">书库</span>
+            <output class="toolbar-meta" id="library-count" aria-live="polite"></output>
+          </div>
+          <div class="toolbar-right">
+            <label class="library-search" for="library-search">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="8.5" cy="8.5" r="5"></circle>
+                <path d="m12.2 12.2 4 4"></path>
+              </svg>
+              <span class="sr-only">搜索书库</span>
+              <input id="library-search" type="search" placeholder="搜索书名或路径" maxlength="200" autocomplete="off">
+            </label>
+            <div class="view-toggle" role="group" aria-label="切换展示方式">
+              <button class="icon-button" id="view-grid" type="button" aria-label="平铺展示" title="平铺展示" aria-pressed="true">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="3" y="3" width="6" height="6" rx="1.4"></rect>
+                  <rect x="11" y="3" width="6" height="6" rx="1.4"></rect>
+                  <rect x="3" y="11" width="6" height="6" rx="1.4"></rect>
+                  <rect x="11" y="11" width="6" height="6" rx="1.4"></rect>
+                </svg>
+              </button>
+              <button class="icon-button" id="view-list" type="button" aria-label="列表展示" title="列表展示" aria-pressed="false">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M7 5h10M7 10h10M7 15h10"></path>
+                  <path d="M3.5 5h.01M3.5 10h.01M3.5 15h.01"></path>
+                </svg>
+              </button>
+            </div>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="open-button" id="add-book" type="button">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M10 4.5v11"></path>
+                <path d="M4.5 10h11"></path>
+              </svg>
+              添加 CHM
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <header class="app-header" id="reader-toolbar" hidden>
+        <div class="titlebar">
+          <div class="window-drag-region" aria-hidden="true"></div>
+          <div class="titlebar-brand" aria-label="当前书籍">
+            <img class="titlebar-logo" src="./assets/app-logo.svg" alt="">
+            <div class="titlebar-title" id="book-title">CHMReaderLight</div>
+          </div>
+        </div>
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <button class="open-button" id="back-to-library" type="button">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
+              书库
+            </button>
+            <button class="icon-button" id="toggle-sidebar" type="button" aria-label="显示或隐藏目录" title="显示或隐藏目录">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <rect x="2.5" y="3" width="15" height="14" rx="2"></rect>
+                <path d="M7 3v14"></path>
+              </svg>
+            </button>
+            <output class="toolbar-meta reader-progress" id="reader-progress" aria-live="polite" hidden></output>
+            <output class="toolbar-meta reader-topic-title" id="reader-topic-title" aria-live="polite" hidden></output>
+          </div>
+          <div class="toolbar-right">
+            <div class="toolbar-search-navigation" id="search-match-navigation" hidden aria-label="当前页面搜索结果">
+              <button class="toolbar-search-button" id="search-previous" type="button" disabled>上一个命中</button>
+              <output id="search-match-position">0 / 0</output>
+              <button class="toolbar-search-button" id="search-next" type="button" disabled>下一个命中</button>
+            </div>
+            <span class="toolbar-separator search-toolbar-separator" id="search-toolbar-separator" hidden aria-hidden="true"></span>
+            <button class="icon-button" id="previous-page" type="button" aria-label="上一页" title="上一页" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 13.5 5.5-5 5.5 5"></path><path d="M10 6.5v8"></path></svg>
+            </button>
+            <button class="icon-button" id="next-page" type="button" aria-label="下一页" title="下一页" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 6.5 5.5 5 5.5-5"></path><path d="M10 13.5v-8"></path></svg>
+            </button>
+            <button class="icon-button" id="copy-topic-reference" type="button" aria-label="复制当前章节引用" title="复制当前章节引用" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <rect x="7" y="5" width="9" height="11" rx="1.5"></rect>
+                <path d="M4 12.5V4.5A1.5 1.5 0 0 1 5.5 3H12"></path>
+              </svg>
+            </button>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="icon-button" id="go-back" type="button" aria-label="后退" title="后退" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
+            </button>
+            <button class="icon-button" id="go-forward" type="button" aria-label="前进" title="前进" disabled>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4.5 5 5.5-5 5.5"></path></svg>
+            </button>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="text-button" id="zoom-out" type="button" aria-label="缩小正文" title="缩小正文">A−</button>
+            <button class="text-button" id="zoom-reset" type="button" aria-label="重置正文缩放" title="重置正文缩放">100%</button>
+            <button class="text-button text-button-large" id="zoom-in" type="button" aria-label="放大正文" title="放大正文">A+</button>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <div class="encoding-picker">
+              <span class="sr-only" id="text-encoding-label">文本编码</span>
+              <button class="encoding-trigger" id="text-encoding" type="button" title="文本编码" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="text-encoding-label text-encoding-value" data-encoding="auto">
+                <span id="text-encoding-value">默认编码</span>
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"></path></svg>
+              </button>
+              <div class="encoding-menu" id="text-encoding-menu" role="listbox" aria-labelledby="text-encoding-label" hidden>
+                <button class="encoding-option" type="button" role="option" data-encoding="auto" aria-selected="true">默认编码</button>
+                <div class="encoding-group" role="presentation">Unicode</div>
+                <button class="encoding-option" type="button" role="option" data-encoding="utf-8" aria-selected="false">Unicode (UTF-8)</button>
+                <div class="encoding-group" role="presentation">简体中文</div>
+                <button class="encoding-option" type="button" role="option" data-encoding="gbk" aria-selected="false">简体中文 (GBK)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="gb18030" aria-selected="false">简体中文 (GB18030)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="gb2312" aria-selected="false">简体中文 (GB2312)</button>
+                <div class="encoding-group" role="presentation">繁体中文</div>
+                <button class="encoding-option" type="button" role="option" data-encoding="big5" aria-selected="false">繁体中文 (BIG5)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="big5-hkscs" aria-selected="false">繁体中文 (BIG5-HKSCS)</button>
+                <div class="encoding-group" role="presentation">西欧</div>
+                <button class="encoding-option" type="button" role="option" data-encoding="iso-8859-1" aria-selected="false">西欧 (ISO Latin 1)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="macintosh" aria-selected="false">西欧 (Mac OS Roman)</button>
+                <div class="encoding-group" role="presentation">日文</div>
+                <button class="encoding-option" type="button" role="option" data-encoding="shift_jis" aria-selected="false">日文 (Shift-JIS)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="iso-2022-jp" aria-selected="false">日文 (ISO-2022-JP)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="euc-jp" aria-selected="false">日文 (EUC-JP)</button>
+                <div class="encoding-group" role="presentation">韩文</div>
+                <button class="encoding-option" type="button" role="option" data-encoding="euc-kr" aria-selected="false">韩文 (EUC-KR)</button>
+                <div class="encoding-group" role="presentation">其它</div>
+                <button class="encoding-option" type="button" role="option" data-encoding="windows-1256" aria-selected="false">阿拉伯文 (Windows)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="windows-1255" aria-selected="false">希伯来文 (Windows)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="windows-1253" aria-selected="false">希腊文 (Windows)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="windows-1251" aria-selected="false">西里尔文 (Windows)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="windows-874" aria-selected="false">泰文 (Windows)</button>
+                <button class="encoding-option" type="button" role="option" data-encoding="windows-1250" aria-selected="false">中欧 (Windows Latin 2)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="library-view" id="library-view" aria-label="书库">
+        <aside class="collection-sidebar" aria-label="书库列表">
+          <div class="collection-header">
+            <span class="eyebrow">书库</span>
+            <button class="icon-button" id="add-collection" type="button" aria-label="新建书库" title="新建书库">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4.5v11"></path><path d="M4.5 10h11"></path></svg>
+            </button>
+          </div>
+          <nav class="collection-list" id="collection-list" aria-label="书库分组"></nav>
+        </aside>
+        <div class="library-content" id="library-content">
+          <div class="library-drop-target" id="library-drop-target" aria-hidden="true">
+            <div class="library-drop-card">
+              <svg viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M24 8v23"></path>
+                <path d="m15 17 9-9 9 9"></path>
+                <path d="M12 30v6a4 4 0 0 0 4 4h16a4 4 0 0 0 4-4v-6"></path>
+              </svg>
+              <strong>松手添加 CHM 文件</strong>
+              <span>会加入当前选中的书库</span>
+            </div>
+          </div>
+          <div class="library-empty" id="library-empty" hidden>
+            <div class="book-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64">
+                <path d="M13 9h27a7 7 0 0 1 7 7v39H20a7 7 0 0 1-7-7V9Z"></path>
+                <path d="M20 55a7 7 0 0 1 7-7h24V16h-4"></path>
+                <path d="M23 21h14M23 29h14M23 37h9"></path>
+              </svg>
+            </div>
+            <h1>这个书库还是空的</h1>
+            <p>添加本地 CHM 文件，它们会被加入到当前书库中，随时打开阅读。</p>
+            <button class="primary-button" id="empty-add-book" type="button">添加 CHM 文件</button>
+            <div class="empty-actions" aria-label="首次使用帮助">
+              <button class="empty-link-button" id="empty-getting-started" type="button">入门指南</button>
+              <button class="empty-link-button" id="empty-feature-tour" type="button">功能导览</button>
+              <button class="empty-link-button" id="empty-privacy" type="button">本地数据</button>
+              <button class="empty-link-button" id="empty-troubleshooting" type="button">故障排查</button>
+            </div>
+            <div class="shortcut-hint"><kbd>⌘</kbd><kbd>O</kbd><span>快速添加，也可以拖入 .chm 文件</span></div>
+          </div>
+          <div class="library-empty library-empty-filtered" id="library-empty-filtered" role="status" aria-live="polite" hidden>
+            <div class="book-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64">
+                <circle cx="27" cy="27" r="12"></circle>
+                <path d="m36 36 12 12"></path>
+                <path d="M22 27h10"></path>
+              </svg>
+            </div>
+            <h1>没有匹配的文档</h1>
+            <p>换个书名、文件夹或路径关键词试试。</p>
+            <div class="empty-actions" aria-label="搜索帮助">
+              <button class="empty-link-button" id="clear-library-search" type="button">清空搜索</button>
+              <button class="empty-link-button" id="empty-search-guide" type="button">搜索指南</button>
+            </div>
+          </div>
+          <div class="library-empty library-load-error" id="library-load-error" role="alert" hidden>
+            <div class="book-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64">
+                <path d="M32 10 55 51H9L32 10Z"></path>
+                <path d="M32 24v13"></path>
+                <path d="M32 44h.01"></path>
+              </svg>
+            </div>
+            <h1>无法加载书库</h1>
+            <p id="library-load-error-message">书库数据暂时无法加载。</p>
+            <button class="primary-button" id="retry-library-load" type="button">重新加载</button>
+          </div>
+          <div class="library-grid" id="library-grid" role="list"></div>
+        </div>
+      </section>
+
+      <main class="reader-layout" id="reader-layout" hidden>
+        <aside class="sidebar" id="sidebar" aria-label="文档目录">
+          <div class="sidebar-header">
+            <div class="sidebar-heading">
+              <div class="eyebrow">内容</div>
+              <output class="sidebar-topic-count" id="sidebar-topic-count" aria-live="polite" hidden></output>
+              <button class="sidebar-menu-trigger" id="tree-menu-trigger" type="button" aria-label="目录操作" title="目录操作" aria-expanded="false" aria-controls="tree-actions-menu">
+                <span aria-hidden="true">⋯</span>
+              </button>
+              <div class="tree-actions-menu" id="tree-actions-menu" role="menu" hidden>
+                <div class="tree-actions-menu-title">目录操作</div>
+                <button id="expand-all" type="button" role="menuitem" disabled>展开全部</button>
+                <button id="collapse-all" type="button" role="menuitem" disabled>收起全部</button>
+                <button id="refresh-tree" type="button" role="menuitem" disabled>刷新目录</button>
+              </div>
+            </div>
+            <div class="search-box">
+              <button class="search-scope-trigger" id="search-scope-trigger" type="button" aria-label="选择搜索范围" aria-expanded="false" aria-controls="search-scope-menu">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="8.5" cy="8.5" r="5"></circle>
+                <path d="m12.2 12.2 4 4"></path>
+                </svg>
+              </button>
+              <span class="sr-only">搜索正文</span>
+              <input id="search-navigation" type="search" placeholder="搜索正文" maxlength="200" autocomplete="off" disabled>
+              <span class="search-scope-label" id="search-scope-label">正文</span>
+              <div class="search-scope-menu" id="search-scope-menu" role="menu" hidden>
+                <button id="search-body" type="button" role="menuitemradio" aria-checked="true">正文</button>
+                <button id="search-directory" type="button" role="menuitemradio" aria-checked="false">目录</button>
+              </div>
+            </div>
+            <div class="search-status" id="search-status" aria-live="polite"></div>
+          </div>
+          <nav class="navigation" id="navigation" aria-label="CHM 章节">
+            <div class="sidebar-placeholder">
+              <svg viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M10 8.5h19a5 5 0 0 1 5 5v26H15a5 5 0 0 1-5-5v-26Z"></path>
+                <path d="M15 39.5a5 5 0 0 1 5-5h18V13h-4"></path>
+                <path d="M17 17h10M17 23h10"></path>
+              </svg>
+              <p>打开 CHM 文件后<br>目录将在这里显示</p>
+            </div>
+          </nav>
+        </aside>
+
+        <div class="resize-handle" id="resize-handle" role="separator" aria-orientation="vertical" aria-label="调整目录宽度" tabindex="0"></div>
+
+        <section class="content-pane" aria-label="文档正文">
+          <div class="empty-state" id="empty-state" hidden>
+            <div class="book-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64">
+                <path d="M13 9h27a7 7 0 0 1 7 7v39H20a7 7 0 0 1-7-7V9Z"></path>
+                <path d="M20 55a7 7 0 0 1 7-7h24V16h-4"></path>
+                <path d="M23 21h14M23 29h14M23 37h9"></path>
+              </svg>
+            </div>
+            <h1>这本文档没有正文</h1>
+            <p>该 CHM 文件未包含可显示的页面。</p>
+          </div>
+          <div class="loading-state" id="loading-state" hidden aria-live="polite">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>正在解析文档...</p>
+          </div>
+          <iframe
+            id="content-frame"
+            title="CHM 文档内容"
+            sandbox="allow-same-origin allow-scripts"
+            referrerpolicy="no-referrer"
+            hidden
+          ></iframe>
+        </section>
+      </main>
+    </div>
+    <div class="modal-backdrop" id="collection-dialog" hidden>
+      <form class="modal" id="collection-form" role="dialog" aria-modal="true" aria-labelledby="collection-dialog-title">
+        <h2 id="collection-dialog-title">新建书库</h2>
+        <label for="collection-name">书库名称</label>
+        <input id="collection-name" type="text" maxlength="40" autocomplete="off" required>
+        <div class="modal-actions">
+          <button class="text-button" id="collection-cancel" type="button">取消</button>
+          <button class="primary-button" id="collection-create" type="submit">创建</button>
+        </div>
+      </form>
+    </div>
+    <div class="context-menu" id="collection-context-menu" role="menu" hidden>
+      <button id="collection-rename" type="button" role="menuitem">重命名</button>
+      <button id="collection-delete" type="button" role="menuitem">删除</button>
+    </div>
+    <output class="sr-only" id="copy-status" aria-live="polite"></output>
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>

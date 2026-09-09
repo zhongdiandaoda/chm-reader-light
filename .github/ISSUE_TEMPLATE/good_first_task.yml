@@ -1,0 +1,51 @@
+name: Good first task
+description: Create a scoped starter issue for new contributors.
+title: "[Good first task]: "
+labels: ["good first issue", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for maintainer-created starter tasks that are small, reviewable, and safe for new contributors.
+        Avoid broad rewrites, private CHM samples, new platform support, signing changes, or release-process changes.
+  - type: textarea
+    id: workflow
+    attributes:
+      label: What user or contributor workflow improves?
+      description: Describe the concrete CHMReaderLight workflow, documentation path, or maintenance task this starter issue improves.
+      placeholder: "Example: Help new users understand the missing-source relink action from the troubleshooting guide."
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Likely files or docs
+      description: List the files, docs, or tests a contributor should inspect first.
+      placeholder: |
+        Example:
+        - docs/troubleshooting.md
+        - test/ui.test.ts
+    validations:
+      required: true
+  - type: textarea
+    id: smallest-change
+    attributes:
+      label: Smallest acceptable change
+      description: Define the smallest complete change that would make this issue reviewable.
+      placeholder: "Example: Add one short troubleshooting paragraph and a static regression assertion."
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification command
+      description: Name the focused command a contributor should run before opening a pull request.
+      placeholder: "Example: npm test -- --test-name-pattern \"support docs route users to troubleshooting before filing CHM issues\""
+    validations:
+      required: true
+  - type: textarea
+    id: mentoring-notes
+    attributes:
+      label: Mentoring notes
+      description: Add hints, accepted alternatives, or boundaries that help a first-time contributor stay focused.
+      placeholder: "Example: Keep wording factual and avoid changing release or notarization claims."

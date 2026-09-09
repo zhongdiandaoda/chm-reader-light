@@ -1,0 +1,44 @@
+name: Question
+description: Ask a usage, setup, or workflow question about CHMReaderLight.
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for using CHMReaderLight. Please check the README and troubleshooting guide before opening a question:
+        - https://github.com/zhongdiandaoda/chm-reader-light#readme
+        - https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.md
+        Search existing Issues and Discussions before filing:
+        - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue
+        - https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: textarea
+    id: question
+    attributes:
+      label: What would you like help with?
+      description: Describe the task, setup step, or reading workflow you are trying to complete.
+      placeholder: "Example: I want to open a CHM from Finder and keep it in a specific library collection."
+    validations:
+      required: true
+  - type: textarea
+    id: tried
+    attributes:
+      label: What have you tried?
+      description: Mention any docs, menu actions, commands, or workarounds you already checked.
+      placeholder: "Example: I checked FAQ, ran npm run doctor, and tried Help > Clear Extracted Cache."
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      placeholder: "0.1.0, commit SHA, or downloaded build name"
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version and Mac architecture
+      placeholder: "Example: macOS 15.2, Apple Silicon"
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic info
+      description: If relevant, choose Help > Copy Diagnostic Info in the app and paste the result here.
+      render: shell

@@ -1,0 +1,42 @@
+name: Documentation improvement
+description: Report unclear, missing, outdated, or confusing CHMReaderLight docs.
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve CHMReaderLight docs. Start with the contributor guide:
+        https://github.com/zhongdiandaoda/chm-reader-light/blob/main/CONTRIBUTING.md
+        Search existing Issues and Discussions before filing:
+        - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue
+        - https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: input
+    id: page
+    attributes:
+      label: Which documentation page needs attention?
+      description: Link the page or name the README, guide, issue template, or release note that should change.
+      placeholder: "Example: docs/install-macos.md"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What should be clearer or updated?
+      description: Describe the confusing wording, missing step, outdated detail, or broken expectation.
+      placeholder: "Example: The first-launch instructions do not explain the exact macOS Privacy & Security prompt."
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested wording or source
+      description: Share suggested wording, a source link, screenshot context, or the user question that exposed the docs gap.
+  - type: dropdown
+    id: pull-request
+    attributes:
+      label: Can you open a pull request for this docs fix?
+      options:
+        - Yes, I can send a small pull request
+        - Maybe, with maintainer guidance
+        - No, I am only reporting the docs gap

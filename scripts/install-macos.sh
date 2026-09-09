@@ -4,13 +4,11 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root_dir"
 
-host_arch="$(uname -m)"
-default_arch="x64"
-if [[ "$host_arch" == "arm64" ]]; then
-  default_arch="arm64"
+arch="${1:-arm64}"
+if [[ "$arch" != "arm64" ]]; then
+  printf "Usage: %s [arm64]\n" "$0" >&2
+  exit 2
 fi
-
-arch="${1:-$default_arch}"
 app_path="$root_dir/dist/CHMReaderLight-darwin-$arch/CHMReaderLight.app"
 target_path="/Applications/CHMReaderLight.app"
 

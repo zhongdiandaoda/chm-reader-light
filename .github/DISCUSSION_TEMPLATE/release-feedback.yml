@@ -1,0 +1,33 @@
+title: "[Release feedback] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for early feedback after trying a published CHMReaderLight release.
+        For a reproducible crash, rendering issue, or security concern, use the issue templates or security policy instead.
+        Search existing Discussions before posting:
+        https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: input
+    id: release-version
+    attributes:
+      label: Which release did you try?
+      description: Include the version, tag, or artifact name.
+      placeholder: "Example: v0.1.0 or CHMReaderLight-mac-arm64.zip"
+    validations:
+      required: true
+  - type: textarea
+    id: feedback
+    attributes:
+      label: What worked well or needs attention?
+      description: Share install, first-launch, checksum, packaging, or release-note feedback that would help future users.
+      placeholder: "Example: The Apple Silicon zip opened after checksum verification, but the release note could mention the current notarization status earlier."
+    validations:
+      required: true
+  - type: textarea
+    id: trust-share-followup
+    attributes:
+      label: What would make this release easier to trust, star, watch, or share?
+      description: Mention any download, checksum, notarization, screenshot, demo, release-note, or support details that would help you recommend the release.
+      placeholder: "Example: I would share this after seeing a short demo GIF and a clearer note about the current signing status."
+    validations:
+      required: true
