@@ -21,9 +21,17 @@
         <div class="toolbar">
           <div class="toolbar-left">
             <span class="library-heading" id="library-heading">书库</span>
-            <span class="toolbar-meta" id="library-count"></span>
+            <output class="toolbar-meta" id="library-count" aria-live="polite"></output>
           </div>
           <div class="toolbar-right">
+            <label class="library-search" for="library-search">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="8.5" cy="8.5" r="5"></circle>
+                <path d="m12.2 12.2 4 4"></path>
+              </svg>
+              <span class="sr-only">搜索书库</span>
+              <input id="library-search" type="search" placeholder="搜索书名或路径" maxlength="200" autocomplete="off">
+            </label>
             <div class="view-toggle" role="group" aria-label="切换展示方式">
               <button class="icon-button" id="view-grid" type="button" aria-label="平铺展示" title="平铺展示" aria-pressed="true">
                 <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -72,6 +80,8 @@
                 <path d="M7 3v14"></path>
               </svg>
             </button>
+            <output class="toolbar-meta reader-progress" id="reader-progress" aria-live="polite" hidden></output>
+            <output class="toolbar-meta reader-topic-title" id="reader-topic-title" aria-live="polite" hidden></output>
           </div>
           <div class="toolbar-right">
             <div class="toolbar-search-navigation" id="search-match-navigation" hidden aria-label="当前页面搜索结果">
@@ -148,18 +158,56 @@
           <nav class="collection-list" id="collection-list" aria-label="书库分组"></nav>
         </aside>
         <div class="library-content" id="library-content">
-          <div class="library-empty" id="library-empty" hidden>
-            <div class="book-mark" aria-hidden="true">
-              <svg viewBox="0 0 64 64">
-                <path d="M13 9h27a7 7 0 0 1 7 7v39H20a7 7 0 0 1-7-7V9Z"></path>
-                <path d="M20 55a7 7 0 0 1 7-7h24V16h-4"></path>
-                <path d="M23 21h14M23 29h14M23 37h9"></path>
+          <div class="library-drop-target" id="library-drop-target" aria-hidden="true">
+            <div class="library-drop-card">
+              <svg viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M24 8v23"></path>
+                <path d="m15 17 9-9 9 9"></path>
+                <path d="M12 30v6a4 4 0 0 0 4 4h16a4 4 0 0 0 4-4v-6"></path>
               </svg>
+              <strong>松手添加 CHM 文件</strong>
+              <span>会加入当前选中的书库</span>
             </div>
+          </div>
+          <div class="library-empty" id="library-empty" hidden>
+            <img class="empty-app-logo" src="./assets/app-logo.svg" alt="">
             <h1>这个书库还是空的</h1>
             <p>添加本地 CHM 文件，它们会被加入到当前书库中，随时打开阅读。</p>
             <button class="primary-button" id="empty-add-book" type="button">添加 CHM 文件</button>
-            <div class="shortcut-hint"><kbd>⌘</kbd><kbd>O</kbd><span>快速添加</span></div>
+            <div class="empty-actions" aria-label="首次使用帮助">
+              <button class="empty-link-button" id="empty-getting-started" type="button">项目说明</button>
+              <button class="empty-link-button" id="empty-feature-tour" type="button">安装说明</button>
+              <button class="empty-link-button" id="empty-privacy" type="button">本地数据</button>
+              <button class="empty-link-button" id="empty-troubleshooting" type="button">故障排查</button>
+            </div>
+            <div class="shortcut-hint"><kbd>⌘</kbd><kbd>O</kbd><span>快速添加，也可以拖入 .chm 文件</span></div>
+          </div>
+          <div class="library-empty library-empty-filtered" id="library-empty-filtered" role="status" aria-live="polite" hidden>
+            <div class="book-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64">
+                <circle cx="27" cy="27" r="12"></circle>
+                <path d="m36 36 12 12"></path>
+                <path d="M22 27h10"></path>
+              </svg>
+            </div>
+            <h1>没有匹配的文档</h1>
+            <p>换个书名、文件夹或路径关键词试试。</p>
+            <div class="empty-actions" aria-label="搜索帮助">
+              <button class="empty-link-button" id="clear-library-search" type="button">清空搜索</button>
+              <button class="empty-link-button" id="empty-search-guide" type="button">使用说明</button>
+            </div>
+          </div>
+          <div class="library-empty library-load-error" id="library-load-error" role="alert" hidden>
+            <div class="book-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64">
+                <path d="M32 10 55 51H9L32 10Z"></path>
+                <path d="M32 24v13"></path>
+                <path d="M32 44h.01"></path>
+              </svg>
+            </div>
+            <h1>无法加载书库</h1>
+            <p id="library-load-error-message">书库数据暂时无法加载。</p>
+            <button class="primary-button" id="retry-library-load" type="button">重新加载</button>
           </div>
           <div class="library-grid" id="library-grid" role="list"></div>
         </div>
@@ -170,6 +218,7 @@
           <div class="sidebar-header">
             <div class="sidebar-heading">
               <div class="eyebrow">内容</div>
+              <output class="sidebar-topic-count" id="sidebar-topic-count" aria-live="polite" hidden></output>
               <button class="sidebar-menu-trigger" id="tree-menu-trigger" type="button" aria-label="目录操作" title="目录操作" aria-expanded="false" aria-controls="tree-actions-menu">
                 <span aria-hidden="true">⋯</span>
               </button>
@@ -188,7 +237,7 @@
                 </svg>
               </button>
               <span class="sr-only">搜索正文</span>
-              <input id="search-navigation" type="search" placeholder="搜索正文" autocomplete="off" disabled>
+              <input id="search-navigation" type="search" placeholder="搜索正文" maxlength="200" autocomplete="off" disabled>
               <span class="search-scope-label" id="search-scope-label">正文</span>
               <div class="search-scope-menu" id="search-scope-menu" role="menu" hidden>
                 <button id="search-body" type="button" role="menuitemradio" aria-checked="true">正文</button>
@@ -241,7 +290,8 @@
       <form class="modal" id="collection-form" role="dialog" aria-modal="true" aria-labelledby="collection-dialog-title">
         <h2 id="collection-dialog-title">新建书库</h2>
         <label for="collection-name">书库名称</label>
-        <input id="collection-name" type="text" maxlength="40" autocomplete="off" required>
+        <input id="collection-name" type="text" maxlength="40" autocomplete="off" aria-errormessage="collection-error" required>
+        <p class="modal-error" id="collection-error" role="alert" hidden></p>
         <div class="modal-actions">
           <button class="text-button" id="collection-cancel" type="button">取消</button>
           <button class="primary-button" id="collection-create" type="submit">创建</button>

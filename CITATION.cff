@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: If CHMReaderLight helps your offline CHM workflow, please cite the project metadata from this file.
+type: software
+title: CHMReaderLight
+abstract: >-
+  A lightweight offline CHM reader and library for macOS that helps users keep
+  local Microsoft HTML Help manuals searchable, organized, and private.
+authors:
+  - family-names: Liu
+    given-names: Qi
+repository-code: "https://github.com/zhongdiandaoda/chm-reader-light"
+url: "https://github.com/zhongdiandaoda/chm-reader-light#readme"
+license: MIT
+version: "0.1.0"
+keywords:
+  - chm
+  - chm-reader
+  - chm-viewer
+  - macos-chm-reader
+  - chm-reader-macos
+  - html-help
+  - microsoft-html-help
+  - offline-docs
+  - offline-documentation
+  - offline-reader
+  - help-viewer
+  - api-reference
+  - technical-documentation
+  - documentation
+  - macos
+  - macos-app
+  - electron
+  - ebook
+  - reader

@@ -1,0 +1,81 @@
+name: Accessibility report
+description: Report keyboard, VoiceOver, focus, color contrast, or appearance issues.
+title: "[Accessibility]: "
+labels: ["accessibility"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve CHMReaderLight accessibility. Please describe the smallest workflow where the issue appears.
+        Do not include private CHM content, sensitive file paths, or confidential screenshots.
+        Search existing Issues and Discussions before filing:
+        - https://github.com/zhongdiandaoda/chm-reader-light/issues?q=is%3Aissue
+        - https://github.com/zhongdiandaoda/chm-reader-light/discussions
+  - type: textarea
+    id: summary
+    attributes:
+      label: What accessibility or usability issue did you hit?
+      description: Describe what was hard to use and what you expected to happen.
+      placeholder: "Example: VoiceOver does not announce the selected topic after opening a CHM from the library."
+    validations:
+      required: true
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: Which workflow is affected?
+      options:
+        - Library management
+        - Reader navigation
+        - Search or filtering
+        - Keyboard shortcuts or focus order
+        - VoiceOver or assistive technology
+        - Color contrast or appearance
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: input-method
+    attributes:
+      label: What input method or assistive technology were you using?
+      description: Mention Keyboard only, Mouse or trackpad, VoiceOver, zoom, display contrast settings, or other assistive tools.
+      placeholder: "Example: Keyboard only with VoiceOver enabled."
+    validations:
+      required: true
+  - type: dropdown
+    id: appearance
+    attributes:
+      label: What is your macOS appearance setting?
+      options:
+        - Light
+        - Dark
+        - High contrast or increased contrast
+        - Not sure
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest set of steps that reproduce the accessibility issue.
+      placeholder: |
+        1. Open CHMReaderLight
+        2. Add a CHM file
+        3. Press ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected accessible behavior
+      description: Describe the announcement, focus movement, contrast, keyboard behavior, or visual state you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic info
+      description: In the app, choose Help > Copy Diagnostic Info and paste the result here.
+      render: shell
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Safe screenshot or recording
+      description: Attach a safe screenshot, short recording, or sanitized notes if they help explain the issue. Do not include private CHM content, sensitive file paths, or confidential screenshots.

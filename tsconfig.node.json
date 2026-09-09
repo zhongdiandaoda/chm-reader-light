@@ -7,8 +7,11 @@
     "noEmit": false
   },
   "include": [
+    "src/async-queue.ts",
+    "src/book-cache.ts",
     "src/chm.ts",
     "src/library.ts",
+    "src/library-store.ts",
     "src/main.ts",
     "src/navigation.ts",
     "src/preload.ts",

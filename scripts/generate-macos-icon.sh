@@ -14,6 +14,7 @@ mkdir -p "$(dirname "$output_icns")"
 
 work_dir="$(mktemp -d "${TMPDIR:-/tmp}/chmreader-icon.XXXXXX")"
 iconset_dir="$work_dir/app.iconset"
+source_png="$work_dir/app-icon-1024.png"
 mkdir -p "$iconset_dir"
 
 cleanup() {
@@ -21,8 +22,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
+module_cache_dir="$work_dir/module-cache"
+mkdir -p "$module_cache_dir"
+SWIFT_MODULECACHE_PATH="$module_cache_dir" \
+CLANG_MODULE_CACHE_PATH="$module_cache_dir" \
+swift "$root_dir/scripts/rasterize-svg.swift" \
+  "$source_svg" \
+  "$source_png" \
+  1024 1024 100 185.4
+
 while IFS=: read -r filename pixels; do
-  sips -z "$pixels" "$pixels" -s format png "$source_svg" --out "$iconset_dir/$filename" >/dev/null
+  sips -z "$pixels" "$pixels" "$source_png" --out "$iconset_dir/$filename" >/dev/null
 done <<'EOF'
 icon_16x16.png:16
 icon_16x16@2x.png:32
@@ -36,5 +46,4 @@ icon_512x512.png:512
 icon_512x512@2x.png:1024
 EOF
 
-iconutil -c icns "$iconset_dir" -o "$output_icns"
-printf "已生成 macOS 图标: %s\n" "$output_icns"
+node "$root_dir/scripts/build-icns.js" "$iconset_dir" "$output_icns"

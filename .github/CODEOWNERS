@@ -1,0 +1,20 @@
+# CHMReaderLight review ownership
+
+* @zhongdiandaoda
+
+/src/ @zhongdiandaoda
+/test/ @zhongdiandaoda
+/docs/ @zhongdiandaoda
+/.github/workflows/ @zhongdiandaoda
+/.github/ISSUE_TEMPLATE/ @zhongdiandaoda
+/.github/DISCUSSION_TEMPLATE/ @zhongdiandaoda
+/.github/PULL_REQUEST_TEMPLATE.md @zhongdiandaoda
+/.github/copilot-instructions.md @zhongdiandaoda
+/.github/dependabot.yml @zhongdiandaoda
+/CITATION.cff @zhongdiandaoda
+/CODE_OF_CONDUCT.md @zhongdiandaoda
+/CONTRIBUTING.md @zhongdiandaoda
+/SECURITY.md @zhongdiandaoda
+/SUPPORT.md @zhongdiandaoda
+/scripts/package-macos.sh @zhongdiandaoda
+/scripts/install-macos.sh @zhongdiandaoda

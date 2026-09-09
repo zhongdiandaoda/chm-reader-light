@@ -1,0 +1,24 @@
+# CHMReaderLight
+
+A lightweight offline CHM reader and library for macOS.
+
+## What It Does
+
+CHMReaderLight provides a library-first workflow, searchable table of contents, body search, reading history, zoom, text encoding controls, and local-only CHM reading on Apple Silicon Macs.
+
+## Trust Notes
+
+- No telemetry, accounts, cloud sync, or hosted document storage.
+- CHM-authored scripts and network access are blocked.
+- Release archives include SHA-256 checksum files.
+- Current builds are not Apple-notarized.
+
+## Key Links
+
+- README: https://github.com/zhongdiandaoda/chm-reader-light#readme
+- Releases: https://github.com/zhongdiandaoda/chm-reader-light/releases
+- Issues: https://github.com/zhongdiandaoda/chm-reader-light/issues/new/choose
+- Support: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/SUPPORT.md
+- Privacy: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/privacy.md
+- Security model: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/security-model.md
+- Troubleshooting: https://github.com/zhongdiandaoda/chm-reader-light/blob/main/docs/troubleshooting.md

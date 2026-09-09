@@ -1,0 +1,32 @@
+changelog:
+  categories:
+    - title: New Features
+      labels:
+        - enhancement
+    - title: Bug Fixes
+      labels:
+        - bug
+    - title: CHM Compatibility
+      labels:
+        - compatibility
+    - title: Performance
+      labels:
+        - performance
+    - title: Accessibility
+      labels:
+        - accessibility
+    - title: Community
+      labels:
+        - question
+        - showcase
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Maintenance
+      labels:
+        - dependencies
+        - github-actions
+        - maintenance
+    - title: Other Changes
+      labels:
+        - "*"
