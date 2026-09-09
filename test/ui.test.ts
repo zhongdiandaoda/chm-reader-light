@@ -446,10 +446,11 @@ test('OpenSSF Scorecard workflow surfaces supply-chain posture', () => {
   assert.match(scorecardWorkflow, /cron: '0 3 \* \* 2'/);
   assert.match(scorecardWorkflow, /^  pull_request:$/m);
   assert.match(scorecardWorkflow, /^  push:$/m);
-  assert.match(scorecardWorkflow, /^permissions:$/m);
-  assert.match(scorecardWorkflow, /^  security-events: write$/m);
-  assert.match(scorecardWorkflow, /^  contents: read$/m);
-  assert.match(scorecardWorkflow, /^  id-token: write$/m);
+  assert.match(scorecardWorkflow, /^permissions: read-all$/m);
+  assert.match(
+    scorecardWorkflow,
+    /scorecard:\n    name: Scorecard(?:.|\n)*?permissions:\n      security-events: write\n      id-token: write\n      contents: read/,
+  );
   assert.match(scorecardWorkflow, /uses: ossf\/scorecard-action@[a-f0-9]{40} # v2\.4\.2/);
   assert.match(scorecardWorkflow, /results_file: scorecard-results\.sarif/);
   assert.match(scorecardWorkflow, /publish_results: true/);

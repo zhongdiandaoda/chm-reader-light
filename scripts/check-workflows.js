@@ -98,7 +98,13 @@ function verifyWorkflowTrustSettings() {
   requireIncludes(dependencyReviewWorkflow, 'comment-summary-in-pr: always', 'Dependency Review PR summary', errors);
   requireIncludes(dependencyReviewWorkflow, 'timeout-minutes: 10', 'Dependency Review job timeout', errors);
 
-  requirePattern(scorecardWorkflow, /^permissions:\n  security-events: write\n  contents: read\n  id-token: write$/m, 'OpenSSF Scorecard permissions', errors);
+  requirePattern(scorecardWorkflow, /^permissions: read-all$/m, 'read-only default OpenSSF Scorecard permissions', errors);
+  requirePattern(
+    scorecardWorkflow,
+    /scorecard:\n    name: Scorecard(?:.|\n)*?permissions:\n      security-events: write\n      id-token: write\n      contents: read/,
+    'job-scoped OpenSSF Scorecard publishing permissions',
+    errors,
+  );
   requireIncludes(scorecardWorkflow, 'persist-credentials: false', 'Scorecard restricted checkout credentials', errors);
   requirePattern(scorecardWorkflow, /ossf\/scorecard-action@[a-f0-9]{40} # v2[.]4[.]2/, 'pinned OpenSSF Scorecard action', errors);
   requireIncludes(scorecardWorkflow, 'results_format: sarif', 'Scorecard SARIF output', errors);
