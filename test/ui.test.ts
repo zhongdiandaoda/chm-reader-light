@@ -34,6 +34,41 @@ test('README stays concise and uses an actual app screenshot', () => {
   ]) assert.ok(fs.existsSync(path.join(projectRoot, relativePath)), relativePath);
 });
 
+test('application branding uses one modern macOS logo across the titlebar and empty library', () => {
+  const html = fs.readFileSync(path.join(projectRoot, 'src', 'index.html'), 'utf-8');
+  const logo = fs.readFileSync(path.join(projectRoot, 'src', 'assets', 'app-logo.svg'), 'utf-8');
+
+  assert.ok(html.includes('<img class="titlebar-logo" src="./assets/app-logo.svg" alt="">'));
+  assert.ok(html.includes('<img class="empty-app-logo" src="./assets/app-logo.svg" alt="">'));
+  assert.ok(logo.includes('<title>Open book logo</title>'));
+  assert.ok(logo.includes('id="background"'));
+  assert.ok(logo.includes('id="paper"'));
+  assert.ok(logo.includes('<rect width="128" height="128" fill="url(#background)"/>'));
+  assert.match(logo, /M24 27[.]5C37[.]2 27 49[.]8 30[.]2 61[.]8 36[.]5V88/);
+  assert.match(logo, /stop-color="#FF6850"/);
+  assert.match(logo, /stop-color="#FFFBEF"/);
+  assert.doesNotMatch(logo, /<rect x="6" y="5"/);
+  assert.doesNotMatch(logo, /M38 28H76L94 46/);
+  assert.doesNotMatch(logo, /chm-lettering/);
+  assert.doesNotMatch(logo, /rotate\(45/);
+});
+
+test('application chrome follows a modern macOS visual system', () => {
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+
+  assert.match(css, /--accent: #e66b00;/);
+  assert.match(css, /--reader-paper: #fffdf9;/);
+  assert.match(css, /--font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text"/);
+  assert.match(css, /--font-display: "SF Pro Display", -apple-system/);
+  assert.match(css, /[.]collection-item[.]active\s*{[^}]*background: var\(--accent-soft\);/s);
+  assert.match(css, /[.]empty-app-logo\s*{[^}]*width: 92px;[^}]*drop-shadow/s);
+  assert.match(css, /[.]library-content\s*{[^}]*background: var\(--surface\);/s);
+  assert.doesNotMatch(css, /letter-spacing:\s*-/);
+  assert.doesNotMatch(css, /radial-gradient/);
+  assert.match(main, /backgroundColor: '#f5f5f7'/);
+});
+
 test('share kit gives maintainers reusable launch copy', () => {
   const shareKit = fs.readFileSync(path.join(projectRoot, 'docs', 'share-kit.md'), 'utf-8');
   const sharePostScript = fs.readFileSync(path.join(projectRoot, 'scripts', 'prepare-share-post.js'), 'utf-8');
@@ -1685,12 +1720,16 @@ test('macOS packaging vendors chmlib into the app bundle', () => {
   assert.match(packageScript, /THIRD_PARTY_NOTICES/);
   assert.match(preflightScript, /clang codesign curl ditto install_name_tool lipo otool patch shasum swift tar/);
   assert.match(iconScript, /rasterize-svg[.]swift/);
+  assert.match(iconScript, /1024 1024 100 185[.]4/);
   assert.doesNotMatch(iconScript, /sips[^\n]+\$source_svg/);
   assert.match(iconRasterizer, /import AppKit/);
   assert.match(iconRasterizer, /NSImage\(contentsOf:/);
-  assert.match(iconRasterizer, /CommandLine[.]arguments[.]count == 3 \|\| CommandLine[.]arguments[.]count == 5/);
+  assert.match(iconRasterizer, /CommandLine[.]arguments[.]count == 3 \|\| CommandLine[.]arguments[.]count == 5 \|\| CommandLine[.]arguments[.]count == 7/);
   assert.match(iconRasterizer, /let parsedWidth = Double\(CommandLine[.]arguments\[3\]\)/);
   assert.match(iconRasterizer, /let parsedHeight = Double\(CommandLine[.]arguments\[4\]\)/);
+  assert.match(iconRasterizer, /let parsedInset = Double\(CommandLine[.]arguments\[5\]\)/);
+  assert.match(iconRasterizer, /let parsedCornerRadius = Double\(CommandLine[.]arguments\[6\]\)/);
+  assert.match(iconRasterizer, /NSBezierPath\(roundedRect: artworkRect, xRadius: cornerRadius, yRadius: cornerRadius\)/);
   assert.match(iconRasterizer, /width: targetWidth/);
   assert.match(iconRasterizer, /height: targetHeight/);
   assert.match(iconScript, /build-icns[.]js/);

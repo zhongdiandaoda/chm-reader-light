@@ -65,7 +65,6 @@ body:
       label: Mac architecture
       options:
         - Apple Silicon
-        - Intel
         - Not sure
     validations:
       required: true

@@ -529,7 +529,7 @@ function createWindow() {
     minWidth: 760,
     minHeight: 520,
     titleBarStyle: 'hiddenInset',
-    backgroundColor: '#f5f4f1',
+    backgroundColor: '#f5f5f7',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

@@ -28,7 +28,8 @@ SWIFT_MODULECACHE_PATH="$module_cache_dir" \
 CLANG_MODULE_CACHE_PATH="$module_cache_dir" \
 swift "$root_dir/scripts/rasterize-svg.swift" \
   "$source_svg" \
-  "$source_png"
+  "$source_png" \
+  1024 1024 100 185.4
 
 while IFS=: read -r filename pixels; do
   sips -z "$pixels" "$pixels" "$source_png" --out "$iconset_dir/$filename" >/dev/null

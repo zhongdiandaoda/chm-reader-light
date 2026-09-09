@@ -9,14 +9,14 @@ function read(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), 'utf-8');
 }
 
-test('public docs and badges target Apple Silicon only', () => {
+test('public docs target Apple Silicon only', () => {
   const publicEntryPoints = [
     'README.md',
     'README.en.md',
+    '.github/ISSUE_TEMPLATE/bug_report.yml',
     '.github/ISSUE_TEMPLATE/install_help.yml',
     '.github/DISCUSSION_TEMPLATE/release-feedback.yml',
   ].map(read).join('\n');
-  assert.doesNotMatch(publicEntryPoints, /actions\/workflows\/(?:ci|codeql)[.]yml\/badge[.]svg/);
   assert.doesNotMatch(publicEntryPoints, /Intel|x64|mac-x64/i);
 
   const readmes = `${read('README.md')}\n${read('README.en.md')}`;
