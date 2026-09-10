@@ -89,7 +89,7 @@
     "@electron/osx-sign": "2.6.0",
     "@electron/packager": "20.0.4",
     "@types/node": "^24.13.3",
-    "electron": "43.2.0",
+    "electron": "44.2.0",
     "lint-staged": "16.2.7",
     "typescript": "^6.0.3"
   },
