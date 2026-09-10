@@ -715,15 +715,23 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
       </svg>
     </span>
     <span class="library-card-text">
-      <span class="library-name"></span>
-      <span class="library-location"></span>
-      <span class="library-last-opened"></span>
-      <span class="library-added-date"></span>
-      <span class="library-source-status" hidden></span>
+      <span class="library-card-details">
+        <span class="library-name"></span>
+        <span class="library-location"></span>
+        <span class="library-path"></span>
+        <span class="library-date-row">
+          <span class="library-last-opened"></span>
+          <span class="library-added-date"></span>
+        </span>
+        <span class="library-source-status" hidden></span>
+      </span>
       <span class="library-continue-reading" hidden></span>
     </span>`;
   const nameElement = open.querySelector<HTMLElement>('.library-name');
-  if (nameElement) nameElement.textContent = entry.name;
+  if (nameElement) {
+    nameElement.textContent = entry.name;
+    nameElement.title = entry.name;
+  }
   const location = getBookLocationLabel(entry.filePath);
   const locationElement = open.querySelector<HTMLElement>('.library-location');
   if (locationElement) {
@@ -731,6 +739,12 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
     locationElement.textContent = location;
     locationElement.hidden = !location;
     if (location) describedBy.push(locationElement.id);
+  }
+  const pathElement = open.querySelector<HTMLElement>('.library-path');
+  if (pathElement) {
+    pathElement.textContent = entry.filePath || '';
+    pathElement.title = entry.filePath || '';
+    pathElement.hidden = !entry.filePath;
   }
   const lastOpenedDate = formatLibraryAddedDate(entry.lastOpenedAt);
   const lastOpenedElement = open.querySelector<HTMLElement>('.library-last-opened');

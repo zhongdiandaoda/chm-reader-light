@@ -1299,7 +1299,7 @@ test('library cards show last-opened metadata after successful opens', () => {
   assert.match(renderer, /lastOpenedElement\.textContent = lastOpenedDate \? t\('library\.lastOpened', \{ date: lastOpenedDate \}\) : ''/);
   assert.match(renderer, /lastOpenedElement\.hidden = !lastOpenedDate/);
   assert.match(css, /\.library-last-opened\s*{/);
-  assert.match(css, /\.library-content\[data-layout="list"\] \.library-last-opened\s*{/);
+  assert.match(css, /\.library-content\[data-layout="list"\] \.library-last-opened,\s*\.library-content\[data-layout="list"\] \.library-added-date\s*{/s);
 });
 
 test('library card open buttons expose metadata to assistive tech', () => {
@@ -1367,8 +1367,27 @@ test('library cards reveal source CHM files without a copy-path action', () => {
   assert.doesNotMatch(main, /handleTrustedIpc\('clipboard:write-text'/);
   assert.match(css, /\.library-card-actions\s*{/);
   assert.doesNotMatch(css, /library-card-copy/);
-  assert.match(css, /padding: 8px 70px 8px 10px;/);
+  assert.match(css, /padding: 9px 78px 9px 12px;/);
   assert.match(css, /\.library-card:focus-within \.library-card-actions/s);
+});
+
+test('list library cards use a compact file-manager hierarchy', () => {
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+  const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
+
+  assert.match(renderer, /<span class="library-card-details">/);
+  assert.match(renderer, /<span class="library-path"><\/span>/);
+  assert.match(renderer, /<span class="library-date-row">/);
+  assert.match(renderer, /nameElement\.title = entry\.name/);
+  assert.match(renderer, /pathElement\.textContent = entry\.filePath \|\| ''/);
+  assert.match(renderer, /pathElement\.title = entry\.filePath \|\| ''/);
+  assert.match(css, /\.library-content\[data-layout="list"\] \.library-grid\s*\{[^}]*gap: 4px;[^}]*max-width: 1040px;/s);
+  assert.match(css, /\.library-content\[data-layout="list"\] \.library-card-open\s*\{[^}]*grid-template-columns: 40px minmax\(0, 1fr\);[^}]*min-height: 70px;/s);
+  assert.match(css, /\.library-content\[data-layout="list"\] \.library-card-open:hover,[^{]*\.library-content\[data-layout="list"\] \.library-card-open:focus-visible\s*\{[^}]*box-shadow: inset 3px 0 0 var\(--accent\);/s);
+  assert.match(css, /\.library-content\[data-layout="list"\] \.library-name\s*\{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/s);
+  assert.match(css, /\.library-content\[data-layout="list"\] \.library-continue-reading\s*\{[^}]*justify-self: end;/s);
+  assert.match(css, /\.view-toggle \.icon-button\[aria-pressed="true"\]\s*\{[^}]*background: var\(--accent-soft\);[^}]*color: var\(--selected-text\);/s);
+  assert.match(css, /@media \(max-width: 620px\)[\s\S]*#library-toolbar \.open-button\s*\{[^}]*flex: 0 0 auto;[^}]*white-space: nowrap;/);
 });
 
 test('library cards warn when the saved CHM source file is missing', () => {
