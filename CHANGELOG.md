@@ -31,6 +31,7 @@ Notable user-facing changes to CHMReaderLight are documented here.
 
 ### Fixed
 
+- Fixed slow, blank window restores after macOS sleep or Dock reactivation by preserving the loaded window and repainting it on resume.
 - Fixed overlapping open, reload, and cache-clear operations that could publish stale reader state.
 - Fixed failed imports, opens, searches, menu actions, and startup operations leaving loading states or unhandled promise rejections.
 - Fixed cache identity, extraction cleanup, malformed topic URLs, missing source handling, and path comparison edge cases.
