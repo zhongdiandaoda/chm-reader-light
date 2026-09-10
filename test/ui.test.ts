@@ -86,7 +86,9 @@ test('settings provides persistent language and theme controls', () => {
   assert.match(renderer, /const appThemeStorageKey = 'chm-reader-theme'/);
   assert.match(renderer, /savePreference\(appLocaleStorageKey, locale\)/);
   assert.match(renderer, /savePreference\(appThemeStorageKey, theme\)/);
-  assert.match(renderer, /document\.documentElement\.dir = getLocaleDirection\(currentLocale\)/);
+  assert.match(renderer, /const direction = getLocaleDirection\(currentLocale\)/);
+  assert.match(renderer, /document\.documentElement\.dir = direction/);
+  assert.match(renderer, /document\.body\.dir = direction/);
   assert.match(renderer, /if \(activeView === 'reader' \|\| activeView === 'library'\) settingsReturnView = activeView/);
   assert.match(renderer, /window\.chmReader\.setPreferences\(currentLocale, currentTheme\)/);
   assert.match(preload, /ipcRenderer\.invoke\('preferences:set', locale, theme\)/);

@@ -487,8 +487,10 @@ function openSettings(): void {
 }
 
 function applyStaticTranslations(): void {
+  const direction = getLocaleDirection(currentLocale);
   document.documentElement.lang = currentLocale;
-  document.documentElement.dir = getLocaleDirection(currentLocale);
+  document.documentElement.dir = direction;
+  document.body.dir = direction;
   document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {
     const key = element.dataset.i18n as TranslationKey | undefined;
     if (!key) return;

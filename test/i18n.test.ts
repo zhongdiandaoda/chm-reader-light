@@ -31,6 +31,7 @@ test('the language selector exposes all requested native language names and Arab
   ]);
   assert.equal(getLocaleDirection('ar'), 'rtl');
   assert.equal(getLocaleDirection('zh-CN'), 'ltr');
+  assert.equal(getLocaleDirection('ru'), 'ltr');
 });
 
 test('translations support both application languages and interpolate dynamic values', () => {
