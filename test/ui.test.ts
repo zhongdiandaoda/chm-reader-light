@@ -57,16 +57,48 @@ test('application chrome follows a modern macOS visual system', () => {
   const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
   const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
 
-  assert.match(css, /--accent: #e66b00;/);
-  assert.match(css, /--reader-paper: #fffdf9;/);
+  for (const token of [
+    '--surface-subtle: #f7f7f5;',
+    '--sidebar: #f1f1ee;',
+    '--toolbar: #f7f7f5;',
+    '--surface: #fcfcfa;',
+    '--reader-paper: #fcfcfa;',
+    '--text: #292929;',
+    '--muted: #777777;',
+    '--border: #e5e5e1;',
+    '--control-hover: #eaeae7;',
+    '--accent: #c97832;',
+    '--accent-soft: #f3e2d3;',
+    '--selected-text: #b86222;',
+    '--link: #b86222;',
+    '--table-header: #e8e8e6;',
+    '--disabled-text: #9a9a96;',
+    '--search-highlight: #f6e8b8;',
+    '--search-highlight-current: #edc98a;',
+  ]) assert.ok(css.includes(token), token);
   assert.match(css, /--font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text"/);
   assert.match(css, /--font-display: "SF Pro Display", -apple-system/);
-  assert.match(css, /[.]collection-item[.]active\s*{[^}]*background: var\(--accent-soft\);/s);
+  assert.match(css, /[.]collection-item[.]active\s*{[^}]*background: var\(--selected-background\);/s);
+  assert.match(css, /[.]tree-row:hover\s*{[^}]*background: var\(--control-hover\);/s);
+  assert.match(css, /[.]tree-row[.]active\s*{[^}]*background: var\(--selected-background\);[^}]*color: var\(--selected-text\);/s);
+  assert.match(css, /[.]tree-item[.]search-match > [.]tree-row\s*{[^}]*background: var\(--search-highlight\);/s);
+  assert.match(css, /[.]tree-item[.]search-match > [.]tree-row[.]active\s*{[^}]*background: var\(--search-highlight-current\);/s);
+  assert.match(css, /[.]tree-actions-menu button:disabled\s*{[^}]*color: var\(--disabled-text\);/s);
   assert.match(css, /[.]empty-app-logo\s*{[^}]*width: 92px;[^}]*drop-shadow/s);
   assert.match(css, /[.]library-content\s*{[^}]*background: var\(--surface\);/s);
   assert.doesNotMatch(css, /letter-spacing:\s*-/);
   assert.doesNotMatch(css, /radial-gradient/);
-  assert.match(main, /backgroundColor: '#f5f5f7'/);
+  assert.match(main, /backgroundColor: '#f7f7f5'/);
+  assert.match(main, /light: '#f7f7f5'/);
+});
+
+test('light reader document palette matches the application design tokens', () => {
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+
+  assert.match(main, /light:\s*{[^}]*background: '#fcfcfa'[^}]*text: '#292929'[^}]*link: '#b86222'[^}]*border: '#e5e5e1'[^}]*tableHeader: '#e8e8e6'[^}]*tableHeaderText: '#333333'[^}]*searchHighlight: '#f6e8b8'[^}]*searchHighlightCurrent: '#edc98a'/s);
+  assert.match(main, /th\s*{[^}]*background: \${palette[.]tableHeader} !important;[^}]*color: \${palette[.]tableHeaderText} !important;/s);
+  assert.match(main, /[.]chm-search-match\s*{[^}]*background: \${palette[.]searchHighlight};/s);
+  assert.match(main, /[.]chm-search-current\s*{[^}]*background: \${palette[.]searchHighlightCurrent};/s);
 });
 
 test('settings provides persistent language and theme controls', () => {
@@ -77,6 +109,9 @@ test('settings provides persistent language and theme controls', () => {
 
   assert.match(html, /class="icon-button settings-button" id="library-settings"[^>]+data-i18n-title="settings[.]open"/);
   assert.match(html, /class="icon-button settings-button" id="reader-settings"[^>]+data-i18n-title="settings[.]open"/);
+  assert.equal((html.match(/class="lucide lucide-settings"/g) || []).length, 2);
+  assert.match(html, /M12[.]22 2h-[.]44a2 2 0 0 0-2 2v[.]18/);
+  assert.doesNotMatch(html, /M10 2[.]8v2M10 15[.]2v2/);
   assert.doesNotMatch(html, /id="(?:library|reader)-theme"|class="[^"]*theme-button/);
   assert.match(html, /id="settings-view"/);
   assert.match(html, /<select id="app-language"/);
@@ -1800,6 +1835,14 @@ test('macOS packaging vendors chmlib into the app bundle', () => {
   assert.match(packageScript, /vendor-chmlib-macos[.]sh/);
   assert.match(packageScript, /--ignore=/);
   assert.match(packageScript, /THIRD_PARTY_NOTICES/);
+  assert.match(packageScript, /staging_root=.+mktemp/);
+  assert.match(packageScript, /--out="\$staging_root"/);
+  assert.doesNotMatch(packageScript, /--out=dist/);
+  assert.ok(
+    packageScript.indexOf('sign-macos-app.js') < packageScript.lastIndexOf('\npublishPackagedApp\n'),
+    'the staged app must be fully signed before it replaces the published dist bundle',
+  );
+  assert.match(packageScript, /trap cleanupPackagingStaging EXIT/);
   assert.match(preflightScript, /clang codesign curl ditto install_name_tool lipo otool patch shasum swift tar/);
   assert.match(iconScript, /rasterize-svg[.]swift/);
   assert.match(iconScript, /1024 1024 100 185[.]4/);

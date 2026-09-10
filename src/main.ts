@@ -572,7 +572,7 @@ function createWindow() {
     minHeight: 520,
     show: false,
     titleBarStyle: 'hiddenInset',
-    backgroundColor: '#f5f5f7',
+    backgroundColor: '#f7f7f5',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -1002,29 +1002,84 @@ function normalizeTextEncoding(encoding: string): string | null {
   return encoding;
 }
 
-function addSearchHighlightStyles(markup: string): string {
+interface ReaderThemePalette {
+  background: string;
+  text: string;
+  link: string;
+  border: string;
+  tableHeader: string;
+  tableHeaderText: string;
+  searchHighlight: string;
+  searchHighlightCurrent: string;
+  searchRing: string;
+}
+
+const readerThemePalettes: Record<AppTheme, ReaderThemePalette> = {
+  light: {
+    background: '#fcfcfa',
+    text: '#292929',
+    link: '#b86222',
+    border: '#e5e5e1',
+    tableHeader: '#e8e8e6',
+    tableHeaderText: '#333333',
+    searchHighlight: '#f6e8b8',
+    searchHighlightCurrent: '#edc98a',
+    searchRing: 'rgba(184, 98, 34, 0.24)',
+  },
+  warm: {
+    background: '#f7f0df',
+    text: '#332b22',
+    link: '#a64b16',
+    border: '#d8c7a8',
+    tableHeader: '#e4d9c8',
+    tableHeaderText: '#493d31',
+    searchHighlight: '#f0dfac',
+    searchHighlightCurrent: '#e4ba70',
+    searchRing: 'rgba(152, 69, 22, 0.24)',
+  },
+  cool: {
+    background: '#f1f6f7',
+    text: '#1f3033',
+    link: '#186b70',
+    border: '#bdd0d2',
+    tableHeader: '#dfe9ea',
+    tableHeaderText: '#2b4145',
+    searchHighlight: '#e5e6ad',
+    searchHighlightCurrent: '#d4cb72',
+    searchRing: 'rgba(21, 93, 98, 0.24)',
+  },
+  'dark-eye': {
+    background: '#171b18',
+    text: '#d8e0d5',
+    link: '#8fc9a2',
+    border: '#3b463e',
+    tableHeader: '#29312a',
+    tableHeaderText: '#d3ddd4',
+    searchHighlight: '#5d562c',
+    searchHighlightCurrent: '#806c32',
+    searchRing: 'rgba(169, 217, 184, 0.28)',
+  },
+};
+
+function addSearchHighlightStyles(markup: string, theme: AppTheme): string {
+  const palette = readerThemePalettes[theme];
   const styles = `<style>
-    .chm-search-match { background: #f7df83; color: inherit; border-radius: 2px; padding: 0 1px; }
-    .chm-search-current { background: #f2a93b; box-shadow: 0 0 0 2px rgba(210, 125, 20, 0.28); animation: chm-search-pulse 650ms ease-out; }
-    @keyframes chm-search-pulse { from { box-shadow: 0 0 0 6px rgba(210, 125, 20, 0.38); } to { box-shadow: 0 0 0 2px rgba(210, 125, 20, 0.28); } }
+    .chm-search-match { background: ${palette.searchHighlight}; color: inherit; border-radius: 2px; padding: 0 1px; }
+    .chm-search-current { background: ${palette.searchHighlightCurrent}; box-shadow: 0 0 0 2px ${palette.searchRing}; animation: chm-search-pulse 650ms ease-out; }
+    @keyframes chm-search-pulse { from { box-shadow: 0 0 0 6px ${palette.searchRing}; } to { box-shadow: 0 0 0 2px ${palette.searchRing}; } }
   </style>`;
   return /<\/head>/i.test(markup) ? markup.replace(/<\/head>/i, `${styles}</head>`) : `${styles}${markup}`;
 }
 
 function addReaderThemeStyles(markup: string, theme: AppTheme): string {
-  const palettes: Record<AppTheme, { background: string; text: string; link: string; border: string }> = {
-    light: { background: '#fffdf9', text: '#1d1d1f', link: '#b94700', border: '#d8d8dc' },
-    warm: { background: '#f7f0df', text: '#332b22', link: '#a64b16', border: '#d8c7a8' },
-    cool: { background: '#f1f6f7', text: '#1f3033', link: '#186b70', border: '#bdd0d2' },
-    'dark-eye': { background: '#171b18', text: '#d8e0d5', link: '#8fc9a2', border: '#3b463e' },
-  };
-  const palette = palettes[theme];
+  const palette = readerThemePalettes[theme];
   const styles = `<style id="chm-reader-theme">
     :root { color-scheme: ${theme === 'dark-eye' ? 'dark' : 'light'}; }
     html, body { background: ${palette.background} !important; color: ${palette.text} !important; }
     body { min-height: 100vh; }
     a, a:visited { color: ${palette.link} !important; }
     hr, table, td, th, pre, code, blockquote { border-color: ${palette.border} !important; }
+    th { background: ${palette.tableHeader} !important; color: ${palette.tableHeaderText} !important; }
     ${theme === 'dark-eye' ? 'img { opacity: 0.88; }' : ''}
   </style>`;
   return /<\/head>/i.test(markup) ? markup.replace(/<\/head>/i, `${styles}</head>`) : `${styles}${markup}`;
@@ -1247,7 +1302,10 @@ function registerBookProtocol(): void {
         );
         if (searchQuery) {
           const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match') || '', 10) || 0);
-          markup = addSearchHighlightStyles(highlightSearchMatches(markup, searchQuery, selectedIndex).markup);
+          markup = addSearchHighlightStyles(
+            highlightSearchMatches(markup, searchQuery, selectedIndex).markup,
+            theme,
+          );
         }
         markup = addReaderThemeStyles(markup, theme);
         markup = injectContentNavigationBridge(markup, scriptNonce);
@@ -1296,7 +1354,7 @@ handleTrustedIpc('preferences:set', (_event: IpcMainInvokeEvent, locale: string,
   appLocale = normalizeLocale(locale);
   appTheme = normalizeTheme(theme);
   getLiveMainWindow()?.setBackgroundColor({
-    light: '#f5f5f7',
+    light: '#f7f7f5',
     warm: '#f2eadb',
     cool: '#eaf1f2',
     'dark-eye': '#151916',
