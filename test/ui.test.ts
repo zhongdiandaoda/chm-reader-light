@@ -75,20 +75,22 @@ test('settings provides persistent language and theme controls', () => {
   const preload = fs.readFileSync(path.join(projectRoot, 'src', 'preload.ts'), 'utf-8');
   const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
 
-  assert.match(html, /id="library-settings"/);
-  assert.match(html, /id="reader-settings"/);
+  assert.match(html, /class="icon-button settings-button" id="library-settings"[^>]+data-i18n-title="settings[.]open"/);
+  assert.match(html, /class="icon-button settings-button" id="reader-settings"[^>]+data-i18n-title="settings[.]open"/);
+  assert.doesNotMatch(html, /id="(?:library|reader)-theme"|class="[^"]*theme-button/);
   assert.match(html, /id="settings-view"/);
   assert.match(html, /<select id="app-language"/);
+  assert.match(html, /<select id="app-theme"/);
   for (const theme of ['light', 'warm', 'cool', 'dark-eye']) {
-    assert.match(html, new RegExp(`name="app-theme" value="${theme}"`));
+    assert.match(html, new RegExp(`option value="${theme}"`));
   }
+  assert.doesNotMatch(html, /name="app-theme"|class="theme-option"/);
   assert.match(renderer, /const appLocaleStorageKey = 'chm-reader-locale'/);
   assert.match(renderer, /const appThemeStorageKey = 'chm-reader-theme'/);
   assert.match(renderer, /savePreference\(appLocaleStorageKey, locale\)/);
   assert.match(renderer, /savePreference\(appThemeStorageKey, theme\)/);
-  assert.match(renderer, /const direction = getLocaleDirection\(currentLocale\)/);
-  assert.match(renderer, /document\.documentElement\.dir = direction/);
-  assert.match(renderer, /document\.body\.dir = direction/);
+  assert.match(renderer, /elements[.]appTheme[.]value = currentTheme/);
+  assert.match(renderer, /elements[.]appTheme[.]addEventListener\('change'/);
   assert.match(renderer, /if \(activeView === 'reader' \|\| activeView === 'library'\) settingsReturnView = activeView/);
   assert.match(renderer, /window\.chmReader\.setPreferences\(currentLocale, currentTheme\)/);
   assert.match(preload, /ipcRenderer\.invoke\('preferences:set', locale, theme\)/);
@@ -97,6 +99,19 @@ test('settings provides persistent language and theme controls', () => {
   assert.match(main, /const help = appMenuLabels\[appLocale\]/);
   assert.match(main, /label: help\.githubRepository/);
   assert.doesNotMatch(main, /label: 'GitHub Repository'/);
+});
+
+test('Arabic translations keep the application chrome in left-to-right layout', () => {
+  const html = fs.readFileSync(path.join(projectRoot, 'src', 'index.html'), 'utf-8');
+  const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+
+  assert.match(html, /<html lang="zh-CN" dir="ltr">/);
+  assert.match(renderer, /const direction = getLocaleDirection\(currentLocale\)/);
+  assert.match(renderer, /document\.documentElement\.dir = 'ltr'/);
+  assert.match(renderer, /document\.body\.dir = 'ltr'/);
+  assert.match(renderer, /element\.dir = direction/);
+  assert.doesNotMatch(renderer, /document\.(?:documentElement|body)\.dir = direction/);
 });
 
 test('all four themes cover application chrome and CHM document content', () => {
@@ -108,8 +123,8 @@ test('all four themes cover application chrome and CHM document content', () => 
     assert.match(css, new RegExp(`:root\\[data-theme="${theme}"\\]`));
   }
   assert.match(css, /\.settings-view\s*{/);
-  assert.match(css, /\.theme-option:has\(input:checked\)/);
-  assert.match(css, /\[dir="rtl"\] \.toolbar/);
+  assert.match(css, /\.settings-select-label select\s*\{/);
+  assert.doesNotMatch(css, /\[dir="rtl"\] \.toolbar/);
   assert.match(renderer, /contentUrl\.searchParams\.set\('theme', currentTheme\)/);
   assert.match(main, /function addReaderThemeStyles\(markup: string, theme: AppTheme\): string/);
   assert.match(main, /const theme = normalizeTheme\(requestUrl\.searchParams\.get\('theme'\)\)/);
@@ -1800,6 +1815,9 @@ test('macOS packaging vendors chmlib into the app bundle', () => {
   assert.match(iconRasterizer, /width: targetWidth/);
   assert.match(iconRasterizer, /height: targetHeight/);
   assert.match(iconScript, /build-icns[.]js/);
+  assert.match(iconScript, /Reusing verified macOS icon/);
+  assert.match(iconScript, /icon_cache_dir="\$root_dir\/[.]native-build\/macos-icon"/);
+  assert.match(iconScript, /shasum -a 256 -c/);
   assert.doesNotMatch(iconScript, /iconutil/);
   assert.match(icnsBuilder, /header[.]write\('icns'/);
   assert.match(icnsBuilder, /'ic10'/);
@@ -1935,6 +1953,10 @@ test('macOS packaging builds and verifies a pinned CVE-patched CHMLib', () => {
   assert.doesNotMatch(preflightScript, /opt\/homebrew|usr\/local|brew install/);
   assert.doesNotMatch(vendorScript, /opt\/homebrew|usr\/local|brew install/);
   assert.match(packageScript, /build-chmlib-macos[.]sh/);
+  assert.match(packageScript, /Reusing verified CHMLib build/);
+  assert.match(packageScript, /native_build_dir="\$root_dir\/[.]native-build\/darwin-\$arch"/);
+  assert.match(buildScript, /cached_archive_path="\$output_dir\/source\/CHMLib-\$chmlib_commit[.]tar[.]gz"/);
+  assert.match(buildScript, /Reusing verified CHMLib source archive/);
   assert.ok(
     packageScript.indexOf('build-chmlib-macos.sh') < packageScript.indexOf('vendor-chmlib-macos.sh'),
     'the pinned native build must finish before vendoring starts',
@@ -1959,6 +1981,17 @@ test('macOS packaging builds and verifies a pinned CVE-patched CHMLib', () => {
   assert.match(thirdPartyNotice, /CVE-2025-48172/);
   assert.match(securityModel, /CVE-2025-48172/);
   assert.match(releaseDoc, /CHMLIB-PROVENANCE[.]txt/);
+});
+
+test('macOS packaging avoids rebuilding application sources after the full check', () => {
+  const packageScript = fs.readFileSync(path.join(projectRoot, 'scripts', 'package-macos.sh'), 'utf-8');
+
+  const fullCheckBranch = packageScript.indexOf('npm run check');
+  const skippedCheckBranch = packageScript.indexOf('else', fullCheckBranch);
+  const build = packageScript.indexOf('npm run build');
+  assert.ok(fullCheckBranch >= 0 && skippedCheckBranch > fullCheckBranch);
+  assert.ok(build > skippedCheckBranch, 'the standalone build should run only when full checks are skipped');
+  assert.equal((packageScript.match(/npm run build/g) || []).length, 1);
 });
 
 test('macOS package declares CHM document association', () => {

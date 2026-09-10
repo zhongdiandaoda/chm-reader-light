@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" dir="ltr">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -254,17 +254,20 @@
               <select id="app-language" aria-labelledby="language-heading"></select>
             </label>
           </section>
-          <section class="settings-section settings-theme-section" aria-labelledby="appearance-heading">
+          <section class="settings-section" aria-labelledby="appearance-heading">
             <div class="settings-section-copy">
               <h2 id="appearance-heading" data-i18n="settings.appearance">配色主题</h2>
               <p data-i18n="settings.appearanceDescription">选择书库、设置和阅读正文的显示配色。</p>
             </div>
-            <div class="theme-options" id="theme-options" role="radiogroup" aria-labelledby="appearance-heading">
-              <label class="theme-option" data-theme-option="light"><input type="radio" name="app-theme" value="light"><span class="theme-swatch swatch-light" aria-hidden="true"><i></i><i></i><i></i></span><span class="theme-option-copy"><strong data-i18n="theme.light">浅白色</strong><small data-i18n="theme.lightDescription">清爽明亮的默认配色</small></span><span class="theme-check" aria-hidden="true">✓</span></label>
-              <label class="theme-option" data-theme-option="warm"><input type="radio" name="app-theme" value="warm"><span class="theme-swatch swatch-warm" aria-hidden="true"><i></i><i></i><i></i></span><span class="theme-option-copy"><strong data-i18n="theme.warm">暖色</strong><small data-i18n="theme.warmDescription">柔和米白与暖橙色</small></span><span class="theme-check" aria-hidden="true">✓</span></label>
-              <label class="theme-option" data-theme-option="cool"><input type="radio" name="app-theme" value="cool"><span class="theme-swatch swatch-cool" aria-hidden="true"><i></i><i></i><i></i></span><span class="theme-option-copy"><strong data-i18n="theme.cool">冷色</strong><small data-i18n="theme.coolDescription">冷静灰蓝与青绿色</small></span><span class="theme-check" aria-hidden="true">✓</span></label>
-              <label class="theme-option" data-theme-option="dark-eye"><input type="radio" name="app-theme" value="dark-eye"><span class="theme-swatch swatch-dark-eye" aria-hidden="true"><i></i><i></i><i></i></span><span class="theme-option-copy"><strong data-i18n="theme.darkEye">黑色护眼</strong><small data-i18n="theme.darkEyeDescription">低亮度深色与柔和绿色</small></span><span class="theme-check" aria-hidden="true">✓</span></label>
-            </div>
+            <label class="settings-select-label">
+              <span class="sr-only" data-i18n="settings.appearance">配色主题</span>
+              <select id="app-theme" aria-labelledby="appearance-heading">
+                <option value="light" data-i18n="theme.light">浅白色</option>
+                <option value="warm" data-i18n="theme.warm">暖色</option>
+                <option value="cool" data-i18n="theme.cool">冷色</option>
+                <option value="dark-eye" data-i18n="theme.darkEye">黑色护眼</option>
+              </select>
+            </label>
           </section>
         </div>
       </main>

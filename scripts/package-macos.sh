@@ -23,10 +23,16 @@ fi
 if [[ "${SKIP_CHECKS:-0}" != "1" ]]; then
   npm test
   npm run check
+else
+  npm run build
 fi
 
-npm run build
-"$root_dir/scripts/build-chmlib-macos.sh" "$arch"
+native_build_dir="$root_dir/.native-build/darwin-$arch"
+if "$root_dir/scripts/check-chmlib-macos.sh" "$arch" "$native_build_dir" >/dev/null 2>&1; then
+  printf "Reusing verified CHMLib build: %s\n" "$native_build_dir"
+else
+  "$root_dir/scripts/build-chmlib-macos.sh" "$arch"
+fi
 
 icon_path="$root_dir/build/assets/app-icon.icns"
 "$root_dir/scripts/generate-macos-icon.sh" "$icon_path"

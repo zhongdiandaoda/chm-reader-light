@@ -215,7 +215,7 @@ const elements = {
   readerSettings: query('#reader-settings'),
   settingsBack: query('#settings-back'),
   appLanguage: query('#app-language'),
-  themeOptions: query('#theme-options'),
+  appTheme: query('#app-theme'),
 };
 
 const libraryLayoutStorageKey = 'chm-reader-library-layout';
@@ -489,11 +489,12 @@ function openSettings(): void {
 function applyStaticTranslations(): void {
   const direction = getLocaleDirection(currentLocale);
   document.documentElement.lang = currentLocale;
-  document.documentElement.dir = direction;
-  document.body.dir = direction;
+  document.documentElement.dir = 'ltr';
+  document.body.dir = 'ltr';
   document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {
     const key = element.dataset.i18n as TranslationKey | undefined;
     if (!key) return;
+    element.dir = direction;
     const value = t(key);
     if (value.includes('\n')) {
       element.replaceChildren(...value.split('\n').flatMap((part, index) => (
@@ -529,9 +530,7 @@ function populateLanguageOptions(): void {
 }
 
 function updateThemeSelection(): void {
-  elements.themeOptions.querySelectorAll<HTMLInputElement>('input[name="app-theme"]').forEach((input) => {
-    input.checked = input.value === currentTheme;
-  });
+  elements.appTheme.value = currentTheme;
 }
 
 function applyTheme(theme: AppTheme, persist = false): void {
@@ -1928,9 +1927,8 @@ elements.settingsBack.addEventListener('click', () => showView(settingsReturnVie
 elements.appLanguage.addEventListener('change', () => {
   applyLocale(normalizeLocale(elements.appLanguage.value), true);
 });
-elements.themeOptions.addEventListener('change', (event: Event) => {
-  const input = (event.target as Element | null)?.closest<HTMLInputElement>('input[name="app-theme"]');
-  if (input) applyTheme(normalizeTheme(input.value), true);
+elements.appTheme.addEventListener('change', () => {
+  applyTheme(normalizeTheme(elements.appTheme.value), true);
 });
 query('#toggle-sidebar').addEventListener('click', toggleReaderSidebar);
 elements.back.addEventListener('click', () => moveHistory(-1));

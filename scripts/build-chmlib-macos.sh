@@ -29,8 +29,13 @@ cleanup() {
 }
 trap cleanup EXIT
 archive_path="$work_dir/chmlib.tar.gz"
+cached_archive_path="$output_dir/source/CHMLib-$chmlib_commit.tar.gz"
 if [[ -n "${CHMLIB_ARCHIVE_PATH:-}" ]]; then
   cp "$CHMLIB_ARCHIVE_PATH" "$archive_path"
+elif [[ -f "$cached_archive_path" ]] \
+  && printf "%s  %s\n" "$archive_sha256" "$cached_archive_path" | shasum -a 256 -c - >/dev/null 2>&1; then
+  printf "Reusing verified CHMLib source archive: %s\n" "$cached_archive_path"
+  cp "$cached_archive_path" "$archive_path"
 else
   curl --fail --location --proto '=https' --tlsv1.2 --retry 3 --output "$archive_path" "$archive_url"
 fi

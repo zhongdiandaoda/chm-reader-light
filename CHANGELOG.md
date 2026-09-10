@@ -4,6 +4,7 @@ Notable user-facing changes to CHMReaderLight are documented here.
 
 ## Unreleased
 
+- Improved local macOS packaging speed by reusing verified CHMLib and icon build inputs and avoiding a duplicate application build.
 ### Added
 
 - Added a Settings page with persistent language selection for English, Simplified Chinese, Traditional Chinese, Japanese, Korean, Spanish, French, German, Portuguese, Italian, Russian, and Arabic.
@@ -16,6 +17,8 @@ Notable user-facing changes to CHMReaderLight are documented here.
 
 ### Changed
 
+- Kept the application chrome left-to-right for every interface language while preserving right-to-left Arabic text.
+- Replaced the theme cards with a compact selector and kept the toolbar entry focused on application settings.
 - Replaced the illustrated README preview with a real 1280 x 760 screenshot captured from the current Electron app.
 - Removed Intel Mac packaging and release artifacts; supported builds now target Apple Silicon only.
 - Reduced the documentation set to core user, security, contributor, release, and repository-operation guides.
