@@ -28,9 +28,14 @@ for (const file of fs.readdirSync(nodeBuildDir)) {
 
 let renderer = fs.readFileSync(path.join(browserBuildDir, 'renderer.js'), 'utf8');
 renderer = renderer
+  .replaceAll('./i18n.js', './i18n.browser.js')
   .replaceAll('./library.js', './library.browser.js')
   .replaceAll('./navigation.js', './navigation.browser.js');
 fs.writeFileSync(path.join(buildDir, 'renderer.js'), renderer);
+fs.copyFileSync(
+  path.join(browserBuildDir, 'i18n.js'),
+  path.join(buildDir, 'i18n.browser.js'),
+);
 fs.copyFileSync(
   path.join(browserBuildDir, 'library.js'),
   path.join(buildDir, 'library.browser.js'),
