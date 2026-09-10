@@ -438,6 +438,7 @@ test('growth readiness guide keeps promotion blockers actionable', () => {
 
 test('citation metadata helps external references point to the project', () => {
   const citation = fs.readFileSync(path.join(projectRoot, 'CITATION.cff'), 'utf-8');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'));
 
   assert.match(citation, /^cff-version: 1\.2\.0$/m);
   assert.match(citation, /^title: CHMReaderLight$/m);
@@ -446,7 +447,7 @@ test('citation metadata helps external references point to the project', () => {
   assert.match(citation, /^repository-code: "https:\/\/github\.com\/zhongdiandaoda\/chm-reader-light"$/m);
   assert.match(citation, /^url: "https:\/\/github\.com\/zhongdiandaoda\/chm-reader-light#readme"$/m);
   assert.match(citation, /^license: MIT$/m);
-  assert.match(citation, /^version: "0\.1\.0"$/m);
+  assert.match(citation, new RegExp(`^version: "${packageJson.version.replaceAll('.', '\\.')}"$`, 'm'));
   assert.match(citation, /family-names: Liu/);
   assert.match(citation, /given-names: Qi/);
   assert.match(citation, /keywords:/);
@@ -1597,7 +1598,7 @@ test('macOS About panel presents project metadata', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf-8'));
 
   assert.equal(packageJson.name, 'chm-reader-light');
-  assert.equal(packageJson.version, '0.1.0');
+  assert.match(packageJson.version, /^\d+\.\d+\.\d+$/);
   assert.match(main, /function configureAboutPanel\(\): void/);
   assert.match(main, /app\.setAboutPanelOptions\(\{/);
   assert.match(main, /applicationName: 'CHMReaderLight'/);
