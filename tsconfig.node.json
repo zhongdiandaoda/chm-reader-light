@@ -10,6 +10,7 @@
     "src/async-queue.ts",
     "src/book-cache.ts",
     "src/chm.ts",
+    "src/i18n.ts",
     "src/library.ts",
     "src/library-store.ts",
     "src/main.ts",

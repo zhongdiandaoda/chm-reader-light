@@ -2,6 +2,16 @@ export { };
 
 import type { BookContentsItem, SearchResult } from './chm';
 import {
+  getLocaleDirection,
+  localeOptions,
+  normalizeLocale,
+  normalizeTheme,
+  translate,
+  type AppLocale,
+  type AppTheme,
+  type TranslationKey,
+} from './i18n.js';
+import {
   filterBooksByQuery,
   formatLibraryAddedDate,
   getBookLocationLabel,
@@ -63,17 +73,20 @@ interface ChmReaderApi {
   createBookUrl: (topicPath: string | null) => Promise<string | null>;
   searchBook: (query: string) => Promise<SearchResult[]>;
   setTextEncoding: (encoding: string) => Promise<OpenedBook | { textEncoding: string | null }>;
-  setView: (view: 'library' | 'reader') => Promise<unknown>;
+  setView: (view: AppView) => Promise<unknown>;
+  setPreferences: (locale: AppLocale, theme: AppTheme) => Promise<unknown>;
   openExternal: (url: string) => Promise<unknown>;
   onBookOpened: (callback: (book: OpenedBook) => void) => () => void;
   onBookIndexReady: (callback: (result: { searchablePageCount: number }) => void) => () => void;
   onLibraryUpdated: (callback: (entries: LibraryState) => void) => () => void;
   onShowLibrary: (callback: () => void) => () => void;
+  onShowSettings: (callback: () => void) => () => void;
   onFocusSearch: (callback: () => void) => () => void;
   onReaderShortcut: (callback: (command: ReaderShortcutCommand) => void) => () => void;
 }
 
 type SearchScope = 'body' | 'directory';
+type AppView = 'library' | 'reader' | 'settings';
 type ReaderShortcutCommand =
   | 'history-back'
   | 'history-forward'
@@ -126,7 +139,9 @@ function query(selector: string): UiElement {
 const elements = {
   libraryToolbar: query('#library-toolbar'),
   readerToolbar: query('#reader-toolbar'),
+  settingsToolbar: query('#settings-toolbar'),
   libraryView: query('#library-view'),
+  settingsView: query('#settings-view'),
   libraryContent: query('#library-content'),
   libraryDropTarget: query('#library-drop-target'),
   libraryEmpty: query('#library-empty'),
@@ -196,6 +211,11 @@ const elements = {
   textEncoding: query('#text-encoding'),
   textEncodingValue: query('#text-encoding-value'),
   textEncodingMenu: query('#text-encoding-menu'),
+  librarySettings: query('#library-settings'),
+  readerSettings: query('#reader-settings'),
+  settingsBack: query('#settings-back'),
+  appLanguage: query('#app-language'),
+  themeOptions: query('#theme-options'),
 };
 
 const libraryLayoutStorageKey = 'chm-reader-library-layout';
@@ -206,6 +226,8 @@ const readerSidebarVisibleStorageKey = 'chm-reader-sidebar-visible';
 const readerZoomStorageKey = 'chm-reader-zoom';
 const readerSearchScopeStorageKey = 'chm-reader-search-scope';
 const readerLastTopicStorageKey = 'chm-reader-last-topic-by-book';
+const appLocaleStorageKey = 'chm-reader-locale';
+const appThemeStorageKey = 'chm-reader-theme';
 
 let currentBook: OpenedBook | null = null;
 let currentTopicPath: string | null = null;
@@ -231,6 +253,37 @@ let collectionDialogMode: { type: 'create' | 'rename'; collectionId: string | nu
 let contextCollection: LibraryCollection | null = null;
 let contextCollectionCount = 0;
 let libraryDragDepth = 0;
+let currentLocale = loadLocalePreference();
+let currentTheme = loadThemePreference();
+let settingsReturnView: Exclude<AppView, 'settings'> = 'library';
+
+function t(key: TranslationKey, variables: Record<string, string | number> = {}): string {
+  return translate(currentLocale, key, variables);
+}
+
+function loadLocalePreference(): AppLocale {
+  try {
+    return normalizeLocale(window.localStorage.getItem(appLocaleStorageKey));
+  } catch {
+    return 'zh-CN';
+  }
+}
+
+function loadThemePreference(): AppTheme {
+  try {
+    return normalizeTheme(window.localStorage.getItem(appThemeStorageKey));
+  } catch {
+    return 'light';
+  }
+}
+
+function savePreference(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Keep the active preference in memory when storage is unavailable.
+  }
+}
 
 function loadLibraryLayoutPreference(): 'grid' | 'list' {
   try {
@@ -405,21 +458,111 @@ function updateDocumentTitle(): void {
   updateReaderTopicTitle();
 }
 
-function syncMainProcessView(view: 'library' | 'reader'): void {
+function syncMainProcessView(view: AppView): void {
   void window.chmReader.setView(view).catch((error: unknown) => {
-    showReaderActionError('无法同步窗口状态', error);
+    showReaderActionError(t('error.syncView'), error);
   });
 }
 
-function showView(view: 'library' | 'reader'): void {
+function showView(view: AppView): void {
   document.body.dataset.view = view;
   syncMainProcessView(view);
   const isReader = view === 'reader';
-  elements.libraryToolbar.hidden = isReader;
+  const isLibrary = view === 'library';
+  const isSettings = view === 'settings';
+  elements.libraryToolbar.hidden = !isLibrary;
   elements.readerToolbar.hidden = !isReader;
-  elements.libraryView.hidden = isReader;
+  elements.settingsToolbar.hidden = !isSettings;
+  elements.libraryView.hidden = !isLibrary;
+  elements.settingsView.hidden = !isSettings;
   elements.readerLayout.hidden = !isReader;
-  if (!isReader) document.title = 'CHMReaderLight';
+  if (!isReader) document.title = isSettings ? t('settings.title') + ' - CHMReaderLight' : 'CHMReaderLight';
+}
+
+function openSettings(): void {
+  const activeView = document.body.dataset.view;
+  if (activeView === 'reader' || activeView === 'library') settingsReturnView = activeView;
+  showView('settings');
+  elements.appLanguage.focus();
+}
+
+function applyStaticTranslations(): void {
+  document.documentElement.lang = currentLocale;
+  document.documentElement.dir = getLocaleDirection(currentLocale);
+  document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {
+    const key = element.dataset.i18n as TranslationKey | undefined;
+    if (!key) return;
+    const value = t(key);
+    if (value.includes('\n')) {
+      element.replaceChildren(...value.split('\n').flatMap((part, index) => (
+        index === 0 ? [document.createTextNode(part)] : [document.createElement('br'), document.createTextNode(part)]
+      )));
+    } else {
+      element.textContent = value;
+    }
+  });
+  document.querySelectorAll<HTMLElement>('[data-i18n-aria-label]').forEach((element) => {
+    const key = element.dataset.i18nAriaLabel as TranslationKey | undefined;
+    if (key) element.setAttribute('aria-label', t(key));
+  });
+  document.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((element) => {
+    const key = element.dataset.i18nTitle as TranslationKey | undefined;
+    if (key) element.setAttribute('title', t(key));
+  });
+  document.querySelectorAll<UiElement>('[data-i18n-placeholder]').forEach((element) => {
+    const key = element.dataset.i18nPlaceholder as TranslationKey | undefined;
+    if (key) element.placeholder = t(key);
+  });
+}
+
+function populateLanguageOptions(): void {
+  elements.appLanguage.replaceChildren(...localeOptions.map(({ value, label, direction }) => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    option.dir = direction;
+    return option;
+  }));
+  elements.appLanguage.value = currentLocale;
+}
+
+function updateThemeSelection(): void {
+  elements.themeOptions.querySelectorAll<HTMLInputElement>('input[name="app-theme"]').forEach((input) => {
+    input.checked = input.value === currentTheme;
+  });
+}
+
+function applyTheme(theme: AppTheme, persist = false): void {
+  currentTheme = theme;
+  document.documentElement.dataset.theme = theme;
+  updateThemeSelection();
+  if (persist) savePreference(appThemeStorageKey, theme);
+  void window.chmReader.setPreferences(currentLocale, currentTheme).catch((error: unknown) => {
+    showReaderActionError(t('error.syncView'), error);
+  });
+  if (persist && currentTopicPath) {
+    void navigateTo(currentTopicPath, false, findNavigationRow(currentTopicPath), searchState.currentMatchIndex);
+  } else if (persist && currentBook?.defaultPage && !currentTopicPath) {
+    loadContent(withContentPreferences(currentBook.defaultPage));
+  }
+}
+
+function applyLocale(locale: AppLocale, persist = false): void {
+  currentLocale = locale;
+  applyStaticTranslations();
+  elements.appLanguage.value = locale;
+  if (persist) savePreference(appLocaleStorageKey, locale);
+  setSearchScope(searchState.scope, false);
+  setTextEncodingControlValue(getTextEncodingControlValue());
+  renderLibrary(library);
+  renderNavigation(currentBook?.contents || []);
+  updateReaderProgress(currentTopicPath ? readingOrder.indexOf(currentTopicPath) : -1);
+  updateSidebarTopicCount();
+  updateSearchStatus();
+  showView((document.body.dataset.view as AppView) || 'library');
+  void window.chmReader.setPreferences(currentLocale, currentTheme).catch((error: unknown) => {
+    showReaderActionError(t('error.syncView'), error);
+  });
 }
 
 function booksInSelectedCollection(): LibraryBook[] {
@@ -468,9 +611,11 @@ function renderLibrary(nextLibrary: LibraryState): void {
 
 function renderCollectionList() {
   elements.collectionList.replaceChildren();
-  elements.collectionList.append(
-    createCollectionItem({ id: null, name: '全部' }, library.books.length, false),
-  );
+  elements.collectionList.append(createCollectionItem(
+    { id: null, name: t('library.all') },
+    library.books.length,
+    false,
+  ));
   library.collections.forEach((collection) => {
     const count = library.books.filter((book) => book.collectionId === collection.id).length;
     elements.collectionList.append(createCollectionItem(collection, count, true));
@@ -510,8 +655,8 @@ function createCollectionItem(collection: CollectionItem, count: number, removab
     remove.className = 'collection-remove';
     remove.type = 'button';
     remove.textContent = '×';
-    remove.title = '删除书库';
-    remove.setAttribute('aria-label', `删除书库 ${collection.name}`);
+    remove.title = t('collection.delete');
+    remove.setAttribute('aria-label', t('collection.deleteNamed', { name: collection.name }));
     remove.addEventListener('click', async (event) => {
       event.stopPropagation();
       await confirmAndRemoveCollection(collection as LibraryCollection, count);
@@ -527,8 +672,8 @@ function renderBooks() {
   const books = filteredBooksInSelectedCollection();
   const lastTopicsByBook = loadReaderLastTopicMap();
   const activeName = selectedCollectionId === null
-    ? '全部'
-    : library.collections.find((collection) => collection.id === selectedCollectionId)?.name || '书库';
+    ? t('library.all')
+    : library.collections.find((collection) => collection.id === selectedCollectionId)?.name || t('library.title');
   const hasQuery = Boolean(libraryQuery.trim());
 
   elements.libraryHeading.textContent = activeName;
@@ -536,8 +681,8 @@ function renderBooks() {
   elements.libraryEmpty.hidden = hasQuery || allBooks.length > 0;
   elements.libraryEmptyFiltered.hidden = !hasQuery || books.length > 0;
   elements.libraryCount.textContent = hasQuery
-    ? `${books.length} / ${allBooks.length} 本文档`
-    : (allBooks.length ? `${allBooks.length} 本文档` : '');
+    ? t('library.filteredCount', { count: books.length, total: allBooks.length })
+    : (allBooks.length ? t('library.documentCount', { count: allBooks.length }) : '');
 
   books.forEach((entry) => elements.libraryGrid.append(createLibraryCard(entry, lastTopicsByBook)));
 }
@@ -555,7 +700,9 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
   open.className = 'library-card-open';
   open.type = 'button';
   open.title = entry.filePath || entry.name;
-  open.setAttribute('aria-label', hasLastTopic ? `继续阅读 ${entry.name}` : `打开 ${entry.name}`);
+  open.setAttribute('aria-label', hasLastTopic
+    ? t('library.continue', { name: entry.name })
+    : t('library.open', { name: entry.name }));
   const cardDescriptionIdPrefix = `library-book-${entry.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
   const describedBy: string[] = [];
   open.innerHTML = `
@@ -571,8 +718,8 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
       <span class="library-location"></span>
       <span class="library-last-opened"></span>
       <span class="library-added-date"></span>
-      <span class="library-source-status" hidden>源文件缺失</span>
-      <span class="library-continue-reading" hidden>继续阅读</span>
+      <span class="library-source-status" hidden></span>
+      <span class="library-continue-reading" hidden></span>
     </span>`;
   const nameElement = open.querySelector<HTMLElement>('.library-name');
   if (nameElement) nameElement.textContent = entry.name;
@@ -588,7 +735,7 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
   const lastOpenedElement = open.querySelector<HTMLElement>('.library-last-opened');
   if (lastOpenedElement) {
     lastOpenedElement.id = `${cardDescriptionIdPrefix}-last-opened`;
-    lastOpenedElement.textContent = lastOpenedDate ? `上次打开 ${lastOpenedDate}` : '';
+    lastOpenedElement.textContent = lastOpenedDate ? t('library.lastOpened', { date: lastOpenedDate }) : '';
     lastOpenedElement.hidden = !lastOpenedDate;
     if (lastOpenedDate) describedBy.push(lastOpenedElement.id);
   }
@@ -596,19 +743,21 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
   const addedDateElement = open.querySelector<HTMLElement>('.library-added-date');
   if (addedDateElement) {
     addedDateElement.id = `${cardDescriptionIdPrefix}-added`;
-    addedDateElement.textContent = addedDate ? `添加于 ${addedDate}` : '';
+    addedDateElement.textContent = addedDate ? t('library.addedAt', { date: addedDate }) : '';
     addedDateElement.hidden = !addedDate;
     if (addedDate) describedBy.push(addedDateElement.id);
   }
   const sourceStatus = open.querySelector<HTMLElement>('.library-source-status');
   if (sourceStatus) {
     sourceStatus.id = `${cardDescriptionIdPrefix}-source-status`;
+    sourceStatus.textContent = t('library.sourceMissing');
     sourceStatus.hidden = !entry.sourceMissing;
     if (entry.sourceMissing) describedBy.push(sourceStatus.id);
   }
   const continueReading = open.querySelector<HTMLElement>('.library-continue-reading');
   if (continueReading) {
     continueReading.id = `${cardDescriptionIdPrefix}-continue-reading`;
+    continueReading.textContent = t('library.continueLabel');
     continueReading.hidden = !hasLastTopic;
     if (hasLastTopic) describedBy.push(continueReading.id);
   }
@@ -618,8 +767,8 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
   const remove = document.createElement('button');
   remove.className = 'library-card-remove';
   remove.type = 'button';
-  remove.setAttribute('aria-label', `从书库移除 ${entry.name}`);
-  remove.title = '从书库移除';
+  remove.setAttribute('aria-label', t('library.removeNamed', { name: entry.name }));
+  remove.title = t('library.remove');
   remove.textContent = '×';
   remove.addEventListener('click', async (event) => {
     event.stopPropagation();
@@ -630,8 +779,8 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
   reveal.className = 'library-card-reveal';
   reveal.type = 'button';
   reveal.disabled = Boolean(entry.sourceMissing);
-  reveal.setAttribute('aria-label', `在 Finder 中显示 ${entry.name}`);
-  reveal.title = entry.sourceMissing ? '源文件缺失' : '在 Finder 中显示';
+  reveal.setAttribute('aria-label', t('library.revealNamed', { name: entry.name }));
+  reveal.title = entry.sourceMissing ? t('library.sourceMissing') : t('library.reveal');
   reveal.innerHTML = `
     <svg viewBox="0 0 20 20" aria-hidden="true">
       <path d="M3 5.5h5.3l1.4 1.8H17v8.2H3z"></path>
@@ -646,8 +795,8 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
   relink.className = 'library-card-relink';
   relink.type = 'button';
   relink.hidden = !entry.sourceMissing;
-  relink.setAttribute('aria-label', `重新定位 ${entry.name} 的源文件`);
-  relink.title = '重新定位源文件';
+  relink.setAttribute('aria-label', t('library.relinkNamed', { name: entry.name }));
+  relink.title = t('library.relink');
   relink.innerHTML = `
     <svg viewBox="0 0 20 20" aria-hidden="true">
       <path d="M4 10.5V7.8A3.8 3.8 0 0 1 7.8 4h2.7"></path>
@@ -677,7 +826,7 @@ async function revealLibraryBook(entry: LibraryBook): Promise<void> {
   try {
     await window.chmReader.revealLibraryBook(entry.id);
   } catch (error: unknown) {
-    showLibraryActionError('无法在 Finder 中显示源文件', error);
+    showLibraryActionError(t('error.reveal'), error);
   }
 }
 
@@ -687,34 +836,34 @@ async function relinkLibraryBook(entry: LibraryBook, trigger: HTMLButtonElement)
     const updated = await window.chmReader.relinkLibraryBook(entry.id);
     if (updated) renderLibrary(updated);
   } catch (error: unknown) {
-    showLibraryActionError('无法重新定位源文件', error);
+    showLibraryActionError(t('error.relink'), error);
   } finally {
     trigger.disabled = false;
   }
 }
 
 async function confirmAndRemoveLibraryBook(entry: LibraryBook): Promise<void> {
-  const message = `从书库移除“${entry.name}”？源文件不会被删除。`;
+  const message = t('library.removeConfirm', { name: entry.name });
   // eslint-disable-next-line no-alert
   if (!window.confirm(message)) return;
   try {
     const updated = await window.chmReader.removeLibraryBook(entry.id);
     renderLibrary(updated);
   } catch (error: unknown) {
-    showLibraryActionError('无法从书库移除文档', error);
+    showLibraryActionError(t('error.remove'), error);
   }
 }
 
 async function openLibraryBook(id: string): Promise<void> {
   showView('reader');
-  elements.bookTitle.textContent = '正在打开...';
+  elements.bookTitle.textContent = t('library.opening');
   document.title = 'Opening - CHMReaderLight';
   setLoading(true);
   try {
     const book = await window.chmReader.openLibraryBook(id);
     if (book) return;
   } catch (error: unknown) {
-    window.alert(`无法打开 CHM：${error instanceof Error ? error.message : String(error)}`);
+    window.alert(t('library.openFailed', { error: error instanceof Error ? error.message : String(error) }));
   }
   setLoading(false);
   showView('library');
@@ -741,15 +890,15 @@ function openCollectionContextMenu(event: MouseEvent, collection: LibraryCollect
 
 async function confirmAndRemoveCollection(collection: LibraryCollection, count: number): Promise<void> {
   const message = count > 0
-    ? `删除书库“${collection.name}”后，其中的 ${count} 个文档会移动到“全部”（不会删除源文件）。`
-    : `删除书库“${collection.name}”？`;
+    ? t('collection.deleteMoveConfirm', { name: collection.name, count })
+    : t('collection.deleteConfirm', { name: collection.name });
   // eslint-disable-next-line no-alert
   if (!window.confirm(message)) return;
   try {
     const updated = await window.chmReader.removeCollection(collection.id);
     renderLibrary(updated);
   } catch (error: unknown) {
-    showLibraryActionError('无法删除书库', error);
+    showLibraryActionError(t('collection.deleteFailed'), error);
   }
 }
 
@@ -762,8 +911,8 @@ function openCollectionDialog(collection: LibraryCollection | null = null): void
     type: isRename ? 'rename' : 'create',
     collectionId: collection?.id || null,
   };
-  elements.collectionDialogTitle.textContent = isRename ? '重命名书库' : '新建书库';
-  elements.collectionCreate.textContent = isRename ? '保存' : '创建';
+  elements.collectionDialogTitle.textContent = isRename ? t('collection.rename') : t('collection.create');
+  elements.collectionCreate.textContent = isRename ? t('common.save') : t('common.create');
   elements.collectionName.value = isRename
     ? collection?.name || ''
     : getNextCollectionName(library.collections);
@@ -811,7 +960,10 @@ async function submitCreateCollection(event: SubmitEvent): Promise<void> {
     if (created) selectCollection(created.id);
     closeCollectionDialog();
   } catch (error: unknown) {
-    elements.collectionError.textContent = `无法${isRename ? '重命名' : '创建'}书库：${error instanceof Error ? error.message : String(error)}`;
+    elements.collectionError.textContent = t('collection.submitFailed', {
+      action: t(isRename ? 'collection.actionRename' : 'collection.actionCreate'),
+      error: error instanceof Error ? error.message : String(error),
+    });
     elements.collectionError.hidden = false;
     elements.collectionName.setAttribute('aria-invalid', 'true');
     elements.collectionName.focus();
@@ -836,7 +988,9 @@ async function loadLibrary(): Promise<void> {
     elements.libraryEmpty.hidden = true;
     elements.libraryEmptyFiltered.hidden = true;
     elements.libraryCount.textContent = '';
-    elements.libraryLoadErrorMessage.textContent = `书库数据无法加载：${error instanceof Error ? error.message : String(error)}`;
+    elements.libraryLoadErrorMessage.textContent = t('library.loadError', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     elements.libraryLoadError.hidden = false;
     elements.retryLibraryLoad.disabled = false;
   }
@@ -856,7 +1010,11 @@ function renderNavigation(items: readonly BookContentsItem[]): void {
   if (!items.length) {
     const message = document.createElement('div');
     message.className = 'sidebar-placeholder';
-    message.innerHTML = '<p>此文档未提供目录<br>仍可阅读默认页面</p>';
+    const paragraph = document.createElement('p');
+    paragraph.append(...t('reader.noDirectory').split('\n').flatMap((part, index) => (
+      index === 0 ? [document.createTextNode(part)] : [document.createElement('br'), document.createTextNode(part)]
+    )));
+    message.append(paragraph);
     elements.navigation.append(message);
     return;
   }
@@ -888,7 +1046,7 @@ function createTreeItem(item: BookContentsItem, level: number): HTMLLIElement {
   disclosure.className = `disclosure${hasChildren ? '' : ' placeholder'}`;
   disclosure.type = 'button';
   disclosure.tabIndex = hasChildren ? 0 : -1;
-  disclosure.setAttribute('aria-label', `${level === 1 ? '折叠' : '展开'} ${item.title}`);
+  disclosure.setAttribute('aria-label', t(level === 1 ? 'reader.collapseNamed' : 'reader.expandNamed', { name: item.title }));
 
   link.className = 'tree-link';
   link.type = 'button';
@@ -901,7 +1059,7 @@ function createTreeItem(item: BookContentsItem, level: number): HTMLLIElement {
     disclosure.addEventListener('click', () => {
       const expanded = listItem.classList.toggle('expanded');
       listItem.setAttribute('aria-expanded', String(expanded));
-      disclosure.setAttribute('aria-label', `${expanded ? '折叠' : '展开'} ${item.title}`);
+      disclosure.setAttribute('aria-label', t(expanded ? 'reader.collapseNamed' : 'reader.expandNamed', { name: item.title }));
     });
   }
 
@@ -933,9 +1091,9 @@ function setTreeItemExpanded(item: HTMLElement, expanded: boolean): void {
 
   item.classList.toggle('expanded', expanded);
   item.setAttribute('aria-expanded', String(expanded));
-  const title = item.dataset.title || '目录';
+  const title = item.dataset.title || t('reader.directoryScope');
   const disclosure = item.querySelector<HTMLElement>(':scope > .tree-row .disclosure');
-  disclosure?.setAttribute('aria-label', `${expanded ? '折叠' : '展开'} ${title}`);
+  disclosure?.setAttribute('aria-label', t(expanded ? 'reader.collapseNamed' : 'reader.expandNamed', { name: title }));
 }
 
 function setAllTreeItemsExpanded(expanded: boolean): void {
@@ -957,8 +1115,15 @@ function createSearchUrl(url: string, topicPath: string | null, matchIndex: numb
   const searchUrl = new URL(url);
   searchUrl.searchParams.set('search', searchState.query);
   searchUrl.searchParams.set('match', String(matchIndex));
+  searchUrl.searchParams.set('theme', currentTheme);
   searchUrl.hash = 'chm-search-current';
   return searchUrl.toString();
+}
+
+function withContentPreferences(url: string): string {
+  const contentUrl = new URL(url);
+  contentUrl.searchParams.set('theme', currentTheme);
+  return contentUrl.toString();
 }
 
 function showReaderActionError(action: string, error: unknown): void {
@@ -968,7 +1133,7 @@ function showReaderActionError(action: string, error: unknown): void {
 
 function openExternalLink(url: string): void {
   void window.chmReader.openExternal(url).catch((error: unknown) => {
-    showReaderActionError('无法打开外部链接', error);
+    showReaderActionError(t('reader.openExternalFailed'), error);
   });
 }
 
@@ -1000,12 +1165,12 @@ async function navigateTo(
       activateNavigationRow(navigationRow);
     }
 
-    loadContent(createSearchUrl(url, topicPath, searchState.currentMatchIndex));
+    loadContent(createSearchUrl(withContentPreferences(url), topicPath, searchState.currentMatchIndex));
     updateHistoryButtons();
     updatePageButtons();
     updateSearchMatchNavigation();
   } catch (error: unknown) {
-    showReaderActionError('无法打开章节', error);
+    showReaderActionError(t('reader.openTopicFailed'), error);
   }
 }
 
@@ -1092,7 +1257,7 @@ function updatePageButtons(): void {
 function updateReaderProgress(currentIndex: number): void {
   elements.readerProgress.hidden = currentIndex < 0 || readingOrder.length === 0;
   elements.readerProgress.textContent = currentIndex >= 0
-    ? `第 ${currentIndex + 1} / ${readingOrder.length} 节`
+    ? t('reader.progress', { current: currentIndex + 1, total: readingOrder.length })
     : '';
 }
 
@@ -1108,7 +1273,7 @@ function findTopicTitleByPath(items: readonly BookContentsItem[], topicPath: str
 function updateSidebarTopicCount(): void {
   elements.sidebarTopicCount.hidden = readingOrder.length === 0;
   elements.sidebarTopicCount.textContent = readingOrder.length > 0
-    ? `共 ${readingOrder.length} 节`
+    ? t('reader.topicCount', { count: readingOrder.length })
     : '';
 }
 
@@ -1170,7 +1335,7 @@ function applyBook(book: OpenedBook): void {
   if (initialTopic) {
     navigateTo(initialTopic, true, findNavigationRow(initialTopic));
   } else if (book.defaultPage) {
-    loadContent(book.defaultPage);
+    loadContent(withContentPreferences(book.defaultPage));
   } else {
     setLoading(false);
     elements.emptyState.hidden = false;
@@ -1191,7 +1356,7 @@ function setTextEncodingControlValue(encoding: string | null): void {
   const selectedOption = options.find((option) => option.dataset.encoding === nextEncoding) || options[0];
 
   elements.textEncoding.dataset.encoding = selectedOption?.dataset.encoding || 'auto';
-  elements.textEncodingValue.textContent = selectedOption?.textContent?.trim() || '默认编码';
+  elements.textEncodingValue.textContent = selectedOption?.textContent?.trim() || t('reader.defaultEncoding');
   options.forEach((option) => {
     option.setAttribute('aria-selected', String(option === selectedOption));
   });
@@ -1223,7 +1388,7 @@ async function selectTextEncoding(nextEncoding: string): Promise<void> {
   } catch (error: unknown) {
     pendingTopicPathAfterEncoding = null;
     setTextEncodingControlValue(previousEncoding);
-    window.alert(`无法切换文本编码：${error instanceof Error ? error.message : String(error)}`);
+    window.alert(t('reader.encodingFailed', { error: error instanceof Error ? error.message : String(error) }));
   } finally {
     elements.textEncoding.disabled = false;
   }
@@ -1348,13 +1513,13 @@ function updateSearchStatus() {
 
   if (searchState.scope === 'directory') {
     const matches = elements.navigation.querySelectorAll('.tree-item.search-match').length;
-    elements.searchStatus.textContent = `目录中找到 ${matches} 项`;
+    elements.searchStatus.textContent = t('reader.directoryResults', { count: matches });
     return;
   }
 
   const results = [...searchState.resultsByPath.values()];
   const count = results.reduce((total, result) => total + result.count, 0);
-  elements.searchStatus.textContent = `正文中找到 ${count} 处，涉及 ${results.length} 个章节`;
+  elements.searchStatus.textContent = t('reader.bodyResults', { count, chapters: results.length });
 }
 
 function moveSearchMatch(offset: number): void {
@@ -1407,8 +1572,8 @@ function setSearchScope(scope: SearchScope, persist = true): void {
   searchState.scope = scope;
   elements.searchBody.setAttribute('aria-checked', String(scope === 'body'));
   elements.searchDirectory.setAttribute('aria-checked', String(scope === 'directory'));
-  elements.searchScopeLabel.textContent = scope === 'body' ? '正文' : '目录';
-  elements.search.placeholder = scope === 'body' ? '搜索正文' : '搜索目录';
+  elements.searchScopeLabel.textContent = t(scope === 'body' ? 'reader.body' : 'reader.directoryScope');
+  elements.search.placeholder = t(scope === 'body' ? 'reader.searchBody' : 'reader.searchDirectory');
   setSearchScopeMenuOpen(false);
   if (persist) saveReaderSearchScopePreference(scope);
   searchNavigation(elements.search.value);
@@ -1451,7 +1616,9 @@ async function searchNavigation(query: string): Promise<void> {
     if (requestId !== searchRequestId) return;
     searchState.resultsByPath = new Map();
     renderNavigation(currentBook?.contents || []);
-    elements.searchStatus.textContent = `正文搜索失败：${error instanceof Error ? error.message : String(error)}`;
+    elements.searchStatus.textContent = t('reader.searchFailed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     updateSearchMatchNavigation();
   }
 }
@@ -1595,7 +1762,7 @@ async function requestImportBooks(): Promise<void> {
     const updated = await window.chmReader.importBooks(selectedCollectionId);
     if (updated) renderLibrary(updated);
   } catch (error: unknown) {
-    showLibraryActionError('无法导入 CHM 文件', error);
+    showLibraryActionError(t('library.importFailed'), error);
   } finally {
     elements.addBook.disabled = false;
     elements.emptyAddBook.disabled = false;
@@ -1619,13 +1786,13 @@ function setLibraryDropState(state: 'idle' | 'ready' | 'invalid'): void {
   const isActive = state !== 'idle';
   elements.libraryDropTarget.setAttribute('aria-hidden', String(!isActive));
   if (state === 'invalid') {
-    elements.libraryDropTarget.querySelector('strong')!.textContent = '请拖入 CHM 文件';
-    elements.libraryDropTarget.querySelector('span')!.textContent = '仅支持 .chm 文档';
+    elements.libraryDropTarget.querySelector('strong')!.textContent = t('library.dropInvalidTitle');
+    elements.libraryDropTarget.querySelector('span')!.textContent = t('library.dropInvalidSubtitle');
     return;
   }
 
-  elements.libraryDropTarget.querySelector('strong')!.textContent = '松手添加 CHM 文件';
-  elements.libraryDropTarget.querySelector('span')!.textContent = '会加入当前选中的书库';
+  elements.libraryDropTarget.querySelector('strong')!.textContent = t('library.dropTitle');
+  elements.libraryDropTarget.querySelector('span')!.textContent = t('library.dropSubtitle');
 }
 
 function resetLibraryDropState(): void {
@@ -1640,7 +1807,7 @@ async function importDroppedBooks(files: readonly File[]): Promise<void> {
     const updated = await window.chmReader.importDroppedFiles(files, selectedCollectionId);
     renderLibrary(updated);
   } catch (error: unknown) {
-    showLibraryActionError('无法导入拖入的 CHM 文件', error);
+    showLibraryActionError(t('library.dropImportFailed'), error);
   }
 }
 
@@ -1753,6 +1920,16 @@ elements.emptySearchGuide.addEventListener('click', () => {
   openExternalLink(onboardingLinks.readme);
 });
 elements.backToLibrary.addEventListener('click', () => showView('library'));
+elements.librarySettings.addEventListener('click', openSettings);
+elements.readerSettings.addEventListener('click', openSettings);
+elements.settingsBack.addEventListener('click', () => showView(settingsReturnView));
+elements.appLanguage.addEventListener('change', () => {
+  applyLocale(normalizeLocale(elements.appLanguage.value), true);
+});
+elements.themeOptions.addEventListener('change', (event: Event) => {
+  const input = (event.target as Element | null)?.closest<HTMLInputElement>('input[name="app-theme"]');
+  if (input) applyTheme(normalizeTheme(input.value), true);
+});
 query('#toggle-sidebar').addEventListener('click', toggleReaderSidebar);
 elements.back.addEventListener('click', () => moveHistory(-1));
 elements.forward.addEventListener('click', () => moveHistory(1));
@@ -1906,6 +2083,11 @@ document.addEventListener('pointerdown', (event: PointerEvent) => {
   setSearchScopeMenuOpen(false);
 });
 document.addEventListener('keydown', (event) => {
+  if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key === ',') {
+    event.preventDefault();
+    openSettings();
+    return;
+  }
   handleReaderKeyboardShortcut(event);
   if (event.defaultPrevented) return;
 
@@ -1942,6 +2124,7 @@ window.chmReader.onBookIndexReady(({ searchablePageCount }) => {
 });
 window.chmReader.onLibraryUpdated(renderLibrary);
 window.chmReader.onShowLibrary(() => showView('library'));
+window.chmReader.onShowSettings(openSettings);
 window.chmReader.onReaderShortcut(runReaderShortcut);
 window.chmReader.onFocusSearch(() => {
   if (document.body.dataset.view === 'library') {
@@ -1956,6 +2139,9 @@ window.chmReader.onFocusSearch(() => {
 });
 initializeResizing();
 initializeLibraryDropImport();
+populateLanguageOptions();
+applyStaticTranslations();
+applyTheme(currentTheme);
 setZoom(loadReaderZoomPreference());
 setLibraryLayout(loadLibraryLayoutPreference());
 setReaderSidebarWidth(loadReaderSidebarWidthPreference());

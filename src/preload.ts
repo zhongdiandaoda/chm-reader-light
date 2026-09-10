@@ -1,6 +1,7 @@
 export {};
 
 import type { BookContentsItem, SearchResult } from './chm';
+import type { AppLocale, AppTheme } from './i18n';
 
 interface LibraryBook {
   id: string;
@@ -65,12 +66,14 @@ interface ChmReaderApi {
   createBookUrl: (topicPath: string | null) => Promise<string | null>;
   searchBook: (query: string) => Promise<SearchResult[]>;
   setTextEncoding: (encoding: string) => Promise<OpenedBook | { textEncoding: string | null }>;
-  setView: (view: 'library' | 'reader') => Promise<unknown>;
+  setView: (view: 'library' | 'reader' | 'settings') => Promise<unknown>;
+  setPreferences: (locale: AppLocale, theme: AppTheme) => Promise<unknown>;
   openExternal: (url: string) => Promise<unknown>;
   onBookOpened: (callback: (book: OpenedBook) => void) => Unsubscribe;
   onBookIndexReady: (callback: (result: IndexReady) => void) => Unsubscribe;
   onLibraryUpdated: (callback: (entries: LibraryState) => void) => Unsubscribe;
   onShowLibrary: (callback: () => void) => Unsubscribe;
+  onShowSettings: (callback: () => void) => Unsubscribe;
   onFocusSearch: (callback: () => void) => Unsubscribe;
   onReaderShortcut: (callback: (command: ReaderShortcutCommand) => void) => Unsubscribe;
 }
@@ -109,6 +112,7 @@ const chmReader: ChmReaderApi = {
   searchBook: (query) => ipcRenderer.invoke('book:search', query) as Promise<SearchResult[]>,
   setTextEncoding: (encoding) => ipcRenderer.invoke('book:encoding', encoding) as Promise<OpenedBook | { textEncoding: string | null }>,
   setView: (view) => ipcRenderer.invoke('view:set', view),
+  setPreferences: (locale, theme) => ipcRenderer.invoke('preferences:set', locale, theme),
   openExternal: (url) => ipcRenderer.invoke('external:open', url),
   onBookOpened: (callback) => {
     const listener = (_event: unknown, book: unknown) => callback(book as OpenedBook);
@@ -129,6 +133,11 @@ const chmReader: ChmReaderApi = {
     const listener = () => callback();
     ipcRenderer.on('library:show', listener);
     return () => ipcRenderer.removeListener('library:show', listener);
+  },
+  onShowSettings: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('settings:show', listener);
+    return () => ipcRenderer.removeListener('settings:show', listener);
   },
   onFocusSearch: (callback) => {
     const listener = () => callback();

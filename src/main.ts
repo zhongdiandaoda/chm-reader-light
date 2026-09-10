@@ -12,6 +12,7 @@ import type {
   SearchIndexEntry,
   SearchResult,
 } from './chm';
+import type { AppLocale, AppTheme } from './i18n';
 
 const {
   app,
@@ -63,6 +64,12 @@ const {
 } = require('./book-cache') as typeof import('./book-cache');
 const { createSerializedTaskQueue } = require('./async-queue') as typeof import('./async-queue');
 const { isTrustedIpcSender } = require('./ipc-security') as typeof import('./ipc-security');
+const {
+  appMenuLabels,
+  normalizeLocale,
+  normalizeTheme,
+  translate,
+} = require('./i18n') as typeof import('./i18n');
 const {
   isAllowedBookFrameNavigation,
   normalizeExternalWebUrl,
@@ -153,9 +160,30 @@ let bookRootIsCached = false;
 let searchIndexWorker: WorkerType | undefined;
 let searchIndexGeneration = 0;
 let pendingFile: string | undefined;
-let currentView: 'library' | 'reader' = 'library';
+let currentView: 'library' | 'reader' | 'settings' = 'library';
+let appLocale: AppLocale = 'zh-CN';
+let appTheme: AppTheme = 'light';
 let isQuitting = false;
 const runBookStateTask = createSerializedTaskQueue();
+
+const menuHeadings: Record<AppLocale, { file: string; edit: string; view: string; help: string }> = {
+  en: { file: 'File', edit: 'Edit', view: 'View', help: 'Help' },
+  'zh-CN': { file: '文件', edit: '编辑', view: '显示', help: '帮助' },
+  'zh-TW': { file: '檔案', edit: '編輯', view: '顯示方式', help: '輔助說明' },
+  ja: { file: 'ファイル', edit: '編集', view: '表示', help: 'ヘルプ' },
+  ko: { file: '파일', edit: '편집', view: '보기', help: '도움말' },
+  es: { file: 'Archivo', edit: 'Edición', view: 'Visualización', help: 'Ayuda' },
+  fr: { file: 'Fichier', edit: 'Édition', view: 'Présentation', help: 'Aide' },
+  de: { file: 'Ablage', edit: 'Bearbeiten', view: 'Darstellung', help: 'Hilfe' },
+  pt: { file: 'Ficheiro', edit: 'Editar', view: 'Visualização', help: 'Ajuda' },
+  it: { file: 'File', edit: 'Modifica', view: 'Vista', help: 'Aiuto' },
+  ru: { file: 'Файл', edit: 'Правка', view: 'Вид', help: 'Справка' },
+  ar: { file: 'ملف', edit: 'تحرير', view: 'عرض', help: 'مساعدة' },
+};
+
+function menuText(key: import('./i18n').TranslationKey): string {
+  return translate(appLocale, key);
+}
 
 function configureAboutPanel(): void {
   app.setAboutPanelOptions({
@@ -624,10 +652,20 @@ function guardMenuActionFailures(
 }
 
 function createMenu() {
+  const headings = menuHeadings[appLocale];
+  const help = appMenuLabels[appLocale];
   const template: Electron.MenuItemConstructorOptions[] = [{
     label: app.name,
     submenu: [
       { role: 'about' },
+      {
+        label: `${menuText('settings.title')}...`,
+        accelerator: 'CmdOrCtrl+,',
+        click: () => {
+          currentView = 'settings';
+          sendToMainWindow('settings:show');
+        },
+      },
       { type: 'separator' },
       { role: 'hide' },
       { role: 'hideOthers' },
@@ -635,9 +673,9 @@ function createMenu() {
       { role: 'quit' },
     ],
   }, {
-    label: 'File',
+    label: headings.file,
     submenu: [{
-      label: 'Add CHM to Library...',
+      label: `${menuText('library.addFiles')}...`,
       accelerator: 'CmdOrCtrl+O',
       click: () => selectAndImportBooks(),
     }, {
@@ -646,7 +684,7 @@ function createMenu() {
         { role: 'clearRecentDocuments' },
       ],
     }, {
-      label: 'Show Library',
+      label: menuText('library.title'),
       accelerator: 'CmdOrCtrl+L',
       click: () => {
         currentView = 'library';
@@ -656,71 +694,71 @@ function createMenu() {
       role: 'close',
     }],
   }, {
-    label: 'Edit',
+    label: headings.edit,
     submenu: [
       { role: 'copy' },
       { role: 'selectAll' },
       { type: 'separator' },
       {
-        label: 'Find',
+        label: menuText('reader.searchBody'),
         accelerator: 'CmdOrCtrl+F',
         click: () => sendToMainWindow('navigation:focus-search'),
       },
       {
-        label: 'Find Next',
+        label: menuText('reader.nextMatch'),
         accelerator: 'CmdOrCtrl+G',
         click: () => sendToMainWindow('reader:shortcut', 'find-next'),
       },
       {
-        label: 'Find Previous',
+        label: menuText('reader.previousMatch'),
         accelerator: 'Shift+CmdOrCtrl+G',
         click: () => sendToMainWindow('reader:shortcut', 'find-previous'),
       },
     ],
   }, {
-    label: 'View',
+    label: headings.view,
     submenu: [
       { role: 'reload' },
       { type: 'separator' },
       {
-        label: 'Back',
+        label: menuText('reader.back'),
         accelerator: 'CmdOrCtrl+[',
         click: () => sendToMainWindow('reader:shortcut', 'history-back'),
       },
       {
-        label: 'Forward',
+        label: menuText('reader.forward'),
         accelerator: 'CmdOrCtrl+]',
         click: () => sendToMainWindow('reader:shortcut', 'history-forward'),
       },
       { type: 'separator' },
       {
-        label: 'Previous Topic',
+        label: menuText('reader.previousPage'),
         accelerator: 'CmdOrCtrl+Up',
         click: () => sendToMainWindow('reader:shortcut', 'previous-topic'),
       },
       {
-        label: 'Next Topic',
+        label: menuText('reader.nextPage'),
         accelerator: 'CmdOrCtrl+Down',
         click: () => sendToMainWindow('reader:shortcut', 'next-topic'),
       },
       {
-        label: 'Toggle Sidebar',
+        label: menuText('reader.toggleSidebar'),
         accelerator: 'CmdOrCtrl+B',
         click: () => sendToMainWindow('reader:shortcut', 'toggle-sidebar'),
       },
       { type: 'separator' },
       {
-        label: 'Actual Size',
+        label: menuText('reader.zoomReset'),
         accelerator: 'CmdOrCtrl+0',
         click: () => sendToMainWindow('reader:shortcut', 'zoom-reset'),
       },
       {
-        label: 'Zoom In',
+        label: menuText('reader.zoomIn'),
         accelerator: 'CmdOrCtrl+Plus',
         click: () => sendToMainWindow('reader:shortcut', 'zoom-in'),
       },
       {
-        label: 'Zoom Out',
+        label: menuText('reader.zoomOut'),
         accelerator: 'CmdOrCtrl+-',
         click: () => sendToMainWindow('reader:shortcut', 'zoom-out'),
       },
@@ -730,96 +768,96 @@ function createMenu() {
   }, {
     role: 'windowMenu',
   }, {
-    label: 'Help',
+    label: headings.help,
     submenu: [{
-      label: 'GitHub Repository',
+      label: help.githubRepository,
       click: () => shell.openExternal(projectLinks.repository),
     }, {
-      label: 'Star on GitHub',
+      label: help.starOnGitHub,
       click: () => shell.openExternal(projectLinks.star),
     }, {
-      label: 'Watch Releases',
+      label: help.watchReleases,
       click: () => shell.openExternal(projectLinks.releases),
     }, {
-      label: 'GitHub Discussions',
+      label: help.githubDiscussions,
       click: () => shell.openExternal(projectLinks.discussions),
     }, {
-      label: 'Release Feedback',
+      label: help.releaseFeedback,
       click: () => shell.openExternal(projectLinks.releaseFeedback),
     }, {
-      label: 'Report or Request',
+      label: help.reportOrRequest,
       submenu: [{
-        label: 'Report a Bug',
+        label: help.reportBug,
         click: () => shell.openExternal(projectLinks.bugIssue),
       }, {
-        label: 'Get Install Help',
+        label: help.installHelp,
         click: () => shell.openExternal(projectLinks.installIssue),
       }, {
-        label: 'Request a Feature',
+        label: help.requestFeature,
         click: () => shell.openExternal(projectLinks.featureIssue),
       }, {
-        label: 'Ask a Usage Question',
+        label: help.usageQuestion,
         click: () => shell.openExternal(projectLinks.questionIssue),
       }, {
-        label: 'Report Documentation',
+        label: help.reportDocumentation,
         click: () => shell.openExternal(projectLinks.documentationIssue),
       }, {
-        label: 'Share Release Feedback',
+        label: help.shareReleaseFeedback,
         click: () => shell.openExternal(projectLinks.releaseFeedback),
       }, {
-        label: 'Report CHM Compatibility',
+        label: help.reportCompatibility,
         click: () => shell.openExternal(projectLinks.compatibilityIssue),
       }, {
-        label: 'Share a Success Story',
+        label: help.shareSuccessStory,
         click: () => shell.openExternal(projectLinks.showcaseIssue),
       }, {
-        label: 'Security Policy',
+        label: help.securityPolicy,
         click: () => shell.openExternal(projectLinks.securityPolicy),
       }, {
-        label: 'Report Performance',
+        label: help.reportPerformance,
         click: () => shell.openExternal(projectLinks.performanceIssue),
       }, {
-        label: 'Report Accessibility',
+        label: help.reportAccessibility,
         click: () => shell.openExternal(projectLinks.accessibilityIssue),
       }],
     }, {
-      label: 'Report an Issue',
+      label: help.reportIssue,
       click: () => shell.openExternal(projectLinks.issues),
     }, {
-      label: 'Support Guide',
+      label: help.supportGuide,
       click: () => shell.openExternal(projectLinks.support),
     }, {
-      label: 'Project README',
+      label: help.projectReadme,
       click: () => shell.openExternal(projectLinks.repository),
     }, {
-      label: 'macOS Install Guide',
+      label: help.installGuide,
       click: () => shell.openExternal(projectLinks.installMac),
     }, {
-      label: 'Privacy and Local Data',
+      label: help.privacyAndLocalData,
       click: () => shell.openExternal(projectLinks.privacy),
     }, {
-      label: 'Compatibility Notes',
+      label: help.compatibilityNotes,
       click: () => shell.openExternal(projectLinks.compatibility),
     }, {
-      label: 'Troubleshooting Guide',
+      label: help.troubleshootingGuide,
       click: () => shell.openExternal(projectLinks.troubleshooting),
     }, {
-      label: 'Download Releases',
+      label: help.downloadReleases,
       click: () => shell.openExternal(projectLinks.releases),
     }, {
       type: 'separator',
     }, {
-      label: 'Copy Share Text',
+      label: help.copyShareText,
       accelerator: 'Shift+CmdOrCtrl+C',
       click: () => copyShareText(),
     }, {
-      label: 'Copy Diagnostic Info',
+      label: help.copyDiagnosticInfo,
       click: () => copyDiagnosticInfo(),
     }, {
-      label: 'Reveal App Data Folder',
+      label: help.revealAppDataFolder,
       click: () => revealAppDataFolder(),
     }, {
-      label: 'Clear Extracted Cache',
+      label: help.clearExtractedCache,
       click: () => clearExtractedBookCache(),
     }],
   }];
@@ -877,7 +915,10 @@ function createBookUrl(topicPath: string | null | undefined): string | null {
   const resource = hashIndex >= 0 ? topicPath.slice(0, hashIndex) : topicPath;
   const hash = hashIndex >= 0 ? topicPath.slice(hashIndex) : '';
   const encodedPath = resource.split('/').map(encodeURIComponent).join('/');
-  return `chm://book/${encodedPath}${hash}`;
+  const url = new URL(`chm://book/${encodedPath}`);
+  url.searchParams.set('theme', appTheme);
+  url.hash = hash;
+  return url.toString();
 }
 
 function createBookResult(
@@ -966,6 +1007,25 @@ function addSearchHighlightStyles(markup: string): string {
     .chm-search-match { background: #f7df83; color: inherit; border-radius: 2px; padding: 0 1px; }
     .chm-search-current { background: #f2a93b; box-shadow: 0 0 0 2px rgba(210, 125, 20, 0.28); animation: chm-search-pulse 650ms ease-out; }
     @keyframes chm-search-pulse { from { box-shadow: 0 0 0 6px rgba(210, 125, 20, 0.38); } to { box-shadow: 0 0 0 2px rgba(210, 125, 20, 0.28); } }
+  </style>`;
+  return /<\/head>/i.test(markup) ? markup.replace(/<\/head>/i, `${styles}</head>`) : `${styles}${markup}`;
+}
+
+function addReaderThemeStyles(markup: string, theme: AppTheme): string {
+  const palettes: Record<AppTheme, { background: string; text: string; link: string; border: string }> = {
+    light: { background: '#fffdf9', text: '#1d1d1f', link: '#b94700', border: '#d8d8dc' },
+    warm: { background: '#f7f0df', text: '#332b22', link: '#a64b16', border: '#d8c7a8' },
+    cool: { background: '#f1f6f7', text: '#1f3033', link: '#186b70', border: '#bdd0d2' },
+    'dark-eye': { background: '#171b18', text: '#d8e0d5', link: '#8fc9a2', border: '#3b463e' },
+  };
+  const palette = palettes[theme];
+  const styles = `<style id="chm-reader-theme">
+    :root { color-scheme: ${theme === 'dark-eye' ? 'dark' : 'light'}; }
+    html, body { background: ${palette.background} !important; color: ${palette.text} !important; }
+    body { min-height: 100vh; }
+    a, a:visited { color: ${palette.link} !important; }
+    hr, table, td, th, pre, code, blockquote { border-color: ${palette.border} !important; }
+    ${theme === 'dark-eye' ? 'img { opacity: 0.88; }' : ''}
   </style>`;
   return /<\/head>/i.test(markup) ? markup.replace(/<\/head>/i, `${styles}</head>`) : `${styles}${markup}`;
 }
@@ -1167,6 +1227,7 @@ function registerBookProtocol(): void {
 
       const filePath = resolveBookResource(bookRoot, requestUrl.pathname);
       const searchQuery = requestUrl.searchParams.get('search');
+      const theme = normalizeTheme(requestUrl.searchParams.get('theme'));
       const isHtml = ['.htm', '.html'].includes(path.extname(filePath).toLowerCase());
       if (isHtml) {
         let markup: string;
@@ -1188,6 +1249,7 @@ function registerBookProtocol(): void {
           const selectedIndex = Math.max(0, Number.parseInt(requestUrl.searchParams.get('match') || '', 10) || 0);
           markup = addSearchHighlightStyles(highlightSearchMatches(markup, searchQuery, selectedIndex).markup);
         }
+        markup = addReaderThemeStyles(markup, theme);
         markup = injectContentNavigationBridge(markup, scriptNonce);
         headers.set('Content-Type', 'text/html; charset=utf-8');
         return new Response(markup, {
@@ -1227,8 +1289,19 @@ handleTrustedIpc('collection:remove', (_event: IpcMainInvokeEvent, id: string) =
 handleTrustedIpc('book:url', (_event: IpcMainInvokeEvent, topicPath: string | null) => createBookUrl(topicPath));
 handleTrustedIpc('book:search', (_event: IpcMainInvokeEvent, query: string): SearchResult[] => searchBookContents(bookSearchIndex, query));
 handleTrustedIpc('book:encoding', (_event: IpcMainInvokeEvent, encoding: string) => setBookTextEncoding(encoding));
-handleTrustedIpc('view:set', (_event: IpcMainInvokeEvent, view: 'library' | 'reader') => {
-  currentView = view === 'reader' ? 'reader' : 'library';
+handleTrustedIpc('view:set', (_event: IpcMainInvokeEvent, view: 'library' | 'reader' | 'settings') => {
+  currentView = view === 'reader' || view === 'settings' ? view : 'library';
+});
+handleTrustedIpc('preferences:set', (_event: IpcMainInvokeEvent, locale: string, theme: string) => {
+  appLocale = normalizeLocale(locale);
+  appTheme = normalizeTheme(theme);
+  getLiveMainWindow()?.setBackgroundColor({
+    light: '#f5f5f7',
+    warm: '#f2eadb',
+    cool: '#eaf1f2',
+    'dark-eye': '#151916',
+  }[appTheme]);
+  createMenu();
 });
 handleTrustedIpc('external:open', (_event: IpcMainInvokeEvent, url: string) => {
   const externalUrl = normalizeExternalWebUrl(url);

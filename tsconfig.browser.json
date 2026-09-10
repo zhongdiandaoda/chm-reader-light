@@ -8,6 +8,7 @@
     "noEmit": false
   },
   "include": [
+    "src/i18n.ts",
     "src/library.ts",
     "src/navigation.ts",
     "src/renderer.ts"

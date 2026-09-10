@@ -69,6 +69,51 @@ test('application chrome follows a modern macOS visual system', () => {
   assert.match(main, /backgroundColor: '#f5f5f7'/);
 });
 
+test('settings provides persistent language and theme controls', () => {
+  const html = fs.readFileSync(path.join(projectRoot, 'src', 'index.html'), 'utf-8');
+  const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
+  const preload = fs.readFileSync(path.join(projectRoot, 'src', 'preload.ts'), 'utf-8');
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+
+  assert.match(html, /id="library-settings"/);
+  assert.match(html, /id="reader-settings"/);
+  assert.match(html, /id="settings-view"/);
+  assert.match(html, /<select id="app-language"/);
+  for (const theme of ['light', 'warm', 'cool', 'dark-eye']) {
+    assert.match(html, new RegExp(`name="app-theme" value="${theme}"`));
+  }
+  assert.match(renderer, /const appLocaleStorageKey = 'chm-reader-locale'/);
+  assert.match(renderer, /const appThemeStorageKey = 'chm-reader-theme'/);
+  assert.match(renderer, /savePreference\(appLocaleStorageKey, locale\)/);
+  assert.match(renderer, /savePreference\(appThemeStorageKey, theme\)/);
+  assert.match(renderer, /document\.documentElement\.dir = getLocaleDirection\(currentLocale\)/);
+  assert.match(renderer, /if \(activeView === 'reader' \|\| activeView === 'library'\) settingsReturnView = activeView/);
+  assert.match(renderer, /window\.chmReader\.setPreferences\(currentLocale, currentTheme\)/);
+  assert.match(preload, /ipcRenderer\.invoke\('preferences:set', locale, theme\)/);
+  assert.match(main, /handleTrustedIpc\('preferences:set'/);
+  assert.match(main, /accelerator: 'CmdOrCtrl\+,'/);
+  assert.match(main, /const help = appMenuLabels\[appLocale\]/);
+  assert.match(main, /label: help\.githubRepository/);
+  assert.doesNotMatch(main, /label: 'GitHub Repository'/);
+});
+
+test('all four themes cover application chrome and CHM document content', () => {
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+  const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+
+  for (const theme of ['warm', 'cool', 'dark-eye']) {
+    assert.match(css, new RegExp(`:root\\[data-theme="${theme}"\\]`));
+  }
+  assert.match(css, /\.settings-view\s*{/);
+  assert.match(css, /\.theme-option:has\(input:checked\)/);
+  assert.match(css, /\[dir="rtl"\] \.toolbar/);
+  assert.match(renderer, /contentUrl\.searchParams\.set\('theme', currentTheme\)/);
+  assert.match(main, /function addReaderThemeStyles\(markup: string, theme: AppTheme\): string/);
+  assert.match(main, /const theme = normalizeTheme\(requestUrl\.searchParams\.get\('theme'\)\)/);
+  assert.match(main, /markup = addReaderThemeStyles\(markup, theme\)/);
+});
+
 test('share kit gives maintainers reusable launch copy', () => {
   const shareKit = fs.readFileSync(path.join(projectRoot, 'docs', 'share-kit.md'), 'utf-8');
   const sharePostScript = fs.readFileSync(path.join(projectRoot, 'scripts', 'prepare-share-post.js'), 'utf-8');
@@ -515,7 +560,7 @@ test('reader toolbar shows the current topic position', () => {
   assert.match(html, /<output class="toolbar-meta reader-progress" id="reader-progress" aria-live="polite" hidden><\/output>/);
   assert.match(renderer, /readerProgress: query\('#reader-progress'\)/);
   assert.match(renderer, /function updateReaderProgress\(currentIndex: number\): void/);
-  assert.match(renderer, /elements\.readerProgress\.textContent = currentIndex >= 0\s*\?\s*`第 \$\{currentIndex \+ 1\} \/ \$\{readingOrder\.length\} 节`\s*:\s*''/);
+  assert.match(renderer, /t\('reader\.progress', \{ current: currentIndex \+ 1, total: readingOrder\.length \}\)/);
   assert.match(renderer, /elements\.readerProgress\.hidden = currentIndex < 0 \|\| readingOrder\.length === 0/);
   assert.match(renderer, /updateReaderProgress\(currentIndex\)/);
   assert.match(css, /\.reader-progress\s*{/);
@@ -547,8 +592,8 @@ test('reader window title includes current book and topic', () => {
   assert.match(renderer, /updateDocumentTitle\(\)/);
   assert.match(renderer, /currentTopicPath = topicPath;\s+if \(currentBook\) saveReaderLastTopicPreference\(currentBook, topicPath\);\s+updateDocumentTitle\(\);/);
   assert.match(renderer, /currentTopicPath = topicPath \|\| currentTopicPath;\n  updateDocumentTitle\(\);/);
-  assert.match(renderer, /elements\.bookTitle\.textContent = '正在打开\.\.\.';\n  document\.title = 'Opening - CHMReaderLight';/);
-  assert.match(renderer, /function showView\(view: 'library' \| 'reader'\): void[\s\S]*if \(!isReader\) document\.title = 'CHMReaderLight'/);
+  assert.match(renderer, /elements\.bookTitle\.textContent = t\('library\.opening'\);\n  document\.title = 'Opening - CHMReaderLight';/);
+  assert.match(renderer, /function showView\(view: AppView\): void[\s\S]*if \(!isReader\) document\.title = isSettings/);
 });
 
 test('reader recovers when a library book open request rejects', () => {
@@ -584,9 +629,9 @@ test('library startup failure shows an accessible retry state without an unhandl
     html,
     /<div class="library-empty library-load-error" id="library-load-error" role="alert" hidden>/,
   );
-  assert.match(html, /<h1>无法加载书库<\/h1>/);
-  assert.match(html, /<p id="library-load-error-message">/);
-  assert.match(html, /<button class="primary-button" id="retry-library-load" type="button">重新加载<\/button>/);
+  assert.match(html, /<h1 data-i18n="library\.loadFailed">无法加载书库<\/h1>/);
+  assert.match(html, /<p id="library-load-error-message" data-i18n="library\.loadFailedDescription">/);
+  assert.match(html, /id="retry-library-load"[^>]+data-i18n="library\.reload"/);
   assert.match(renderer, /libraryLoadError: query\('#library-load-error'\)/);
   assert.match(renderer, /libraryLoadErrorMessage: query\('#library-load-error-message'\)/);
   assert.match(renderer, /retryLibraryLoad: query\('#retry-library-load'\)/);
@@ -600,7 +645,7 @@ test('library startup failure shows an accessible retry state without an unhandl
   assert.match(implementation, /elements\.libraryGrid\.hidden = true/);
   assert.match(implementation, /elements\.libraryEmpty\.hidden = true/);
   assert.match(implementation, /elements\.libraryEmptyFiltered\.hidden = true/);
-  assert.match(implementation, /elements\.libraryLoadErrorMessage\.textContent = `书库数据无法加载：\$\{error instanceof Error \? error\.message : String\(error\)\}`/);
+  assert.match(implementation, /elements\.libraryLoadErrorMessage\.textContent = t\('library\.loadError'/);
   assert.match(implementation, /elements\.libraryLoadError\.hidden = false/);
   assert.match(implementation, /elements\.retryLibraryLoad\.disabled = false/);
   assert.match(renderer, /elements\.retryLibraryLoad\.addEventListener\('click', \(\) => void loadLibrary\(\)\)/);
@@ -625,7 +670,7 @@ test('collection dialog recovers when create or rename requests reject', () => {
   assert.ok(tryStart >= 0 && tryStart < createRequest);
   assert.ok(catchStart > createRequest);
   assert.ok(finallyStart > catchStart);
-  assert.match(implementation, /elements\.collectionError\.textContent = `无法\$\{isRename \? '重命名' : '创建'\}书库：\$\{error instanceof Error \? error\.message : String\(error\)\}`/);
+  assert.match(implementation, /elements\.collectionError\.textContent = t\('collection\.submitFailed'/);
   assert.match(implementation, /elements\.collectionError\.hidden = false/);
   assert.match(implementation, /elements\.collectionName\.setAttribute\('aria-invalid', 'true'\)/);
   assert.match(implementation, /elements\.collectionName\.focus\(\)/);
@@ -691,7 +736,7 @@ test('reader search and topic navigation recover when IPC requests reject', () =
   assert.ok(navigationTry >= 0 && navigationTry < urlRequest);
   assert.ok(navigationCatch > urlRequest);
   assert.ok(historyMutation > urlRequest && historyMutation < navigationCatch);
-  assert.match(navigation, /showReaderActionError\('无法打开章节', error\)/);
+  assert.match(navigation, /showReaderActionError\(t\('reader\.openTopicFailed'\), error\)/);
   assert.match(renderer, /function showReaderActionError\(action: string, error: unknown\): void/);
   assert.match(renderer, /window\.alert\(`\$\{action\}：\$\{error instanceof Error \? error\.message : String\(error\)\}`\)/);
   assert.ok(searchStart >= 0 && searchEnd > searchStart);
@@ -700,7 +745,7 @@ test('reader search and topic navigation recover when IPC requests reject', () =
   assert.match(search, /if \(requestId !== searchRequestId\) return/);
   assert.match(search, /searchState\.resultsByPath = new Map\(\)/);
   assert.match(search, /renderNavigation\(currentBook\?\.contents \|\| \[\]\)/);
-  assert.match(search, /elements\.searchStatus\.textContent = `正文搜索失败：\$\{error instanceof Error \? error\.message : String\(error\)\}`/);
+  assert.match(search, /elements\.searchStatus\.textContent = t\('reader\.searchFailed'/);
   assert.match(search, /updateSearchMatchNavigation\(\)/);
 });
 
@@ -722,7 +767,7 @@ test('reader sidebar shows the available topic count', () => {
   assert.match(renderer, /sidebarTopicCount: query\('#sidebar-topic-count'\)/);
   assert.match(renderer, /function updateSidebarTopicCount\(\): void/);
   assert.match(renderer, /elements\.sidebarTopicCount\.hidden = readingOrder\.length === 0/);
-  assert.match(renderer, /elements\.sidebarTopicCount\.textContent = readingOrder\.length > 0\s*\?\s*`共 \$\{readingOrder\.length\} 节`\s*:\s*''/);
+  assert.match(renderer, /t\('reader\.topicCount', \{ count: readingOrder\.length \}\)/);
   assert.match(renderer, /updateSidebarTopicCount\(\)/);
   assert.match(css, /\.sidebar-topic-count\s*{/);
 });
@@ -1017,6 +1062,7 @@ test('all renderer invoke endpoints enforce the trusted IPC sender boundary', ()
     'book:search',
     'book:encoding',
     'view:set',
+    'preferences:set',
     'external:open',
   ]);
   assert.match(main, /isTrustedIpcSender\(event, targetWindow\?\.webContents \|\| null\)/);
@@ -1174,7 +1220,7 @@ test('library cards show a compact added date label', () => {
   assert.match(renderer, /formatLibraryAddedDate/);
   assert.match(renderer, /<span class="library-added-date"><\/span>/);
   assert.match(renderer, /const addedDate = formatLibraryAddedDate\(entry\.addedAt\)/);
-  assert.match(renderer, /addedDateElement\.textContent = addedDate \? `添加于 \$\{addedDate\}` : ''/);
+  assert.match(renderer, /addedDateElement\.textContent = addedDate \? t\('library\.addedAt', \{ date: addedDate \}\) : ''/);
   assert.match(renderer, /addedDateElement\.hidden = !addedDate/);
   assert.match(css, /\.library-added-date\s*{/);
   assert.match(css, /\.library-content\[data-layout="list"\] \.library-added-date\s*{/);
@@ -1197,7 +1243,7 @@ test('library cards show last-opened metadata after successful opens', () => {
   assert.match(main, /sendToMainWindow\('library:updated', openedLibrary\)/);
   assert.match(renderer, /<span class="library-last-opened"><\/span>/);
   assert.match(renderer, /const lastOpenedDate = formatLibraryAddedDate\(entry\.lastOpenedAt\)/);
-  assert.match(renderer, /lastOpenedElement\.textContent = lastOpenedDate \? `上次打开 \$\{lastOpenedDate\}` : ''/);
+  assert.match(renderer, /lastOpenedElement\.textContent = lastOpenedDate \? t\('library\.lastOpened', \{ date: lastOpenedDate \}\) : ''/);
   assert.match(renderer, /lastOpenedElement\.hidden = !lastOpenedDate/);
   assert.match(css, /\.library-last-opened\s*{/);
   assert.match(css, /\.library-content\[data-layout="list"\] \.library-last-opened\s*{/);
@@ -1240,9 +1286,11 @@ test('library cards surface continue-reading state', () => {
   assert.match(renderer, /function createLibraryCard\(entry: LibraryBook, lastTopicsByBook: Record<string, string>\): HTMLDivElement/);
   assert.match(renderer, /const hasLastTopic = Boolean\(entry\.filePath && lastTopicsByBook\[entry\.filePath\] && !entry\.sourceMissing\)/);
   assert.match(renderer, /card\.classList\.toggle\('has-last-topic', hasLastTopic\)/);
-  assert.match(renderer, /<span class="library-continue-reading" hidden>继续阅读<\/span>/);
+  assert.match(renderer, /<span class="library-continue-reading" hidden><\/span>/);
+  assert.match(renderer, /continueReading\.textContent = t\('library\.continueLabel'\)/);
   assert.match(renderer, /continueReading\.hidden = !hasLastTopic/);
-  assert.match(renderer, /hasLastTopic \? `继续阅读 \$\{entry\.name\}` : `打开 \$\{entry\.name\}`/);
+  assert.match(renderer, /t\('library\.continue', \{ name: entry\.name \}\)/);
+  assert.match(renderer, /t\('library\.open', \{ name: entry\.name \}\)/);
   assert.match(css, /\.library-continue-reading\s*{/);
   assert.match(css, /\.library-card\.has-last-topic \.library-cover\s*{/);
   assert.match(css, /\.library-content\[data-layout="list"\] \.library-continue-reading\s*{/);
@@ -1260,7 +1308,7 @@ test('library cards reveal source CHM files without a copy-path action', () => {
   assert.doesNotMatch(preload, /copyText:|clipboard:write-text/);
   assert.match(renderer, /revealLibraryBook: \(id: string\) => Promise<unknown>/);
   assert.match(renderer, /className = 'library-card-reveal'/);
-  assert.match(renderer, /reveal\.setAttribute\('aria-label', `在 Finder 中显示 \$\{entry\.name\}`\)/);
+  assert.match(renderer, /reveal\.setAttribute\('aria-label', t\('library\.revealNamed', \{ name: entry\.name \}\)\)/);
   assert.match(renderer, /window\.chmReader\.revealLibraryBook\(entry\.id\)/);
   assert.doesNotMatch(renderer, /copyPath|copyLibraryBookPath|library-card-copy|copyText:/);
   assert.doesNotMatch(main, /handleTrustedIpc\('clipboard:write-text'/);
@@ -1288,10 +1336,11 @@ test('library cards warn when the saved CHM source file is missing', () => {
   assert.match(preload, /sourceMissing\?: boolean/);
   assert.match(renderer, /sourceMissing\?: boolean/);
   assert.match(renderer, /classList\.toggle\('source-missing', Boolean\(entry\.sourceMissing\)\)/);
-  assert.match(renderer, /<span class="library-source-status" hidden>源文件缺失<\/span>/);
+  assert.match(renderer, /<span class="library-source-status" hidden><\/span>/);
+  assert.match(renderer, /sourceStatus\.textContent = t\('library\.sourceMissing'\)/);
   assert.match(renderer, /sourceStatus\.hidden = !entry\.sourceMissing/);
   assert.match(renderer, /reveal\.disabled = Boolean\(entry\.sourceMissing\)/);
-  assert.match(renderer, /entry\.sourceMissing \? '源文件缺失' : '在 Finder 中显示'/);
+  assert.match(renderer, /entry\.sourceMissing \? t\('library\.sourceMissing'\) : t\('library\.reveal'\)/);
   assert.match(css, /\.library-card\.source-missing \.library-cover\s*{/);
   assert.match(css, /\.library-source-status\s*{/);
   assert.match(css, /\.library-card-reveal:disabled\s*{/);
@@ -1314,7 +1363,7 @@ test('missing library sources can be relinked without deleting the entry', () =>
   assert.match(renderer, /relinkLibraryBook: \(id: string\) => Promise<LibraryState \| null>/);
   assert.match(renderer, /className = 'library-card-relink'/);
   assert.match(renderer, /relink\.hidden = !entry\.sourceMissing/);
-  assert.match(renderer, /重新定位 \$\{entry\.name\} 的源文件/);
+  assert.match(renderer, /t\('library\.relinkNamed', \{ name: entry\.name \}\)/);
   assert.match(renderer, /window\.chmReader\.relinkLibraryBook\(entry\.id\)/);
   assert.match(css, /\.library-card-relink\s*{/);
   assert.match(css, /\.library-card-relink svg\s*{/);
@@ -1324,7 +1373,7 @@ test('library cards confirm before removing a CHM from the library', () => {
   const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
 
   assert.match(renderer, /async function confirmAndRemoveLibraryBook\(entry: LibraryBook\): Promise<void>/);
-  assert.match(renderer, /`从书库移除“\$\{entry\.name\}”\？源文件不会被删除。`/);
+  assert.match(renderer, /const message = t\('library\.removeConfirm', \{ name: entry\.name \}\)/);
   assert.match(renderer, /if \(!window\.confirm\(message\)\) return/);
   assert.match(renderer, /window\.chmReader\.removeLibraryBook\(entry\.id\)/);
   assert.match(renderer, /await confirmAndRemoveLibraryBook\(entry\)/);
@@ -1457,7 +1506,7 @@ test('find shortcut focuses the active view search field', () => {
   const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
   const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
 
-  assert.match(main, /label: 'Find'/);
+  assert.match(main, /label: menuText\('reader\.searchBody'\)/);
   assert.match(main, /accelerator: 'CmdOrCtrl\+F'/);
   assert.match(main, /sendToMainWindow\('navigation:focus-search'\)/);
   assert.match(renderer, /if \(document\.body\.dataset\.view === 'library'\)/);
@@ -1471,20 +1520,20 @@ test('find shortcut focuses the active view search field', () => {
 test('help menu exposes a compact set of stable project links', () => {
   const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
 
-  for (const label of [
-    'GitHub Repository',
-    'Star on GitHub',
-    'Watch Releases',
-    'GitHub Discussions',
-    'Report or Request',
-    'Support Guide',
-    'Project README',
-    'macOS Install Guide',
-    'Privacy and Local Data',
-    'Compatibility Notes',
-    'Troubleshooting Guide',
-    'Download Releases',
-  ]) assert.match(main, new RegExp("label: '" + label + "'"));
+  for (const labelKey of [
+    'githubRepository',
+    'starOnGitHub',
+    'watchReleases',
+    'githubDiscussions',
+    'reportOrRequest',
+    'supportGuide',
+    'projectReadme',
+    'installGuide',
+    'privacyAndLocalData',
+    'compatibilityNotes',
+    'troubleshootingGuide',
+    'downloadReleases',
+  ]) assert.match(main, new RegExp('label: help\\.' + labelKey));
   assert.doesNotMatch(main, /label: 'Feature Tour'|label: 'Roadmap'|label: 'Chinese Documentation'/);
   assert.ok(main.includes("star: 'https://github.com/zhongdiandaoda/chm-reader-light'"));
   assert.ok(main.includes('function buildShareText(): string'));
@@ -1514,7 +1563,7 @@ test('help menu can copy diagnostic details for bug reports', () => {
 
   assert.ok(main.includes('function buildDiagnosticInfo(): string'));
   assert.ok(main.includes('clipboard.writeText(buildDiagnosticInfo())'));
-  assert.match(main, /label: 'Copy Diagnostic Info'/);
+  assert.match(main, /label: help\.copyDiagnosticInfo/);
   assert.match(bugTemplate, /Help > Copy Diagnostic Info/);
   assert.match(troubleshooting, /Help > Copy Diagnostic Info/);
 });
@@ -1528,7 +1577,7 @@ test('help menu can reveal the app data folder for troubleshooting', () => {
   assert.match(main, /await fs\.promises\.mkdir\(app\.getPath\('userData'\), \{ recursive: true \}\)/);
   assert.match(main, /shell\.openPath\(app\.getPath\('userData'\)\)/);
   assert.match(main, /title: 'Unable to Open App Data Folder'/);
-  assert.match(main, /label: 'Reveal App Data Folder'/);
+  assert.match(main, /label: help\.revealAppDataFolder/);
   assert.match(main, /click: \(\) => revealAppDataFolder\(\)/);
   assert.match(privacy, /Help > Reveal App Data Folder/);
   assert.match(troubleshooting, /Help > Reveal App Data Folder/);
@@ -1556,7 +1605,7 @@ test('help menu can clear extracted cache without removing library metadata', ()
   assert.match(implementation, /currentView = 'library'/);
   assert.match(implementation, /sendToMainWindow\('library:show'\)/);
   assert.match(main, /title: 'Extracted Cache Cleared'/);
-  assert.match(main, /label: 'Clear Extracted Cache'/);
+  assert.match(main, /label: help\.clearExtractedCache/);
   assert.match(main, /click: \(\) => clearExtractedBookCache\(\)/);
   assert.match(privacy, /Help > Clear Extracted Cache/);
   assert.match(troubleshooting, /Help > Clear Extracted Cache/);
@@ -1700,7 +1749,7 @@ test('closing the reader window returns to the library before closing the app', 
   const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
   const preload = fs.readFileSync(path.join(projectRoot, 'src', 'preload.ts'), 'utf-8');
 
-  assert.match(main, /let currentView: 'library' \| 'reader' = 'library'/);
+  assert.match(main, /let currentView: 'library' \| 'reader' \| 'settings' = 'library'/);
   assert.match(main, /browserWindow\.on\('close', \(event: \{ preventDefault: \(\) => void \}\) =>/);
   assert.match(main, /if \(isQuitting\) return/);
   assert.match(main, /if \(currentView !== 'reader'\) \{[\s\S]*?process\.platform === 'darwin'[\s\S]*?browserWindow\.hide\(\)/);

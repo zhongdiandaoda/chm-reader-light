@@ -6,6 +6,8 @@ Notable user-facing changes to CHMReaderLight are documented here.
 
 ### Added
 
+- Added a Settings page with persistent language selection for English, Simplified Chinese, Traditional Chinese, Japanese, Korean, Spanish, French, German, Portuguese, Italian, Russian, and Arabic.
+- Added light, warm, cool, and dark eye-care themes across the library, settings, reader chrome, and CHM document content.
 - Added a persistent library with collections, search, grid/list layouts, drag-and-drop import, recent-reading state, Finder reveal, missing-file warnings, and relink support.
 - Added reader navigation history, previous/next topic controls, full-text search, topic progress, persistent zoom, text encoding, sidebar, search scope, and last-read position.
 - Added Apple Silicon macOS packaging with bundled CHMLib, checksums, GitHub artifact attestations, and a draft-first Release workflow.
