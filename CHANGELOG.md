@@ -4,6 +4,8 @@ Notable user-facing changes to CHMReaderLight are documented here.
 
 ## Unreleased
 
+## 0.1.1 - 2026-09-10
+
 - Improved local macOS packaging speed by reusing verified CHMLib and icon build inputs and avoiding a duplicate application build.
 ### Added
 
