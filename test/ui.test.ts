@@ -1651,6 +1651,20 @@ test('runtime avoids sending to a destroyed window from async callbacks', () => 
   assert.doesNotMatch(main, /mainWindow\?\.webContents\.send/);
 });
 
+test('macOS wake and Dock activation restore a painted window without exposing a blank frame', () => {
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+
+  assert.match(main, /powerMonitor/);
+  assert.match(main, /show: false/);
+  assert.match(main, /browserWindow\.once\('ready-to-show'/);
+  assert.match(main, /function restoreMainWindow\(focus: boolean\): boolean/);
+  assert.match(main, /if \(targetWindow\.isMinimized\(\)\) targetWindow\.restore\(\)/);
+  assert.match(main, /if \(!targetWindow\.isVisible\(\)\) targetWindow\.show\(\)/);
+  assert.match(main, /targetWindow\.webContents\.invalidate\(\)/);
+  assert.match(main, /app\.on\('activate', \(\) => \{\s+if \(!restoreMainWindow\(true\)\) createWindow\(\)/);
+  assert.match(main, /powerMonitor\.on\('resume', \(\) => \{\s+restoreMainWindow\(false\)/);
+});
+
 test('background search indexing degrades safely when its worker cannot start', () => {
   const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
   const start = main.indexOf('function startSearchIndexBuild(');
@@ -1688,7 +1702,8 @@ test('closing the reader window returns to the library before closing the app', 
 
   assert.match(main, /let currentView: 'library' \| 'reader' = 'library'/);
   assert.match(main, /browserWindow\.on\('close', \(event: \{ preventDefault: \(\) => void \}\) =>/);
-  assert.match(main, /if \(isQuitting \|\| currentView !== 'reader'\) return/);
+  assert.match(main, /if \(isQuitting\) return/);
+  assert.match(main, /if \(currentView !== 'reader'\) \{[\s\S]*?process\.platform === 'darwin'[\s\S]*?browserWindow\.hide\(\)/);
   assert.match(main, /event\.preventDefault\(\)/);
   assert.match(main, /currentView = 'library'/);
   assert.match(main, /sendToMainWindow\('library:show'\)/);

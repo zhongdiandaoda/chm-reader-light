@@ -21,6 +21,7 @@ const {
   ipcMain,
   Menu,
   net,
+  powerMonitor,
   protocol,
   shell,
 } = require('electron');
@@ -182,6 +183,19 @@ function getLiveMainWindow(): BrowserWindowType | null {
     return null;
   }
   return mainWindow;
+}
+
+function restoreMainWindow(focus: boolean): boolean {
+  const targetWindow = getLiveMainWindow();
+  if (!targetWindow) return false;
+
+  // Waking macOS must not reveal a window the user intentionally hid.
+  if (!focus && (!targetWindow.isVisible() || targetWindow.isMinimized())) return true;
+  if (targetWindow.isMinimized()) targetWindow.restore();
+  if (!targetWindow.isVisible()) targetWindow.show();
+  if (!targetWindow.webContents.isDestroyed()) targetWindow.webContents.invalidate();
+  if (focus) targetWindow.focus();
+  return true;
 }
 
 function sendToMainWindow(channel: string, ...args: unknown[]): void {
@@ -528,6 +542,7 @@ function createWindow() {
     height: 800,
     minWidth: 760,
     minHeight: 520,
+    show: false,
     titleBarStyle: 'hiddenInset',
     backgroundColor: '#f5f5f7',
     webPreferences: {
@@ -559,8 +574,19 @@ function createWindow() {
   browserWindow.webContents.on('will-navigate', (event: Electron.Event) => {
     event.preventDefault();
   });
+  browserWindow.once('ready-to-show', () => {
+    if (browserWindow.isDestroyed()) return;
+    browserWindow.show();
+  });
   browserWindow.on('close', (event: { preventDefault: () => void }) => {
-    if (isQuitting || currentView !== 'reader') return;
+    if (isQuitting) return;
+    if (currentView !== 'reader') {
+      if (process.platform === 'darwin') {
+        event.preventDefault();
+        browserWindow.hide();
+      }
+      return;
+    }
     event.preventDefault();
     currentView = 'library';
     sendToMainWindow('library:show');
@@ -1241,11 +1267,7 @@ if (!hasSingleInstanceLock) {
 
   app.on('second-instance', (_event: Electron.Event, argv: string[]) => {
     const launchedFile = getLaunchChmPath(argv);
-    const targetWindow = getLiveMainWindow();
-    if (targetWindow) {
-      if (targetWindow.isMinimized()) targetWindow.restore();
-      targetWindow.focus();
-    }
+    restoreMainWindow(true);
     if (launchedFile) {
       importAndOpenFromSystem(launchedFile);
     }
@@ -1263,7 +1285,11 @@ if (!hasSingleInstanceLock) {
     }
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      if (!restoreMainWindow(true)) createWindow();
+    });
+
+    powerMonitor.on('resume', () => {
+      restoreMainWindow(false);
     });
   }).catch((error: unknown) => {
     reportMainProcessError('Unable to Start CHMReaderLight', error);
