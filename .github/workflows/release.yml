@@ -203,6 +203,7 @@ jobs:
         with:
           artifact-ids: ${{ needs.prepare_publish.outputs.artifact_id }}
           path: dist/publish
+          merge-multiple: true
 
       - name: Publish complete GitHub Release atomically
         working-directory: dist/publish

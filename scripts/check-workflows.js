@@ -193,7 +193,7 @@ function verifyWorkflowTrustSettings() {
   );
   requirePattern(
     publishJob,
-    /uses: actions\/download-artifact@[a-f0-9]{40} # v4\n        with:\n          artifact-ids: \$\{\{ needs\.prepare_publish\.outputs\.artifact_id \}\}\n          path: dist\/publish/,
+    /uses: actions\/download-artifact@[a-f0-9]{40} # v4\n        with:\n          artifact-ids: \$\{\{ needs\.prepare_publish\.outputs\.artifact_id \}\}\n          path: dist\/publish\n          merge-multiple: true/,
     'exact-ID-bound immutable release publication input download',
     errors,
   );
