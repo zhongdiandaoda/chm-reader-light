@@ -35,12 +35,20 @@ function readText(relativePath) {
 
 function verifyReadmeBadges() {
   const errors = [];
-  const readmeFiles = ['README.md', 'README.en.md'];
+  const readmeFiles = [
+    'README.md',
+    ...fs.readdirSync(path.join(rootDir, 'docs', 'readme'))
+      .filter((fileName) => /^README[.][^.]+(?:-[^.]+)?[.]md$/.test(fileName))
+      .map((fileName) => path.join('docs', 'readme', fileName)),
+  ];
 
   for (const relativePath of readmeFiles) {
     const readme = readText(relativePath);
     for (const badge of requiredBadges) {
-      if (!readme.includes(badge.markdown)) {
+      const expectedMarkdown = badge.name === 'License: MIT' && relativePath !== 'README.md'
+        ? badge.markdown.replace('(./LICENSE)', '(../../LICENSE)')
+        : badge.markdown;
+      if (!readme.includes(expectedMarkdown)) {
         errors.push(`${relativePath} is missing the ${badge.name} badge.`);
       }
     }

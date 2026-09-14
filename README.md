@@ -1,6 +1,6 @@
 # CHMReaderLight - macOS CHM Reader
 
-[English](./README.en.md)
+[English](./docs/readme/README.en.md) | **简体中文** | [繁體中文](./docs/readme/README.zh-TW.md) | [日本語](./docs/readme/README.ja.md) | [한국어](./docs/readme/README.ko.md) | [Español](./docs/readme/README.es.md) | [Français](./docs/readme/README.fr.md) | [Deutsch](./docs/readme/README.de.md) | [Português](./docs/readme/README.pt.md) | [Italiano](./docs/readme/README.it.md) | [Русский](./docs/readme/README.ru.md) | [العربية](./docs/readme/README.ar.md)
 
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/badge/CodeQL-analysis-2088FF?logo=github&logoColor=white)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml)

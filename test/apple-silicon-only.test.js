@@ -12,14 +12,14 @@ function read(relativePath) {
 test('public docs target Apple Silicon only', () => {
   const publicEntryPoints = [
     'README.md',
-    'README.en.md',
+    'docs/readme/README.en.md',
     '.github/ISSUE_TEMPLATE/bug_report.yml',
     '.github/ISSUE_TEMPLATE/install_help.yml',
     '.github/DISCUSSION_TEMPLATE/release-feedback.yml',
   ].map(read).join('\n');
   assert.doesNotMatch(publicEntryPoints, /Intel|x64|mac-x64/i);
 
-  const readmes = `${read('README.md')}\n${read('README.en.md')}`;
+  const readmes = `${read('README.md')}\n${read('docs/readme/README.en.md')}`;
   assert.match(readmes, /Apple Silicon/);
   assert.match(readmes, /CHMReaderLight-mac-arm64[.]zip/);
 });

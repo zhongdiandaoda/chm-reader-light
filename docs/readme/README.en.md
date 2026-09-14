@@ -1,18 +1,18 @@
 # CHMReaderLight - macOS CHM Reader
 
-[中文](./README.md)
+**English** | [简体中文](../../README.md) | [繁體中文](./README.zh-TW.md) | [日本語](./README.ja.md) | [한국어](./README.ko.md) | [Español](./README.es.md) | [Français](./README.fr.md) | [Deutsch](./README.de.md) | [Português](./README.pt.md) | [Italiano](./README.it.md) | [Русский](./README.ru.md) | [العربية](./README.ar.md)
 
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/badge/CodeQL-analysis-2088FF?logo=github&logoColor=white)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml)
 [![GitHub stars](https://img.shields.io/github/stars/zhongdiandaoda/chm-reader-light?style=social)](https://github.com/zhongdiandaoda/chm-reader-light/stargazers)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](../../LICENSE)
 [![Platform: macOS](https://img.shields.io/badge/platform-macOS-111111.svg)](#requirements)
 
 A lightweight, offline CHM reader for macOS. Organize local manuals in a library, search their contents, and read without uploading documents or creating an account.
 
 **[Download for macOS](https://github.com/zhongdiandaoda/chm-reader-light/releases)** · **[Run from source](#run-from-source)** · **[Star the project](https://github.com/zhongdiandaoda/chm-reader-light)**
 
-![Actual CHMReaderLight empty library](./docs/assets/app-preview.png)
+![Actual CHMReaderLight empty library](../assets/app-preview.png)
 
 > This screenshot is captured from the current Electron app with an empty, isolated library. It contains no private CHM names or local paths.
 
@@ -35,7 +35,7 @@ Each archive has a matching `.zip.sha256` file. Verify both files from the same 
 shasum -a 256 -c CHMReaderLight-mac-arm64.zip.sha256
 ```
 
-Current builds are not Apple-notarized. If macOS blocks the first launch, review the app under **System Settings > Privacy & Security**. See the [install guide](./docs/install-macos.md) for complete steps.
+Current builds are not Apple-notarized. If macOS blocks the first launch, review the app under **System Settings > Privacy & Security**. See the [install guide](../install-macos.md) for complete steps.
 
 ## Basic Use
 
@@ -44,7 +44,7 @@ Current builds are not Apple-notarized. If macOS blocks the first launch, review
 3. Open a document, then search its contents or body; change text encoding if needed.
 4. Use `Command+O` to add files, `Command+F` to search, and `Command+L` to return to the library.
 
-The app stores source paths and reading preferences only. See [Privacy](./docs/privacy.md), [Compatibility](./docs/compatibility.md), and [Troubleshooting](./docs/troubleshooting.md).
+The app stores source paths and reading preferences only. See [Privacy](../privacy.md), [Compatibility](../compatibility.md), and [Troubleshooting](../troubleshooting.md).
 
 ## Requirements
 
@@ -72,22 +72,22 @@ Package the current architecture with `npm run package:mac`.
 
 | Topic | Guide |
 | --- | --- |
-| Installation | [macOS Install Guide](./docs/install-macos.md) |
-| Supported CHM behavior | [Compatibility](./docs/compatibility.md) |
-| Local data | [Privacy](./docs/privacy.md) |
-| Trust boundaries | [Security Model](./docs/security-model.md) |
-| Common problems | [Troubleshooting](./docs/troubleshooting.md) |
-| Code structure | [Architecture](./docs/architecture.md) |
-| Verification | [Testing](./docs/testing.md) |
-| Publishing | [Release Guide](./docs/release.md) |
+| Installation | [macOS Install Guide](../install-macos.md) |
+| Supported CHM behavior | [Compatibility](../compatibility.md) |
+| Local data | [Privacy](../privacy.md) |
+| Trust boundaries | [Security Model](../security-model.md) |
+| Common problems | [Troubleshooting](../troubleshooting.md) |
+| Code structure | [Architecture](../architecture.md) |
+| Verification | [Testing](../testing.md) |
+| Publishing | [Release Guide](../release.md) |
 
 ## Support and Contributing
 
-- Usage and bugs: [SUPPORT.md](./SUPPORT.md) or [Issues](https://github.com/zhongdiandaoda/chm-reader-light/issues/new/choose)
-- Security reports: [SECURITY.md](./SECURITY.md)
-- Contributions: [CONTRIBUTING.md](./CONTRIBUTING.md)
-- Community conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+- Usage and bugs: [SUPPORT.md](../../SUPPORT.md) or [Issues](https://github.com/zhongdiandaoda/chm-reader-light/issues/new/choose)
+- Security reports: [SECURITY.md](../../SECURITY.md)
+- Contributions: [CONTRIBUTING.md](../../CONTRIBUTING.md)
+- Community conduct: [CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md)
 
 If CHMReaderLight improves your offline documentation workflow, please [star the project](https://github.com/zhongdiandaoda/chm-reader-light).
 
-[MIT License](./LICENSE) · [Third-Party Notices](./THIRD_PARTY_NOTICES.md)
+[MIT License](../../LICENSE) · [Third-Party Notices](../../THIRD_PARTY_NOTICES.md)

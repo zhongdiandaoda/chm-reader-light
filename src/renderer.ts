@@ -27,6 +27,9 @@ import {
 interface LibraryBook {
   id: string;
   name: string;
+  displayName?: string;
+  sourcePath?: string;
+  sourceFileName?: string;
   filePath?: string;
   storedName?: string;
   addedAt?: number;
@@ -67,6 +70,8 @@ interface ChmReaderApi {
   removeLibraryBook: (id: string) => Promise<LibraryState>;
   revealLibraryBook: (id: string) => Promise<unknown>;
   relinkLibraryBook: (id: string) => Promise<LibraryState | null>;
+  renameLibraryBook: (id: string, displayName: string) => Promise<LibraryState>;
+  moveLibraryBook: (id: string, collectionId: string | null) => Promise<LibraryState>;
   createCollection: (name: string) => Promise<LibraryState>;
   renameCollection: (id: string, name: string) => Promise<LibraryState>;
   removeCollection: (id: string) => Promise<LibraryState>;
@@ -74,7 +79,7 @@ interface ChmReaderApi {
   searchBook: (query: string) => Promise<SearchResult[]>;
   setTextEncoding: (encoding: string) => Promise<OpenedBook | { textEncoding: string | null }>;
   setView: (view: AppView) => Promise<unknown>;
-  setPreferences: (locale: AppLocale, theme: AppTheme) => Promise<unknown>;
+  setPreferences: (locale: AppLocale, theme: AppTheme, openLibraryOnDocumentClose: boolean) => Promise<unknown>;
   openExternal: (url: string) => Promise<unknown>;
   onBookOpened: (callback: (book: OpenedBook) => void) => () => void;
   onBookIndexReady: (callback: (result: { searchablePageCount: number }) => void) => () => void;
@@ -115,6 +120,7 @@ interface SearchState {
 
 interface UiElement extends HTMLElement {
   disabled: boolean;
+  checked: boolean;
   value: string;
   placeholder: string;
   src: string;
@@ -165,6 +171,22 @@ const elements = {
   collectionContextMenu: query('#collection-context-menu'),
   collectionRename: query('#collection-rename'),
   collectionDelete: query('#collection-delete'),
+  bookContextMenu: query('#book-context-menu'),
+  bookContextOpen: query('#book-context-open'),
+  bookContextReveal: query('#book-context-reveal'),
+  bookContextRename: query('#book-context-rename'),
+  bookContextMove: query('#book-context-move'),
+  bookContextDelete: query('#book-context-delete'),
+  bookMoveMenu: query('#book-move-menu'),
+  bookRenameDialog: query('#book-rename-dialog'),
+  bookRenameForm: query('#book-rename-form'),
+  bookDisplayName: query('#book-display-name'),
+  bookRenameError: query('#book-rename-error'),
+  bookRenameCancel: query('#book-rename-cancel'),
+  bookRenameSave: query('#book-rename-save'),
+  gridSizeControls: query('#grid-size-controls'),
+  gridSizeDecrease: query('#grid-size-decrease'),
+  gridSizeIncrease: query('#grid-size-increase'),
   viewGrid: query('#view-grid'),
   viewList: query('#view-list'),
   addBook: query('#add-book'),
@@ -216,9 +238,11 @@ const elements = {
   settingsBack: query('#settings-back'),
   appLanguage: query('#app-language'),
   appTheme: query('#app-theme'),
+  openLibraryOnDocumentClose: query('#open-library-on-document-close'),
 };
 
 const libraryLayoutStorageKey = 'chm-reader-library-layout';
+const libraryGridSizeStorageKey = 'chm-reader-library-grid-size';
 const selectedCollectionStorageKey = 'chm-reader-selected-collection';
 const textEncodingStorageKey = 'chm-reader-text-encoding';
 const readerSidebarWidthStorageKey = 'chm-reader-sidebar-width';
@@ -228,6 +252,8 @@ const readerSearchScopeStorageKey = 'chm-reader-search-scope';
 const readerLastTopicStorageKey = 'chm-reader-last-topic-by-book';
 const appLocaleStorageKey = 'chm-reader-locale';
 const appThemeStorageKey = 'chm-reader-theme';
+const openLibraryOnDocumentCloseStorageKey = 'chm-reader-open-library-on-document-close';
+const libraryGridSizes = [128, 150, 180, 210] as const;
 
 let currentBook: OpenedBook | null = null;
 let currentTopicPath: string | null = null;
@@ -247,14 +273,19 @@ let searchState: SearchState = {
 let library: LibraryState = { collections: [], books: [] };
 let selectedCollectionId: string | null = null; // null = 全部
 let libraryLayout = 'grid';
+let libraryGridSizeIndex = 1;
 let libraryQuery = '';
 let collectionDialogRestoreFocus: UiElement | null = null;
 let collectionDialogMode: { type: 'create' | 'rename'; collectionId: string | null } = { type: 'create', collectionId: null };
 let contextCollection: LibraryCollection | null = null;
 let contextCollectionCount = 0;
+let contextBookId: string | null = null;
+let bookContextRestoreFocus: HTMLElement | null = null;
+let bookRenameId: string | null = null;
 let libraryDragDepth = 0;
 let currentLocale = loadLocalePreference();
 let currentTheme = loadThemePreference();
+let openLibraryOnDocumentClose = loadOpenLibraryOnDocumentClosePreference();
 let settingsReturnView: Exclude<AppView, 'settings'> = 'library';
 
 function t(key: TranslationKey, variables: Record<string, string | number> = {}): string {
@@ -277,6 +308,14 @@ function loadThemePreference(): AppTheme {
   }
 }
 
+function loadOpenLibraryOnDocumentClosePreference(): boolean {
+  try {
+    return window.localStorage.getItem(openLibraryOnDocumentCloseStorageKey) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
 function savePreference(key: string, value: string): void {
   try {
     window.localStorage.setItem(key, value);
@@ -291,6 +330,16 @@ function loadLibraryLayoutPreference(): 'grid' | 'list' {
     return saved === 'list' || saved === 'grid' ? saved : 'grid';
   } catch {
     return 'grid';
+  }
+}
+
+function loadLibraryGridSizePreference(): number {
+  try {
+    const saved = Number(window.localStorage.getItem(libraryGridSizeStorageKey));
+    const index = libraryGridSizes.indexOf(saved as typeof libraryGridSizes[number]);
+    return index >= 0 ? index : 1;
+  } catch {
+    return 1;
   }
 }
 
@@ -512,6 +561,10 @@ function applyStaticTranslations(): void {
     const key = element.dataset.i18nTitle as TranslationKey | undefined;
     if (key) element.setAttribute('title', t(key));
   });
+  document.querySelectorAll<HTMLElement>('[data-i18n-tooltip]').forEach((element) => {
+    const key = element.dataset.i18nTooltip as TranslationKey | undefined;
+    if (key) element.dataset.tooltip = t(key);
+  });
   document.querySelectorAll<UiElement>('[data-i18n-placeholder]').forEach((element) => {
     const key = element.dataset.i18nPlaceholder as TranslationKey | undefined;
     if (key) element.placeholder = t(key);
@@ -538,7 +591,7 @@ function applyTheme(theme: AppTheme, persist = false): void {
   document.documentElement.dataset.theme = theme;
   updateThemeSelection();
   if (persist) savePreference(appThemeStorageKey, theme);
-  void window.chmReader.setPreferences(currentLocale, currentTheme).catch((error: unknown) => {
+  void window.chmReader.setPreferences(currentLocale, currentTheme, openLibraryOnDocumentClose).catch((error: unknown) => {
     showReaderActionError(t('error.syncView'), error);
   });
   if (persist && currentTopicPath) {
@@ -561,7 +614,7 @@ function applyLocale(locale: AppLocale, persist = false): void {
   updateSidebarTopicCount();
   updateSearchStatus();
   showView((document.body.dataset.view as AppView) || 'library');
-  void window.chmReader.setPreferences(currentLocale, currentTheme).catch((error: unknown) => {
+  void window.chmReader.setPreferences(currentLocale, currentTheme, openLibraryOnDocumentClose).catch((error: unknown) => {
     showReaderActionError(t('error.syncView'), error);
   });
 }
@@ -573,6 +626,14 @@ function booksInSelectedCollection(): LibraryBook[] {
   return sortBooksForDisplay(books);
 }
 
+function getBookDisplayName(book: LibraryBook): string {
+  return book.displayName || book.name;
+}
+
+function getBookSourcePath(book: LibraryBook): string {
+  return book.sourcePath || book.filePath || '';
+}
+
 function filteredBooksInSelectedCollection(): LibraryBook[] {
   return filterBooksByQuery(booksInSelectedCollection(), libraryQuery);
 }
@@ -580,6 +641,7 @@ function filteredBooksInSelectedCollection(): LibraryBook[] {
 function setLibraryLayout(layout: 'grid' | 'list'): void {
   libraryLayout = layout;
   elements.libraryContent.dataset.layout = layout;
+  elements.gridSizeControls.hidden = layout !== 'grid';
   elements.viewGrid.setAttribute('aria-pressed', String(layout === 'grid'));
   elements.viewList.setAttribute('aria-pressed', String(layout === 'list'));
   try {
@@ -587,6 +649,15 @@ function setLibraryLayout(layout: 'grid' | 'list'): void {
   } catch {
     // Ignore storage failures and keep the in-memory layout for this session.
   }
+}
+
+function setLibraryGridSize(index: number, persist = false): void {
+  libraryGridSizeIndex = Math.max(0, Math.min(index, libraryGridSizes.length - 1));
+  const size = libraryGridSizes[libraryGridSizeIndex];
+  elements.libraryContent.style.setProperty('--library-card-min-width', `${size}px`);
+  elements.gridSizeDecrease.disabled = libraryGridSizeIndex === 0;
+  elements.gridSizeIncrease.disabled = libraryGridSizeIndex === libraryGridSizes.length - 1;
+  if (persist) savePreference(libraryGridSizeStorageKey, String(size));
 }
 
 function selectCollection(id: string | null): void {
@@ -597,6 +668,7 @@ function selectCollection(id: string | null): void {
 
 function renderLibrary(nextLibrary: LibraryState): void {
   hideCollectionContextMenu();
+  hideBookContextMenu();
   library = {
     collections: Array.isArray(nextLibrary?.collections) ? nextLibrary.collections : [],
     books: Array.isArray(nextLibrary?.books) ? nextLibrary.books : [],
@@ -628,6 +700,7 @@ function createCollectionItem(collection: CollectionItem, count: number, removab
   const item = document.createElement('div');
   item.className = 'collection-item';
   item.classList.toggle('active', isSelected);
+  item.classList.toggle('removable', removable);
 
   const select = document.createElement('button');
   select.className = 'collection-select';
@@ -689,21 +762,33 @@ function renderBooks() {
 }
 
 function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, string>): HTMLDivElement {
-  const hasLastTopic = Boolean(entry.filePath && lastTopicsByBook[entry.filePath] && !entry.sourceMissing);
+  const displayName = getBookDisplayName(entry);
+  const sourcePath = getBookSourcePath(entry);
+  const hasLastTopic = Boolean(sourcePath && lastTopicsByBook[sourcePath] && !entry.sourceMissing);
   const card = document.createElement('div');
   card.className = 'library-card';
   card.classList.toggle('source-missing', Boolean(entry.sourceMissing));
   card.classList.toggle('has-last-topic', hasLastTopic);
   card.dataset.id = entry.id;
   card.setAttribute('role', 'listitem');
+  card.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    openBookContextMenu(entry.id, event.clientX, event.clientY, event.currentTarget as UiElement);
+  });
 
   const open = document.createElement('button');
   open.className = 'library-card-open';
   open.type = 'button';
-  open.title = entry.filePath || entry.name;
+  open.title = sourcePath || displayName;
   open.setAttribute('aria-label', hasLastTopic
-    ? t('library.continue', { name: entry.name })
-    : t('library.open', { name: entry.name }));
+    ? t('library.continue', { name: displayName })
+    : t('library.open', { name: displayName }));
+  open.addEventListener('keydown', (event) => {
+    if (!(event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))) return;
+    event.preventDefault();
+    const rect = card.getBoundingClientRect();
+    openBookContextMenu(entry.id, rect.left + 20, rect.top + 20, open);
+  });
   const cardDescriptionIdPrefix = `library-book-${entry.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
   const describedBy: string[] = [];
   open.innerHTML = `
@@ -729,10 +814,10 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
     </span>`;
   const nameElement = open.querySelector<HTMLElement>('.library-name');
   if (nameElement) {
-    nameElement.textContent = entry.name;
-    nameElement.title = entry.name;
+    nameElement.textContent = displayName;
+    nameElement.title = displayName;
   }
-  const location = getBookLocationLabel(entry.filePath);
+  const location = getBookLocationLabel(sourcePath);
   const locationElement = open.querySelector<HTMLElement>('.library-location');
   if (locationElement) {
     locationElement.id = `${cardDescriptionIdPrefix}-location`;
@@ -742,9 +827,9 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
   }
   const pathElement = open.querySelector<HTMLElement>('.library-path');
   if (pathElement) {
-    pathElement.textContent = entry.filePath || '';
-    pathElement.title = entry.filePath || '';
-    pathElement.hidden = !entry.filePath;
+    pathElement.textContent = sourcePath;
+    pathElement.title = sourcePath;
+    pathElement.hidden = !sourcePath;
   }
   const lastOpenedDate = formatLibraryAddedDate(entry.lastOpenedAt);
   const lastOpenedElement = open.querySelector<HTMLElement>('.library-last-opened');
@@ -779,38 +864,11 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
   if (describedBy.length > 0) open.setAttribute('aria-describedby', describedBy.join(' '));
   open.addEventListener('click', () => void openLibraryBook(entry.id));
 
-  const remove = document.createElement('button');
-  remove.className = 'library-card-remove';
-  remove.type = 'button';
-  remove.setAttribute('aria-label', t('library.removeNamed', { name: entry.name }));
-  remove.title = t('library.remove');
-  remove.textContent = '×';
-  remove.addEventListener('click', async (event) => {
-    event.stopPropagation();
-    await confirmAndRemoveLibraryBook(entry);
-  });
-
-  const reveal = document.createElement('button');
-  reveal.className = 'library-card-reveal';
-  reveal.type = 'button';
-  reveal.disabled = Boolean(entry.sourceMissing);
-  reveal.setAttribute('aria-label', t('library.revealNamed', { name: entry.name }));
-  reveal.title = entry.sourceMissing ? t('library.sourceMissing') : t('library.reveal');
-  reveal.innerHTML = `
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M3 5.5h5.3l1.4 1.8H17v8.2H3z"></path>
-      <path d="M3 7.3h14"></path>
-    </svg>`;
-  reveal.addEventListener('click', (event) => {
-    event.stopPropagation();
-    void revealLibraryBook(entry);
-  });
-
   const relink = document.createElement('button');
   relink.className = 'library-card-relink';
   relink.type = 'button';
   relink.hidden = !entry.sourceMissing;
-  relink.setAttribute('aria-label', t('library.relinkNamed', { name: entry.name }));
+  relink.setAttribute('aria-label', t('library.relinkNamed', { name: displayName }));
   relink.title = t('library.relink');
   relink.innerHTML = `
     <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -826,7 +884,7 @@ function createLibraryCard(entry: LibraryBook, lastTopicsByBook: Record<string, 
 
   const actions = document.createElement('div');
   actions.className = 'library-card-actions';
-  actions.append(relink, reveal, remove);
+  actions.append(relink);
 
   card.append(open, actions);
   return card;
@@ -858,7 +916,7 @@ async function relinkLibraryBook(entry: LibraryBook, trigger: HTMLButtonElement)
 }
 
 async function confirmAndRemoveLibraryBook(entry: LibraryBook): Promise<void> {
-  const message = t('library.removeConfirm', { name: entry.name });
+  const message = t('library.removeConfirmGeneric');
   // eslint-disable-next-line no-alert
   if (!window.confirm(message)) return;
   try {
@@ -901,6 +959,173 @@ function openCollectionContextMenu(event: MouseEvent, collection: LibraryCollect
   elements.collectionContextMenu.style.left = `${Math.max(8, left)}px`;
   elements.collectionContextMenu.style.top = `${Math.max(8, top)}px`;
   elements.collectionRename.focus();
+}
+
+function getMenuItems(menu: UiElement): UiElement[] {
+  return Array.from(menu.querySelectorAll<UiElement>(':scope > button:not([disabled])'));
+}
+
+function positionContextMenu(menu: UiElement, left: number, top: number): void {
+  const measuredWidth = menu.offsetWidth;
+  const measuredHeight = menu.offsetHeight;
+  menu.style.left = `${Math.max(8, Math.min(left, window.innerWidth - measuredWidth - 8))}px`;
+  menu.style.top = `${Math.max(8, Math.min(top, window.innerHeight - measuredHeight - 8))}px`;
+}
+
+function hideBookMoveMenu(): void {
+  elements.bookMoveMenu.hidden = true;
+  elements.bookContextMove.setAttribute('aria-expanded', 'false');
+}
+
+function hideBookContextMenu(restoreFocus = false): void {
+  elements.bookContextMenu.hidden = true;
+  hideBookMoveMenu();
+  document.querySelector('.library-card.context-active')?.classList.remove('context-active');
+  contextBookId = null;
+  if (restoreFocus) bookContextRestoreFocus?.focus();
+  bookContextRestoreFocus = null;
+}
+
+function getContextBook(): LibraryBook | null {
+  return contextBookId ? library.books.find((book) => book.id === contextBookId) || null : null;
+}
+
+function renderBookMoveTargets(book: LibraryBook): number {
+  elements.bookMoveMenu.replaceChildren();
+  const targets: CollectionItem[] = [{ id: null, name: t('library.unassigned') }, ...library.collections];
+  let availableTargetCount = 0;
+  for (const target of targets) {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.setAttribute('role', 'menuitem');
+    option.dataset.collectionId = target.id || '';
+    option.textContent = target.name;
+    const isCurrent = book.collectionId === target.id;
+    option.disabled = isCurrent;
+    if (!isCurrent) availableTargetCount += 1;
+    option.setAttribute('aria-current', String(isCurrent));
+    option.addEventListener('click', () => void moveContextBook(book.id, target.id));
+    elements.bookMoveMenu.append(option);
+  }
+  return availableTargetCount;
+}
+
+function openBookMoveMenu(): void {
+  const book = getContextBook();
+  if (!book) {
+    hideBookContextMenu();
+    showLibraryActionError(t('library.moveFailed'), t('library.bookUnavailable'));
+    return;
+  }
+  if (renderBookMoveTargets(book) === 0) return;
+  elements.bookMoveMenu.hidden = false;
+  elements.bookContextMove.setAttribute('aria-expanded', 'true');
+  const triggerRect = elements.bookContextMove.getBoundingClientRect();
+  const submenuWidth = elements.bookMoveMenu.offsetWidth;
+  const opensLeft = triggerRect.right + submenuWidth + 8 > window.innerWidth;
+  positionContextMenu(
+    elements.bookMoveMenu,
+    opensLeft ? triggerRect.left - submenuWidth - 4 : triggerRect.right + 4,
+    triggerRect.top - 6,
+  );
+  getMenuItems(elements.bookMoveMenu)[0]?.focus();
+}
+
+function openBookContextMenu(bookId: string, left: number, top: number, restoreFocus: HTMLElement): void {
+  hideCollectionContextMenu();
+  hideBookContextMenu();
+  const book = library.books.find((entry) => entry.id === bookId);
+  if (!book) return;
+  contextBookId = bookId;
+  bookContextRestoreFocus = restoreFocus;
+  elements.bookContextReveal.disabled = Boolean(book.sourceMissing);
+  elements.bookContextMove.disabled = library.collections.length === 0 && book.collectionId === null;
+  elements.bookContextMenu.hidden = false;
+  document.querySelector(`.library-card[data-id="${CSS.escape(bookId)}"]`)?.classList.add('context-active');
+  positionContextMenu(elements.bookContextMenu, left, top);
+  elements.bookContextOpen.focus();
+}
+
+function handleMenuKeyboardNavigation(
+  event: KeyboardEvent,
+  menu: UiElement,
+  onEscape: () => void,
+): void {
+  const items = getMenuItems(menu);
+  const currentIndex = items.indexOf(document.activeElement as UiElement);
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    const direction = event.key === 'ArrowDown' ? 1 : -1;
+    items[(currentIndex + direction + items.length) % items.length]?.focus();
+    return;
+  }
+  if (event.key === 'Home' || event.key === 'End') {
+    event.preventDefault();
+    items[event.key === 'Home' ? 0 : items.length - 1]?.focus();
+    return;
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    onEscape();
+  }
+}
+
+function clearBookRenameError(): void {
+  elements.bookRenameError.textContent = '';
+  elements.bookRenameError.hidden = true;
+  elements.bookDisplayName.removeAttribute('aria-invalid');
+}
+
+function closeBookRenameDialog(): void {
+  elements.bookRenameDialog.hidden = true;
+  elements.bookRenameSave.disabled = false;
+  bookRenameId = null;
+  clearBookRenameError();
+}
+
+function openBookRenameDialog(book: LibraryBook): void {
+  hideBookContextMenu();
+  bookRenameId = book.id;
+  elements.bookDisplayName.value = getBookDisplayName(book);
+  elements.bookRenameDialog.hidden = false;
+  requestAnimationFrame(() => {
+    elements.bookDisplayName.focus();
+    elements.bookDisplayName.select();
+  });
+}
+
+async function submitBookRename(event: SubmitEvent): Promise<void> {
+  event.preventDefault();
+  const bookId = bookRenameId;
+  const trimmed = elements.bookDisplayName.value.trim().slice(0, 512);
+  if (!bookId || !trimmed) {
+    elements.bookDisplayName.focus();
+    return;
+  }
+  elements.bookRenameSave.disabled = true;
+  clearBookRenameError();
+  try {
+    const updated = await window.chmReader.renameLibraryBook(bookId, trimmed);
+    renderLibrary(updated);
+    closeBookRenameDialog();
+  } catch (error: unknown) {
+    elements.bookRenameError.textContent = `${t('library.renameFailed')}：${error instanceof Error ? error.message : String(error)}`;
+    elements.bookRenameError.hidden = false;
+    elements.bookDisplayName.setAttribute('aria-invalid', 'true');
+    elements.bookDisplayName.focus();
+  } finally {
+    elements.bookRenameSave.disabled = false;
+  }
+}
+
+async function moveContextBook(bookId: string, collectionId: string | null): Promise<void> {
+  hideBookContextMenu();
+  try {
+    const updated = await window.chmReader.moveLibraryBook(bookId, collectionId);
+    renderLibrary(updated);
+  } catch (error: unknown) {
+    showLibraryActionError(t('library.moveFailed'), error);
+  }
 }
 
 async function confirmAndRemoveCollection(collection: LibraryCollection, count: number): Promise<void> {
@@ -1919,8 +2144,59 @@ elements.collectionDelete.addEventListener('click', () => {
   hideCollectionContextMenu();
   void confirmAndRemoveCollection(collection, count);
 });
+elements.bookContextOpen.addEventListener('click', () => {
+  const book = getContextBook();
+  hideBookContextMenu();
+  if (book) void openLibraryBook(book.id);
+});
+elements.bookContextReveal.addEventListener('click', () => {
+  const book = getContextBook();
+  hideBookContextMenu();
+  if (book) void revealLibraryBook(book);
+});
+elements.bookContextRename.addEventListener('click', () => {
+  const book = getContextBook();
+  if (book) openBookRenameDialog(book);
+});
+elements.bookContextMove.addEventListener('click', () => {
+  if (elements.bookMoveMenu.hidden) openBookMoveMenu();
+  else hideBookMoveMenu();
+});
+elements.bookContextDelete.addEventListener('click', () => {
+  const book = getContextBook();
+  hideBookContextMenu();
+  if (book) void confirmAndRemoveLibraryBook(book);
+});
+elements.bookContextMenu.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.target === elements.bookContextMove && event.key === 'ArrowRight') {
+    event.preventDefault();
+    openBookMoveMenu();
+    return;
+  }
+  handleMenuKeyboardNavigation(event, elements.bookContextMenu, () => hideBookContextMenu(true));
+});
+elements.bookMoveMenu.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key === 'ArrowLeft' || event.key === 'Escape') {
+    event.preventDefault();
+    hideBookMoveMenu();
+    elements.bookContextMove.focus();
+    return;
+  }
+  handleMenuKeyboardNavigation(event, elements.bookMoveMenu, () => {
+    hideBookMoveMenu();
+    elements.bookContextMove.focus();
+  });
+});
+elements.bookRenameForm.addEventListener('submit', submitBookRename);
+elements.bookDisplayName.addEventListener('input', clearBookRenameError);
+elements.bookRenameCancel.addEventListener('click', closeBookRenameDialog);
+elements.bookRenameDialog.addEventListener('pointerdown', (event) => {
+  if (event.target === elements.bookRenameDialog) closeBookRenameDialog();
+});
 elements.viewGrid.addEventListener('click', () => setLibraryLayout('grid'));
 elements.viewList.addEventListener('click', () => setLibraryLayout('list'));
+elements.gridSizeDecrease.addEventListener('click', () => setLibraryGridSize(libraryGridSizeIndex - 1, true));
+elements.gridSizeIncrease.addEventListener('click', () => setLibraryGridSize(libraryGridSizeIndex + 1, true));
 elements.librarySearch.addEventListener('input', (event: Event) => {
   libraryQuery = (event.currentTarget as UiElement).value;
   renderBooks();
@@ -1943,6 +2219,13 @@ elements.appLanguage.addEventListener('change', () => {
 });
 elements.appTheme.addEventListener('change', () => {
   applyTheme(normalizeTheme(elements.appTheme.value), true);
+});
+elements.openLibraryOnDocumentClose.addEventListener('change', () => {
+  openLibraryOnDocumentClose = elements.openLibraryOnDocumentClose.checked;
+  savePreference(openLibraryOnDocumentCloseStorageKey, String(openLibraryOnDocumentClose));
+  void window.chmReader.setPreferences(currentLocale, currentTheme, openLibraryOnDocumentClose).catch((error: unknown) => {
+    showReaderActionError(t('error.syncView'), error);
+  });
 });
 query('#toggle-sidebar').addEventListener('click', toggleReaderSidebar);
 elements.back.addEventListener('click', () => moveHistory(-1));
@@ -2085,6 +2368,11 @@ document.addEventListener('pointerdown', (event: PointerEvent) => {
   if (!elements.collectionContextMenu.hidden && !target?.closest('.context-menu')) {
     hideCollectionContextMenu();
   }
+  if (!elements.bookContextMenu.hidden
+    && !target?.closest('#book-context-menu')
+    && !target?.closest('#book-move-menu')) {
+    hideBookContextMenu();
+  }
   if (!elements.treeActionsMenu.hidden
     && !target?.closest('#tree-menu-trigger')
     && !target?.closest('#tree-actions-menu')) {
@@ -2117,6 +2405,14 @@ document.addEventListener('keydown', (event) => {
   }
   if (event.key === 'Escape' && !elements.collectionContextMenu.hidden) {
     hideCollectionContextMenu();
+    return;
+  }
+  if (event.key === 'Escape' && !elements.bookContextMenu.hidden) {
+    hideBookContextMenu(true);
+    return;
+  }
+  if (event.key === 'Escape' && !elements.bookRenameDialog.hidden) {
+    closeBookRenameDialog();
     return;
   }
   if (event.key === 'Escape' && !elements.collectionDialog.hidden) {
@@ -2154,10 +2450,12 @@ window.chmReader.onFocusSearch(() => {
 initializeResizing();
 initializeLibraryDropImport();
 populateLanguageOptions();
+elements.openLibraryOnDocumentClose.checked = openLibraryOnDocumentClose;
 applyStaticTranslations();
 applyTheme(currentTheme);
 setZoom(loadReaderZoomPreference());
 setLibraryLayout(loadLibraryLayoutPreference());
+setLibraryGridSize(loadLibraryGridSizePreference());
 setReaderSidebarWidth(loadReaderSidebarWidthPreference());
 setReaderSidebarVisible(loadReaderSidebarVisiblePreference());
 const preferredTextEncoding = loadTextEncodingPreference();

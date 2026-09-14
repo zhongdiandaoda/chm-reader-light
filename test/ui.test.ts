@@ -9,7 +9,7 @@ export { };
 
 test('README stays concise and uses an actual app screenshot', () => {
   const readme = fs.readFileSync(path.join(projectRoot, 'README.md'), 'utf-8');
-  const englishReadme = fs.readFileSync(path.join(projectRoot, 'README.en.md'), 'utf-8');
+  const englishReadme = fs.readFileSync(path.join(projectRoot, 'docs', 'readme', 'README.en.md'), 'utf-8');
   const preview = fs.readFileSync(path.join(projectRoot, 'docs', 'assets', 'app-preview.png'));
   const markdownFiles = fs.readdirSync(path.join(projectRoot, 'docs'))
     .filter((fileName: string) => fileName.endsWith('.md'));
@@ -18,10 +18,10 @@ test('README stays concise and uses an actual app screenshot', () => {
   assert.ok(englishReadme.split('\n').length <= 130);
   assert.ok(markdownFiles.length <= 15);
   assert.match(readme, /!\[CHMReaderLight 实际空书库界面\]\(\.\/docs\/assets\/app-preview\.png\)/);
-  assert.match(englishReadme, /!\[Actual CHMReaderLight empty library\]\(\.\/docs\/assets\/app-preview\.png\)/);
+  assert.match(englishReadme, /!\[Actual CHMReaderLight empty library\]\(\.\.\/assets\/app-preview\.png\)/);
   assert.equal(preview.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
-  assert.equal(preview.readUInt32BE(16), 1280);
-  assert.equal(preview.readUInt32BE(20), 760);
+  assert.equal(preview.readUInt32BE(16), 2504);
+  assert.equal(preview.readUInt32BE(20), 1600);
   for (const relativePath of [
     'docs/install-macos.md',
     'docs/compatibility.md',
@@ -32,6 +32,44 @@ test('README stays concise and uses an actual app screenshot', () => {
     'docs/testing.md',
     'docs/release.md',
   ]) assert.ok(fs.existsSync(path.join(projectRoot, relativePath)), relativePath);
+});
+
+test('README translations cover every supported application language', () => {
+  const i18n = fs.readFileSync(path.join(projectRoot, 'src', 'i18n.ts'), 'utf-8');
+  const readmePaths: Record<string, string> = {
+    en: 'docs/readme/README.en.md',
+    'zh-CN': 'README.md',
+    'zh-TW': 'docs/readme/README.zh-TW.md',
+    ja: 'docs/readme/README.ja.md',
+    ko: 'docs/readme/README.ko.md',
+    es: 'docs/readme/README.es.md',
+    fr: 'docs/readme/README.fr.md',
+    de: 'docs/readme/README.de.md',
+    pt: 'docs/readme/README.pt.md',
+    it: 'docs/readme/README.it.md',
+    ru: 'docs/readme/README.ru.md',
+    ar: 'docs/readme/README.ar.md',
+  };
+  const supportedLocaleSource = i18n.match(/export const supportedLocales = \[([\s\S]*?)\] as const/)?.[1] || '';
+  const supportedLocales = [...supportedLocaleSource.matchAll(/'([^']+)'/g)].map((match) => match[1]);
+  const languageLabels = [
+    'English', '简体中文', '繁體中文', '日本語', '한국어', 'Español',
+    'Français', 'Deutsch', 'Português', 'Italiano', 'Русский', 'العربية',
+  ];
+
+  assert.deepEqual(Object.keys(readmePaths), supportedLocales);
+  assert.deepEqual(
+    fs.readdirSync(path.join(projectRoot, 'docs', 'readme')).sort(),
+    Object.values(readmePaths).filter((relativePath) => relativePath !== 'README.md')
+      .map((relativePath) => path.basename(relativePath)).sort(),
+  );
+
+  for (const relativePath of Object.values(readmePaths)) {
+    const readme = fs.readFileSync(path.join(projectRoot, relativePath), 'utf-8');
+    assert.ok(readme.split('\n').length <= 130, relativePath);
+    assert.match(readme, /docs\/assets\/app-preview[.]png|[.]\.\/assets\/app-preview[.]png/, relativePath);
+    for (const label of languageLabels) assert.ok(readme.includes(label), `${relativePath}: ${label}`);
+  }
 });
 
 test('application branding uses one modern macOS logo across the titlebar and empty library', () => {
@@ -92,6 +130,14 @@ test('application chrome follows a modern macOS visual system', () => {
   assert.match(main, /light: '#f7f7f5'/);
 });
 
+test('library collection counts share one aligned trailing column', () => {
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+
+  assert.match(css, /\.collection-select\s*\{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) 32px;/s);
+  assert.match(css, /\.collection-count\s*\{[^}]*box-sizing: border-box;[^}]*width: 32px;[^}]*font-variant-numeric: tabular-nums;/s);
+  assert.match(css, /\.collection-remove\s*\{[^}]*position: absolute;[^}]*right: 16px;/s);
+});
+
 test('light reader document palette matches the application design tokens', () => {
   const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
 
@@ -101,14 +147,14 @@ test('light reader document palette matches the application design tokens', () =
   assert.match(main, /[.]chm-search-current\s*{[^}]*background: \${palette[.]searchHighlightCurrent};/s);
 });
 
-test('settings provides persistent language and theme controls', () => {
+test('settings provides persistent language, theme, and document close controls', () => {
   const html = fs.readFileSync(path.join(projectRoot, 'src', 'index.html'), 'utf-8');
   const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
   const preload = fs.readFileSync(path.join(projectRoot, 'src', 'preload.ts'), 'utf-8');
   const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
 
   assert.match(html, /class="icon-button settings-button" id="library-settings"[^>]+data-i18n-title="settings[.]open"/);
-  assert.match(html, /class="icon-button settings-button" id="reader-settings"[^>]+data-i18n-title="settings[.]open"/);
+  assert.match(html, /class="icon-button settings-button reader-tooltip" id="reader-settings"[^>]+data-i18n-tooltip="settings[.]open"/);
   assert.equal((html.match(/class="lucide lucide-settings"/g) || []).length, 2);
   assert.match(html, /M12[.]22 2h-[.]44a2 2 0 0 0-2 2v[.]18/);
   assert.doesNotMatch(html, /M10 2[.]8v2M10 15[.]2v2/);
@@ -116,19 +162,22 @@ test('settings provides persistent language and theme controls', () => {
   assert.match(html, /id="settings-view"/);
   assert.match(html, /<select id="app-language"/);
   assert.match(html, /<select id="app-theme"/);
+  assert.match(html, /<input id="open-library-on-document-close" type="checkbox" role="switch" checked>/);
   for (const theme of ['light', 'warm', 'cool', 'dark-eye']) {
     assert.match(html, new RegExp(`option value="${theme}"`));
   }
   assert.doesNotMatch(html, /name="app-theme"|class="theme-option"/);
   assert.match(renderer, /const appLocaleStorageKey = 'chm-reader-locale'/);
   assert.match(renderer, /const appThemeStorageKey = 'chm-reader-theme'/);
+  assert.match(renderer, /const openLibraryOnDocumentCloseStorageKey = 'chm-reader-open-library-on-document-close'/);
   assert.match(renderer, /savePreference\(appLocaleStorageKey, locale\)/);
   assert.match(renderer, /savePreference\(appThemeStorageKey, theme\)/);
   assert.match(renderer, /elements[.]appTheme[.]value = currentTheme/);
   assert.match(renderer, /elements[.]appTheme[.]addEventListener\('change'/);
+  assert.match(renderer, /elements[.]openLibraryOnDocumentClose[.]addEventListener\('change'/);
   assert.match(renderer, /if \(activeView === 'reader' \|\| activeView === 'library'\) settingsReturnView = activeView/);
-  assert.match(renderer, /window\.chmReader\.setPreferences\(currentLocale, currentTheme\)/);
-  assert.match(preload, /ipcRenderer\.invoke\('preferences:set', locale, theme\)/);
+  assert.match(renderer, /window\.chmReader\.setPreferences\(currentLocale, currentTheme, openLibraryOnDocumentClose\)/);
+  assert.match(preload, /ipcRenderer\.invoke\('preferences:set', locale, theme, openLibraryOnDocumentClose\)/);
   assert.match(main, /handleTrustedIpc\('preferences:set'/);
   assert.match(main, /accelerator: 'CmdOrCtrl\+,'/);
   assert.match(main, /const help = appMenuLabels\[appLocale\]/);
@@ -159,6 +208,7 @@ test('all four themes cover application chrome and CHM document content', () => 
   }
   assert.match(css, /\.settings-view\s*{/);
   assert.match(css, /\.settings-select-label select\s*\{/);
+  assert.match(css, /\.settings-switch\s*{/);
   assert.doesNotMatch(css, /\[dir="rtl"\] \.toolbar/);
   assert.match(renderer, /contentUrl\.searchParams\.set\('theme', currentTheme\)/);
   assert.match(main, /function addReaderThemeStyles\(markup: string, theme: AppTheme\): string/);
@@ -742,6 +792,7 @@ test('library mutation requests report IPC failures without unhandled event prom
     ['async function relinkLibraryBook(entry: LibraryBook, trigger: HTMLButtonElement): Promise<void>', 'async function confirmAndRemoveLibraryBook('],
     ['async function revealLibraryBook(entry: LibraryBook): Promise<void>', 'async function relinkLibraryBook('],
     ['async function confirmAndRemoveLibraryBook(entry: LibraryBook): Promise<void>', 'async function openLibraryBook('],
+    ['async function moveContextBook(bookId: string, collectionId: string | null): Promise<void>', 'async function confirmAndRemoveCollection('],
     ['async function confirmAndRemoveCollection(collection: LibraryCollection, count: number): Promise<void>', 'function openCollectionDialog('],
   ].map(([startMarker, endMarker]) => {
     const start = renderer.indexOf(startMarker);
@@ -763,9 +814,9 @@ test('library mutation requests report IPC failures without unhandled event prom
   assert.match(renderer, /elements\.emptyAddBook\.disabled = false/);
   assert.match(renderer, /trigger\.disabled = true/);
   assert.match(renderer, /trigger\.disabled = false/);
-  assert.match(renderer, /remove\.addEventListener\('click', async \(event\) => \{[\s\S]*await confirmAndRemoveLibraryBook\(entry\)/);
+  assert.match(renderer, /elements\.bookContextDelete\.addEventListener\('click',[\s\S]*void confirmAndRemoveLibraryBook\(book\)/);
   assert.match(renderer, /relink\.addEventListener\('click', \(event\) => \{[\s\S]*void relinkLibraryBook\(entry, relink\)/);
-  assert.match(renderer, /reveal\.addEventListener\('click', \(event\) => \{[\s\S]*void revealLibraryBook\(entry\)/);
+  assert.match(renderer, /elements\.bookContextReveal\.addEventListener\('click',[\s\S]*void revealLibraryBook\(book\)/);
   assert.match(renderer, /elements\.collectionDelete\.addEventListener\('click', \(\) => \{[\s\S]*void confirmAndRemoveCollection\(collection, count\)/);
 });
 
@@ -1108,6 +1159,8 @@ test('all renderer invoke endpoints enforce the trusted IPC sender boundary', ()
     'library:remove',
     'library:reveal',
     'library:relink',
+    'library:rename',
+    'library:move',
     'collection:create',
     'collection:rename',
     'collection:remove',
@@ -1143,6 +1196,26 @@ test('reader toolbar places text encoding picker after zoom controls', () => {
   assert.match(toolbarRight, /data-encoding="auto"[^>]*>默认编码<\/button>/);
   assert.match(toolbarRight, /data-encoding="gbk"[^>]*>简体中文 \(GBK\)<\/button>/);
   assert.match(toolbarRight, /data-encoding="gb18030"[^>]*>简体中文 \(GB18030\)<\/button>/);
+});
+
+test('reader toolbar uses aligned arrows and delayed localized tooltips', () => {
+  const html = fs.readFileSync(path.join(projectRoot, 'src', 'index.html'), 'utf-8');
+  const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+
+  assert.match(html, /id="previous-page"[^>]+data-i18n-tooltip="reader.previousPage"[^>]*>[\s\S]*lucide-chevron-up/);
+  assert.match(html, /id="next-page"[^>]+data-i18n-tooltip="reader.nextPage"[^>]*>[\s\S]*lucide-chevron-down/);
+  assert.match(html, /id="go-back"[^>]+data-i18n-tooltip="reader.back"[^>]*>[\s\S]*lucide-arrow-left/);
+  assert.match(html, /id="go-forward"[^>]+data-i18n-tooltip="reader.forward"[^>]*>[\s\S]*lucide-arrow-right/);
+  assert.match(html, /id="zoom-out"[^>]+data-i18n-tooltip="reader.zoomOut"[^>]*><span aria-hidden="true">A<\/span><svg/);
+  assert.match(html, /id="zoom-in"[^>]+data-i18n-tooltip="reader.zoomIn"[^>]*><span aria-hidden="true">A<\/span><svg/);
+  assert.doesNotMatch(html, /id="zoom-(?:out|in)"[^>]*>A[+−]/);
+  assert.ok(renderer.includes("document.querySelectorAll<HTMLElement>('[data-i18n-tooltip]')"));
+  assert.match(renderer, /element.dataset.tooltip = t\(key\)/);
+  assert.match(css, /--floating-control-text: #ffffff/);
+  assert.match(css, /\.zoom-step-button\s*\{[^}]*font-size: 13px;[^}]*line-height: 1;/s);
+  assert.match(css, /\.zoom-step-button svg\s*\{[^}]*width: 10px;[^}]*height: 10px;/s);
+  assert.match(css, /\.reader-tooltip::after\s*\{[^}]*content: attr\(data-tooltip\);[^}]*transition: opacity 100ms ease 1s, transform 100ms ease 1s;/s);
 });
 
 test('encoding picker menu is anchored below the trigger instead of using native select popup', () => {
@@ -1258,7 +1331,7 @@ test('library cards show a compact source folder label', () => {
   const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
 
   assert.match(renderer, /getBookLocationLabel/);
-  assert.match(renderer, /open\.title = entry\.filePath \|\| entry\.name/);
+  assert.match(renderer, /open\.title = sourcePath \|\| displayName/);
   assert.match(renderer, /<span class="library-location"><\/span>/);
   assert.match(renderer, /locationElement\.hidden = !location/);
   assert.match(css, /\.library-card-text\s*{/);
@@ -1289,7 +1362,7 @@ test('library cards show last-opened metadata after successful opens', () => {
   assert.match(preload, /lastOpenedAt\?: number/);
   assert.match(renderer, /lastOpenedAt\?: number/);
   assert.match(main, /markBookOpenedInLibrary/);
-  assert.match(main, /openedBook = await openBookTransaction\(chmPath, entry\.name\)/);
+  assert.match(main, /openedBook = await openBookTransaction\(chmPath, entry\.displayName \|\| entry\.name\)/);
   assert.match(main, /runBookStateTask\(\(\) => openLibraryBookTransaction\(id\)\)/);
   assert.match(main, /const openedLibrary = await updateLibrary\(\(current\) => \(\s*markBookOpenedInLibrary\(current, id, Date\.now\(\)\) as LibraryState/s);
   assert.match(main, /const updateLibrary = createSerializedStateUpdater\(readLibrary, writeLibrary, withBookAvailability\)/);
@@ -1337,19 +1410,19 @@ test('library cards surface continue-reading state', () => {
   assert.match(renderer, /const lastTopicsByBook = loadReaderLastTopicMap\(\)/);
   assert.match(renderer, /createLibraryCard\(entry, lastTopicsByBook\)/);
   assert.match(renderer, /function createLibraryCard\(entry: LibraryBook, lastTopicsByBook: Record<string, string>\): HTMLDivElement/);
-  assert.match(renderer, /const hasLastTopic = Boolean\(entry\.filePath && lastTopicsByBook\[entry\.filePath\] && !entry\.sourceMissing\)/);
+  assert.match(renderer, /const hasLastTopic = Boolean\(sourcePath && lastTopicsByBook\[sourcePath\] && !entry\.sourceMissing\)/);
   assert.match(renderer, /card\.classList\.toggle\('has-last-topic', hasLastTopic\)/);
   assert.match(renderer, /<span class="library-continue-reading" hidden><\/span>/);
   assert.match(renderer, /continueReading\.textContent = t\('library\.continueLabel'\)/);
   assert.match(renderer, /continueReading\.hidden = !hasLastTopic/);
-  assert.match(renderer, /t\('library\.continue', \{ name: entry\.name \}\)/);
-  assert.match(renderer, /t\('library\.open', \{ name: entry\.name \}\)/);
+  assert.match(renderer, /t\('library\.continue', \{ name: displayName \}\)/);
+  assert.match(renderer, /t\('library\.open', \{ name: displayName \}\)/);
   assert.match(css, /\.library-continue-reading\s*{/);
   assert.match(css, /\.library-card\.has-last-topic \.library-cover\s*{/);
   assert.match(css, /\.library-content\[data-layout="list"\] \.library-continue-reading\s*{/);
 });
 
-test('library cards reveal source CHM files without a copy-path action', () => {
+test('library context menu reveals source CHM files without card action buttons', () => {
   const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
   const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
   const preload = fs.readFileSync(path.join(projectRoot, 'src', 'preload.ts'), 'utf-8');
@@ -1360,15 +1433,14 @@ test('library cards reveal source CHM files without a copy-path action', () => {
   assert.match(preload, /revealLibraryBook: \(id\) => ipcRenderer\.invoke\('library:reveal', id\)/);
   assert.doesNotMatch(preload, /copyText:|clipboard:write-text/);
   assert.match(renderer, /revealLibraryBook: \(id: string\) => Promise<unknown>/);
-  assert.match(renderer, /className = 'library-card-reveal'/);
-  assert.match(renderer, /reveal\.setAttribute\('aria-label', t\('library\.revealNamed', \{ name: entry\.name \}\)\)/);
-  assert.match(renderer, /window\.chmReader\.revealLibraryBook\(entry\.id\)/);
+  assert.doesNotMatch(renderer, /className = 'library-card-reveal'/);
+  assert.doesNotMatch(renderer, /className = 'library-card-remove'/);
+  assert.match(renderer, /if \(book\) void revealLibraryBook\(book\)/);
   assert.doesNotMatch(renderer, /copyPath|copyLibraryBookPath|library-card-copy|copyText:/);
   assert.doesNotMatch(main, /handleTrustedIpc\('clipboard:write-text'/);
-  assert.match(css, /\.library-card-actions\s*{/);
   assert.doesNotMatch(css, /library-card-copy/);
-  assert.match(css, /padding: 9px 78px 9px 12px;/);
-  assert.match(css, /\.library-card:focus-within \.library-card-actions/s);
+  assert.doesNotMatch(css, /\.library-card-remove/);
+  assert.doesNotMatch(css, /\.library-card-reveal/);
 });
 
 test('list library cards use a compact file-manager hierarchy', () => {
@@ -1378,9 +1450,9 @@ test('list library cards use a compact file-manager hierarchy', () => {
   assert.match(renderer, /<span class="library-card-details">/);
   assert.match(renderer, /<span class="library-path"><\/span>/);
   assert.match(renderer, /<span class="library-date-row">/);
-  assert.match(renderer, /nameElement\.title = entry\.name/);
-  assert.match(renderer, /pathElement\.textContent = entry\.filePath \|\| ''/);
-  assert.match(renderer, /pathElement\.title = entry\.filePath \|\| ''/);
+  assert.match(renderer, /nameElement\.title = displayName/);
+  assert.match(renderer, /pathElement\.textContent = sourcePath/);
+  assert.match(renderer, /pathElement\.title = sourcePath/);
   assert.match(css, /\.library-content\[data-layout="list"\] \.library-grid\s*\{[^}]*gap: 4px;[^}]*max-width: 1040px;/s);
   assert.match(css, /\.library-content\[data-layout="list"\] \.library-card-open\s*\{[^}]*grid-template-columns: 40px minmax\(0, 1fr\);[^}]*min-height: 70px;/s);
   assert.match(css, /\.library-content\[data-layout="list"\] \.library-card-open:hover,[^{]*\.library-content\[data-layout="list"\] \.library-card-open:focus-visible\s*\{[^}]*box-shadow: inset 3px 0 0 var\(--accent\);/s);
@@ -1388,6 +1460,15 @@ test('list library cards use a compact file-manager hierarchy', () => {
   assert.match(css, /\.library-content\[data-layout="list"\] \.library-continue-reading\s*\{[^}]*justify-self: end;/s);
   assert.match(css, /\.view-toggle \.icon-button\[aria-pressed="true"\]\s*\{[^}]*background: var\(--accent-soft\);[^}]*color: var\(--selected-text\);/s);
   assert.match(css, /@media \(max-width: 620px\)[\s\S]*#library-toolbar \.open-button\s*\{[^}]*flex: 0 0 auto;[^}]*white-space: nowrap;/);
+});
+
+test('library book titles stay on one line and preserve the full name in a tooltip', () => {
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+  const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
+
+  assert.match(css, /\.library-name\s*\{[^}]*display: block;[^}]*width: 100%;[^}]*max-width: 100%;[^}]*overflow: hidden;[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/s);
+  assert.doesNotMatch(css, /\.library-name\s*\{[^}]*-webkit-line-clamp:/s);
+  assert.match(renderer, /nameElement\.title = displayName/);
 });
 
 test('library cards warn when the saved CHM source file is missing', () => {
@@ -1411,11 +1492,9 @@ test('library cards warn when the saved CHM source file is missing', () => {
   assert.match(renderer, /<span class="library-source-status" hidden><\/span>/);
   assert.match(renderer, /sourceStatus\.textContent = t\('library\.sourceMissing'\)/);
   assert.match(renderer, /sourceStatus\.hidden = !entry\.sourceMissing/);
-  assert.match(renderer, /reveal\.disabled = Boolean\(entry\.sourceMissing\)/);
-  assert.match(renderer, /entry\.sourceMissing \? t\('library\.sourceMissing'\) : t\('library\.reveal'\)/);
+  assert.match(renderer, /elements\.bookContextReveal\.disabled = Boolean\(book\.sourceMissing\)/);
   assert.match(css, /\.library-card\.source-missing \.library-cover\s*{/);
   assert.match(css, /\.library-source-status\s*{/);
-  assert.match(css, /\.library-card-reveal:disabled\s*{/);
 });
 
 test('missing library sources can be relinked without deleting the entry', () => {
@@ -1435,7 +1514,7 @@ test('missing library sources can be relinked without deleting the entry', () =>
   assert.match(renderer, /relinkLibraryBook: \(id: string\) => Promise<LibraryState \| null>/);
   assert.match(renderer, /className = 'library-card-relink'/);
   assert.match(renderer, /relink\.hidden = !entry\.sourceMissing/);
-  assert.match(renderer, /t\('library\.relinkNamed', \{ name: entry\.name \}\)/);
+  assert.match(renderer, /t\('library\.relinkNamed', \{ name: displayName \}\)/);
   assert.match(renderer, /window\.chmReader\.relinkLibraryBook\(entry\.id\)/);
   assert.match(css, /\.library-card-relink\s*{/);
   assert.match(css, /\.library-card-relink svg\s*{/);
@@ -1445,10 +1524,55 @@ test('library cards confirm before removing a CHM from the library', () => {
   const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
 
   assert.match(renderer, /async function confirmAndRemoveLibraryBook\(entry: LibraryBook\): Promise<void>/);
-  assert.match(renderer, /const message = t\('library\.removeConfirm', \{ name: entry\.name \}\)/);
+  assert.match(renderer, /const message = t\('library\.removeConfirmGeneric'\)/);
   assert.match(renderer, /if \(!window\.confirm\(message\)\) return/);
   assert.match(renderer, /window\.chmReader\.removeLibraryBook\(entry\.id\)/);
-  assert.match(renderer, /await confirmAndRemoveLibraryBook\(entry\)/);
+  assert.match(renderer, /void confirmAndRemoveLibraryBook\(book\)/);
+});
+
+test('library books expose a keyboard-accessible context menu with metadata-only actions', () => {
+  const html = fs.readFileSync(path.join(projectRoot, 'src', 'index.html'), 'utf-8');
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+  const preload = fs.readFileSync(path.join(projectRoot, 'src', 'preload.ts'), 'utf-8');
+  const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+
+  assert.match(html, /id="book-context-menu" role="menu"/);
+  assert.match(html, /id="book-context-open"[^>]+role="menuitem"/);
+  assert.match(html, /id="book-context-reveal"[^>]+role="menuitem"/);
+  assert.match(html, /id="book-context-rename"[^>]+role="menuitem"/);
+  assert.match(html, /id="book-context-move"[^>]+aria-haspopup="menu"/);
+  assert.match(html, /id="book-context-delete"[^>]+class="context-menu-danger"/);
+  assert.match(html, /<\/div>\s*<div class="context-menu context-submenu" id="book-move-menu" role="menu" hidden><\/div>\s*<div class="modal-backdrop" id="book-rename-dialog"/);
+  assert.match(html, /id="book-rename-dialog"/);
+  assert.match(renderer, /card\.addEventListener\('contextmenu'/);
+  assert.match(renderer, /event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')/);
+  assert.match(renderer, /function handleMenuKeyboardNavigation/);
+  assert.match(renderer, /moveContextBook\(book\.id, target\.id\)/);
+  assert.match(renderer, /!target\?\.closest\('#book-context-menu'\)\s*&& !target\?\.closest\('#book-move-menu'\)/);
+  assert.match(renderer, /hideBookContextMenu/);
+  assert.ok(renderer.includes('window.chmReader.renameLibraryBook(bookId, trimmed)'));
+  assert.ok(renderer.includes('window.chmReader.moveLibraryBook(bookId, collectionId)'));
+  assert.ok(preload.includes("ipcRenderer.invoke('library:rename', id, displayName)"));
+  assert.ok(preload.includes("ipcRenderer.invoke('library:move', id, collectionId)"));
+  assert.ok(main.includes('renameBookInLibrary(current, id, displayName)'));
+  assert.ok(main.includes('moveBookInLibrary(current, id, collectionId)'));
+  assert.match(css, /\.context-menu-danger/);
+  assert.match(css, /\.context-submenu-arrow/);
+});
+
+test('book display metadata stays independent from its source path', () => {
+  const librarySource = fs.readFileSync(path.join(projectRoot, 'src', 'library.ts'), 'utf-8');
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.ts'), 'utf-8');
+
+  assert.ok(librarySource.includes('displayName?: string'));
+  assert.ok(librarySource.includes('sourcePath?: string'));
+  assert.ok(librarySource.includes('sourceFileName?: string'));
+  assert.match(librarySource, /export function renameBookInLibrary/);
+  assert.ok(librarySource.includes('book.id === id ? { ...book, displayName: nextName } : book'));
+  assert.match(librarySource, /export function moveBookInLibrary/);
+  assert.doesNotMatch(librarySource, /renameSync|fs[.]promises[.]rename/);
+  assert.ok(main.includes('shell.showItemInFolder(bookPath)'));
 });
 
 test('library toolbar can filter books by name or path', () => {
@@ -1488,6 +1612,27 @@ test('library layout preference persists between launches', () => {
   assert.match(renderer, /saved === 'list' \|\| saved === 'grid'/);
   assert.match(renderer, /window\.localStorage\.setItem\(libraryLayoutStorageKey, layout\)/);
   assert.match(renderer, /setLibraryLayout\(loadLibraryLayoutPreference\(\)\)/);
+});
+
+test('grid view provides persistent bounded controls for resizing book cards', () => {
+  const html = fs.readFileSync(path.join(projectRoot, 'src', 'index.html'), 'utf-8');
+  const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+
+  assert.match(html, /id="grid-size-controls"[^>]+data-i18n-aria-label="library.resizeBooks"/);
+  assert.match(html, /id="grid-size-decrease"[^>]+data-i18n-title="library.decreaseBookSize"/);
+  assert.match(html, /id="grid-size-increase"[^>]+data-i18n-title="library.increaseBookSize"/);
+  assert.match(renderer, /const libraryGridSizeStorageKey = 'chm-reader-library-grid-size'/);
+  assert.match(renderer, /const libraryGridSizes = \[128, 150, 180, 210\] as const/);
+  assert.match(renderer, /elements\.gridSizeControls\.hidden = layout !== 'grid'/);
+  assert.match(renderer, /style\.setProperty\('--library-card-min-width', `\$\{size\}px`\)/);
+  assert.match(renderer, /elements\.gridSizeDecrease\.disabled = libraryGridSizeIndex === 0/);
+  assert.match(renderer, /elements\.gridSizeIncrease\.disabled = libraryGridSizeIndex === libraryGridSizes\.length - 1/);
+  assert.match(renderer, /savePreference\(libraryGridSizeStorageKey, String\(size\)\)/);
+  assert.match(renderer, /setLibraryGridSize\(loadLibraryGridSizePreference\(\)\)/);
+  assert.match(css, /\.library-content\s*\{[^}]*--library-card-min-width: 150px;/s);
+  assert.match(css, /grid-template-columns: repeat\(auto-fill, minmax\(min\(var\(--library-card-min-width\), 100%\), 1fr\)\)/);
+  assert.match(css, /\.grid-size-controls\[hidden\]\s*\{[^}]*display: none;/s);
 });
 
 test('selected library collection preference persists between launches', () => {
@@ -1824,11 +1969,13 @@ test('closing the reader window returns to the library before closing the app', 
   assert.match(main, /let currentView: 'library' \| 'reader' \| 'settings' = 'library'/);
   assert.match(main, /browserWindow\.on\('close', \(event: \{ preventDefault: \(\) => void \}\) =>/);
   assert.match(main, /if \(isQuitting\) return/);
-  assert.match(main, /if \(currentView !== 'reader'\) \{[\s\S]*?process\.platform === 'darwin'[\s\S]*?browserWindow\.hide\(\)/);
+  assert.match(main, /let openLibraryOnDocumentClose = true/);
+  assert.match(main, /if \(currentView !== 'reader' \|\| !openLibraryOnDocumentClose\) \{[\s\S]*?process\.platform === 'darwin'[\s\S]*?browserWindow\.hide\(\)/);
   assert.match(main, /event\.preventDefault\(\)/);
   assert.match(main, /currentView = 'library'/);
   assert.match(main, /sendToMainWindow\('library:show'\)/);
   assert.match(main, /handleTrustedIpc\('view:set'/);
+  assert.match(main, /openLibraryOnDocumentClose = shouldOpenLibraryOnDocumentClose !== false/);
   assert.match(main, /app\.on\('before-quit'/);
   assert.match(renderer, /syncMainProcessView\(view\)/);
   assert.match(preload, /setView: \(view\) => ipcRenderer\.invoke\('view:set', view\)/);

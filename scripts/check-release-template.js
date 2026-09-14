@@ -44,7 +44,7 @@ function verifyReleaseTemplate() {
   const installGuide = readText('docs/install-macos.md');
   const growthGuide = readText('docs/growth-readiness.md');
   const readme = readText('README.md');
-  const englishReadme = readText('README.en.md');
+  const englishReadme = readText('docs/readme/README.en.md');
   const releaseArtifactChecker = readText('scripts/check-release-artifacts.js');
   const releaseArtifactStager = readText('scripts/stage-release-artifacts.js');
   const releaseBodyPreparer = readText('scripts/prepare-release-body.js');

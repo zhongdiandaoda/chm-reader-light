@@ -48,9 +48,11 @@ const {
   addBooksToLibrary,
   findBookByFilePath,
   markBookOpenedInLibrary,
+  moveBookInLibrary,
   normalizeLibraryData,
   normalizeLibraryDataForWrite,
   relinkBookInLibrary,
+  renameBookInLibrary,
   renameCollectionInLibrary,
 } = require('./library') as typeof import('./library');
 const {
@@ -114,6 +116,9 @@ protocol.registerSchemesAsPrivileged([{
 interface LibraryBook {
   id: string;
   name: string;
+  displayName?: string;
+  sourcePath?: string;
+  sourceFileName?: string;
   filePath?: string;
   storedName?: string;
   addedAt?: number;
@@ -163,6 +168,7 @@ let pendingFile: string | undefined;
 let currentView: 'library' | 'reader' | 'settings' = 'library';
 let appLocale: AppLocale = 'zh-CN';
 let appTheme: AppTheme = 'light';
+let openLibraryOnDocumentClose = true;
 let isQuitting = false;
 const runBookStateTask = createSerializedTaskQueue();
 
@@ -311,7 +317,7 @@ async function writeLibrary(library: LibraryState): Promise<void> {
 }
 
 function getLibraryBookPath(entry: LibraryBook): string {
-  return entry.filePath || (entry.storedName ? path.join(getLibraryDir(), entry.storedName) : '');
+  return entry.sourcePath || entry.filePath || (entry.storedName ? path.join(getLibraryDir(), entry.storedName) : '');
 }
 
 async function withBookAvailability(library: LibraryState): Promise<LibraryState> {
@@ -472,11 +478,28 @@ async function importBooks(
 }
 
 async function removeBook(id: string): Promise<LibraryState> {
-  const library = await updateLibrary((current) => ({
-    ...current,
-    books: current.books.filter((item) => item.id !== id),
-  }));
+  const library = await updateLibrary((current) => {
+    if (!current.books.some((item) => item.id === id)) {
+      throw new Error('该文档已不在书库中');
+    }
+    return {
+      ...current,
+      books: current.books.filter((item) => item.id !== id),
+    };
+  });
   return library;
+}
+
+async function renameLibraryBook(id: string, displayName: string): Promise<LibraryState> {
+  return updateLibrary((current) => (
+    renameBookInLibrary(current, id, displayName) as LibraryState
+  ));
+}
+
+async function moveLibraryBook(id: string, collectionId: string | null): Promise<LibraryState> {
+  return updateLibrary((current) => (
+    moveBookInLibrary(current, id, collectionId) as LibraryState
+  ));
 }
 
 async function revealLibraryBook(id: string): Promise<boolean> {
@@ -608,7 +631,7 @@ function createWindow() {
   });
   browserWindow.on('close', (event: { preventDefault: () => void }) => {
     if (isQuitting) return;
-    if (currentView !== 'reader') {
+    if (currentView !== 'reader' || !openLibraryOnDocumentClose) {
       if (process.platform === 'darwin') {
         event.preventDefault();
         browserWindow.hide();
@@ -1169,7 +1192,7 @@ async function openLibraryBookTransaction(id: string): Promise<OpenedBook | null
   const chmPath = getLibraryBookPath(entry);
   let openedBook: OpenedBook;
   try {
-    openedBook = await openBookTransaction(chmPath, entry.name);
+    openedBook = await openBookTransaction(chmPath, entry.displayName || entry.name);
   } catch (error) {
     await dialog.showMessageBox(mainWindow, {
       type: 'error',
@@ -1341,6 +1364,12 @@ handleTrustedIpc('library:open', (_event: IpcMainInvokeEvent, id: string) => ope
 handleTrustedIpc('library:remove', (_event: IpcMainInvokeEvent, id: string) => removeBook(id));
 handleTrustedIpc('library:reveal', (_event: IpcMainInvokeEvent, id: string) => revealLibraryBook(id));
 handleTrustedIpc('library:relink', (_event: IpcMainInvokeEvent, id: string) => relinkLibraryBook(id));
+handleTrustedIpc('library:rename', (_event: IpcMainInvokeEvent, id: string, displayName: string) => (
+  renameLibraryBook(id, displayName)
+));
+handleTrustedIpc('library:move', (_event: IpcMainInvokeEvent, id: string, collectionId: string | null) => (
+  moveLibraryBook(id, collectionId)
+));
 handleTrustedIpc('collection:create', (_event: IpcMainInvokeEvent, name: string) => createCollection(name));
 handleTrustedIpc('collection:rename', (_event: IpcMainInvokeEvent, id: string, name: string) => renameCollection(id, name));
 handleTrustedIpc('collection:remove', (_event: IpcMainInvokeEvent, id: string) => removeCollection(id));
@@ -1350,9 +1379,15 @@ handleTrustedIpc('book:encoding', (_event: IpcMainInvokeEvent, encoding: string)
 handleTrustedIpc('view:set', (_event: IpcMainInvokeEvent, view: 'library' | 'reader' | 'settings') => {
   currentView = view === 'reader' || view === 'settings' ? view : 'library';
 });
-handleTrustedIpc('preferences:set', (_event: IpcMainInvokeEvent, locale: string, theme: string) => {
+handleTrustedIpc('preferences:set', (
+  _event: IpcMainInvokeEvent,
+  locale: string,
+  theme: string,
+  shouldOpenLibraryOnDocumentClose: boolean,
+) => {
   appLocale = normalizeLocale(locale);
   appTheme = normalizeTheme(theme);
+  openLibraryOnDocumentClose = shouldOpenLibraryOnDocumentClose !== false;
   getLiveMainWindow()?.setBackgroundColor({
     light: '#f7f7f5',
     warm: '#f2eadb',
