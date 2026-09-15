@@ -7,6 +7,9 @@ export interface LibraryCollection {
 export interface LibraryBook {
   id: string;
   name: string;
+  displayName?: string;
+  sourcePath?: string;
+  sourceFileName?: string;
   filePath?: string;
   storedName?: string;
   addedAt?: number;
@@ -53,6 +56,10 @@ function boundedString(value: unknown, maxChars: number): string | undefined {
   return typeof value === 'string' && value.length <= maxChars ? value : undefined;
 }
 
+function getSourceFileName(filePath: string): string {
+  return filePath.split(/[\\/]/).pop() || filePath;
+}
+
 function normalizeLibraryCollection(
   value: unknown,
   maxIdChars: number,
@@ -85,11 +92,18 @@ function normalizeLibraryBook(
   if (id === undefined || name === undefined) return null;
 
   const filePath = boundedString(value.filePath, maxPathChars);
+  const sourcePath = boundedString(value.sourcePath, maxPathChars) || filePath;
+  const sourceFileName = boundedString(value.sourceFileName, maxNameChars)
+    || (sourcePath ? getSourceFileName(sourcePath) : undefined);
+  const displayName = boundedString(value.displayName, maxNameChars) || name;
   const storedName = boundedString(value.storedName, maxPathChars);
   const collectionId = legacy ? null : boundedString(value.collectionId, maxIdChars) ?? null;
   return {
     id,
     name,
+    displayName,
+    ...(sourcePath === undefined ? {} : { sourcePath }),
+    ...(sourceFileName === undefined ? {} : { sourceFileName }),
     ...(filePath === undefined ? {} : { filePath }),
     ...(storedName === undefined ? {} : { storedName }),
     ...(typeof value.addedAt === 'number' && Number.isFinite(value.addedAt) ? { addedAt: value.addedAt } : {}),
@@ -152,6 +166,7 @@ export function normalizeLibraryDataForWrite(
   }
 
   const maxIdChars = resolveLibraryLimit(limits.maxIdChars, DEFAULT_LIBRARY_LIMITS.maxIdChars, 'maxIdChars');
+  const maxNameChars = resolveLibraryLimit(limits.maxNameChars, DEFAULT_LIBRARY_LIMITS.maxNameChars, 'maxNameChars');
   const maxPathChars = resolveLibraryLimit(limits.maxPathChars, DEFAULT_LIBRARY_LIMITS.maxPathChars, 'maxPathChars');
   const hasInvalidOptionalString = (value: unknown, maxChars: number) => (
     value !== undefined && boundedString(value, maxChars) === undefined
@@ -167,7 +182,10 @@ export function normalizeLibraryDataForWrite(
   }
   for (const book of library.books as Record<string, unknown>[]) {
     if (
-      hasInvalidOptionalString(book.filePath, maxPathChars)
+      hasInvalidOptionalString(book.displayName, maxNameChars)
+      || hasInvalidOptionalString(book.sourcePath, maxPathChars)
+      || hasInvalidOptionalString(book.sourceFileName, maxNameChars)
+      || hasInvalidOptionalString(book.filePath, maxPathChars)
       || hasInvalidOptionalString(book.storedName, maxPathChars)
       || (book.collectionId !== undefined
         && book.collectionId !== null
@@ -221,6 +239,45 @@ export function renameCollectionInLibrary(
   };
 }
 
+export function renameBookInLibrary(
+  library: LibraryData,
+  id: string,
+  displayName: unknown,
+): LibraryData {
+  const nextName = normalizeCollectionName(displayName);
+  if (!nextName) throw new Error('Book display name is required.');
+  if (!library.books.some((book) => book.id === id)) {
+    throw new Error('Book is no longer in the library.');
+  }
+
+  return {
+    ...library,
+    books: library.books.map((book) => (
+      book.id === id ? { ...book, displayName: nextName } : book
+    )),
+  };
+}
+
+export function moveBookInLibrary(
+  library: LibraryData,
+  id: string,
+  collectionId: string | null,
+): LibraryData {
+  if (!library.books.some((book) => book.id === id)) {
+    throw new Error('Book is no longer in the library.');
+  }
+  if (collectionId !== null && !library.collections.some((collection) => collection.id === collectionId)) {
+    throw new Error('Target library does not exist.');
+  }
+
+  return {
+    ...library,
+    books: library.books.map((book) => (
+      book.id === id ? { ...book, collectionId } : book
+    )),
+  };
+}
+
 export function addBooksToLibrary(
   library: LibraryData,
   filePaths: readonly string[],
@@ -232,7 +289,7 @@ export function addBooksToLibrary(
   const books = [...library.books];
   const knownPaths = new Set(
     books
-      .map((book) => book.filePath)
+      .map((book) => book.sourcePath || book.filePath)
       .filter((filePath): filePath is string => Boolean(filePath))
       .map((filePath) => normalizeLibraryPathIdentity(filePath, caseInsensitivePaths)),
   );
@@ -241,12 +298,16 @@ export function addBooksToLibrary(
     const pathIdentity = normalizeLibraryPathIdentity(filePath, caseInsensitivePaths);
     if (!filePath.toLocaleLowerCase().endsWith('.chm') || knownPaths.has(pathIdentity)) continue;
 
-    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+    const fileName = getSourceFileName(filePath);
     const extensionIndex = fileName.toLocaleLowerCase().lastIndexOf('.chm');
+    const displayName = extensionIndex >= 0 ? fileName.slice(0, extensionIndex) : fileName;
     books.push({
       id: createId(),
-      name: extensionIndex >= 0 ? fileName.slice(0, extensionIndex) : fileName,
+      name: displayName,
+      displayName,
       filePath,
+      sourcePath: filePath,
+      sourceFileName: fileName,
       addedAt: now(),
       collectionId: collectionId || null,
     });
@@ -281,8 +342,11 @@ export function findBookByFilePath(
   caseInsensitive = false,
 ): LibraryBook | undefined {
   const targetPath = normalizeLibraryPathIdentity(filePath, caseInsensitive);
-  return books.find((book) => Boolean(book.filePath)
-    && normalizeLibraryPathIdentity(book.filePath as string, caseInsensitive) === targetPath);
+  return books.find((book) => {
+    const sourcePath = book.sourcePath || book.filePath;
+    return Boolean(sourcePath)
+      && normalizeLibraryPathIdentity(sourcePath as string, caseInsensitive) === targetPath;
+  });
 }
 
 export function relinkBookInLibrary(
@@ -296,7 +360,7 @@ export function relinkBookInLibrary(
     && normalizeLibraryPathIdentity(book.filePath as string, caseInsensitivePaths) === targetPath);
   if (duplicate) throw new Error('A library entry for this CHM file already exists.');
 
-  const fileName = filePath.split(/[\\/]/).pop() || filePath;
+  const fileName = getSourceFileName(filePath);
   const extensionIndex = fileName.toLocaleLowerCase().lastIndexOf('.chm');
   const name = extensionIndex >= 0 ? fileName.slice(0, extensionIndex) : fileName;
   return {
@@ -307,7 +371,12 @@ export function relinkBookInLibrary(
       return {
         ...persistentBook,
         name: name || book.name,
+        displayName: !book.displayName || book.displayName === book.name
+          ? name || book.name
+          : book.displayName,
         filePath,
+        sourcePath: filePath,
+        sourceFileName: fileName,
       };
     }),
   };
@@ -355,8 +424,8 @@ export function filterBooksByQuery(
   if (!normalizedQuery) return [...books];
 
   return books.filter((book) => (
-    book.name.toLocaleLowerCase().includes(normalizedQuery)
-    || String(book.filePath || '').toLocaleLowerCase().includes(normalizedQuery)
+    String(book.displayName || book.name).toLocaleLowerCase().includes(normalizedQuery)
+    || String(book.sourcePath || book.filePath || '').toLocaleLowerCase().includes(normalizedQuery)
   ));
 }
 
@@ -376,6 +445,10 @@ export function sortBooksForDisplay(books: readonly LibraryBook[]): LibraryBook[
     const leftAddedAt = addedAtValue(left);
     const rightAddedAt = addedAtValue(right);
     if (leftAddedAt !== rightAddedAt) return rightAddedAt - leftAddedAt;
-    return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' });
+    return String(left.displayName || left.name).localeCompare(
+      String(right.displayName || right.name),
+      undefined,
+      { sensitivity: 'base' },
+    );
   });
 }

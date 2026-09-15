@@ -6,6 +6,9 @@ import type { AppLocale, AppTheme } from './i18n';
 interface LibraryBook {
   id: string;
   name: string;
+  displayName?: string;
+  sourcePath?: string;
+  sourceFileName?: string;
   filePath?: string;
   storedName?: string;
   addedAt?: number;
@@ -60,6 +63,8 @@ interface ChmReaderApi {
   removeLibraryBook: (id: string) => Promise<LibraryState>;
   revealLibraryBook: (id: string) => Promise<unknown>;
   relinkLibraryBook: (id: string) => Promise<LibraryState | null>;
+  renameLibraryBook: (id: string, displayName: string) => Promise<LibraryState>;
+  moveLibraryBook: (id: string, collectionId: string | null) => Promise<LibraryState>;
   createCollection: (name: string) => Promise<LibraryState>;
   renameCollection: (id: string, name: string) => Promise<LibraryState>;
   removeCollection: (id: string) => Promise<LibraryState>;
@@ -67,7 +72,7 @@ interface ChmReaderApi {
   searchBook: (query: string) => Promise<SearchResult[]>;
   setTextEncoding: (encoding: string) => Promise<OpenedBook | { textEncoding: string | null }>;
   setView: (view: 'library' | 'reader' | 'settings') => Promise<unknown>;
-  setPreferences: (locale: AppLocale, theme: AppTheme) => Promise<unknown>;
+  setPreferences: (locale: AppLocale, theme: AppTheme, openLibraryOnDocumentClose: boolean) => Promise<unknown>;
   openExternal: (url: string) => Promise<unknown>;
   onBookOpened: (callback: (book: OpenedBook) => void) => Unsubscribe;
   onBookIndexReady: (callback: (result: IndexReady) => void) => Unsubscribe;
@@ -105,6 +110,12 @@ const chmReader: ChmReaderApi = {
   removeLibraryBook: (id) => ipcRenderer.invoke('library:remove', id) as Promise<LibraryState>,
   revealLibraryBook: (id) => ipcRenderer.invoke('library:reveal', id),
   relinkLibraryBook: (id) => ipcRenderer.invoke('library:relink', id) as Promise<LibraryState | null>,
+  renameLibraryBook: (id, displayName) => (
+    ipcRenderer.invoke('library:rename', id, displayName) as Promise<LibraryState>
+  ),
+  moveLibraryBook: (id, collectionId) => (
+    ipcRenderer.invoke('library:move', id, collectionId) as Promise<LibraryState>
+  ),
   createCollection: (name) => ipcRenderer.invoke('collection:create', name) as Promise<LibraryState>,
   renameCollection: (id, name) => ipcRenderer.invoke('collection:rename', id, name) as Promise<LibraryState>,
   removeCollection: (id) => ipcRenderer.invoke('collection:remove', id) as Promise<LibraryState>,
@@ -112,7 +123,9 @@ const chmReader: ChmReaderApi = {
   searchBook: (query) => ipcRenderer.invoke('book:search', query) as Promise<SearchResult[]>,
   setTextEncoding: (encoding) => ipcRenderer.invoke('book:encoding', encoding) as Promise<OpenedBook | { textEncoding: string | null }>,
   setView: (view) => ipcRenderer.invoke('view:set', view),
-  setPreferences: (locale, theme) => ipcRenderer.invoke('preferences:set', locale, theme),
+  setPreferences: (locale, theme, openLibraryOnDocumentClose) => (
+    ipcRenderer.invoke('preferences:set', locale, theme, openLibraryOnDocumentClose)
+  ),
   openExternal: (url) => ipcRenderer.invoke('external:open', url),
   onBookOpened: (callback) => {
     const listener = (_event: unknown, book: unknown) => callback(book as OpenedBook);

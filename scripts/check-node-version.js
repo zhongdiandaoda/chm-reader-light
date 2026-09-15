@@ -26,7 +26,7 @@ function verifyNodeVersionAlignment() {
   const packageJson = JSON.parse(readText('package.json'));
   const nvmrc = readText('.nvmrc');
   const readme = readText('README.md');
-  const englishReadme = readText('README.en.md');
+  const englishReadme = readText('docs/readme/README.en.md');
   const contributing = readText('CONTRIBUTING.md');
   const ciWorkflow = readText('.github/workflows/ci.yml');
   const releaseWorkflow = readText('.github/workflows/release.yml');

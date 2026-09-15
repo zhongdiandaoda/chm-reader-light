@@ -6,7 +6,7 @@ const path = require('node:path');
 const rootDir = path.resolve(__dirname, '..');
 const requiredPaths = [
   'README.md',
-  'README.en.md',
+  'docs/readme/README.en.md',
   'LICENSE',
   'CODE_OF_CONDUCT.md',
   'CONTRIBUTING.md',

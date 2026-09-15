@@ -32,6 +32,14 @@
               <span class="sr-only" data-i18n="library.searchLabel">搜索书库</span>
               <input id="library-search" type="search" placeholder="搜索书名或路径" data-i18n-placeholder="library.search" maxlength="200" autocomplete="off">
             </label>
+            <div class="grid-size-controls" id="grid-size-controls" role="group" aria-label="调整书籍大小" data-i18n-aria-label="library.resizeBooks">
+              <button class="icon-button" id="grid-size-decrease" type="button" aria-label="缩小书籍" title="缩小书籍" data-i18n-aria-label="library.decreaseBookSize" data-i18n-title="library.decreaseBookSize">
+                <svg class="lucide lucide-zoom-out" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3M8 11h6"></path></svg>
+              </button>
+              <button class="icon-button" id="grid-size-increase" type="button" aria-label="放大书籍" title="放大书籍" data-i18n-aria-label="library.increaseBookSize" data-i18n-title="library.increaseBookSize">
+                <svg class="lucide lucide-zoom-in" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3M11 8v6M8 11h6"></path></svg>
+              </button>
+            </div>
             <div class="view-toggle" role="group" aria-label="切换展示方式" data-i18n-aria-label="library.viewMode">
               <button class="icon-button" id="view-grid" type="button" aria-label="平铺展示" title="平铺展示" data-i18n-aria-label="library.grid" data-i18n-title="library.grid" aria-pressed="true">
                 <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -77,7 +85,7 @@
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
               <span data-i18n="library.title">书库</span>
             </button>
-            <button class="icon-button" id="toggle-sidebar" type="button" aria-label="显示或隐藏目录" title="显示或隐藏目录" data-i18n-aria-label="reader.toggleSidebar" data-i18n-title="reader.toggleSidebar">
+            <button class="icon-button reader-tooltip" id="toggle-sidebar" type="button" aria-label="显示或隐藏目录" data-tooltip="显示或隐藏目录" data-i18n-aria-label="reader.toggleSidebar" data-i18n-tooltip="reader.toggleSidebar">
               <svg viewBox="0 0 20 20" aria-hidden="true">
                 <rect x="2.5" y="3" width="15" height="14" rx="2"></rect>
                 <path d="M7 3v14"></path>
@@ -93,25 +101,25 @@
               <button class="toolbar-search-button" id="search-next" type="button" data-i18n="reader.nextMatch" disabled>下一个命中</button>
             </div>
             <span class="toolbar-separator search-toolbar-separator" id="search-toolbar-separator" hidden aria-hidden="true"></span>
-            <button class="icon-button" id="previous-page" type="button" aria-label="上一页" title="上一页" data-i18n-aria-label="reader.previousPage" data-i18n-title="reader.previousPage" disabled>
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 13.5 5.5-5 5.5 5"></path><path d="M10 6.5v8"></path></svg>
+            <button class="icon-button reader-tooltip" id="previous-page" type="button" aria-label="上一页" data-tooltip="上一页" data-i18n-aria-label="reader.previousPage" data-i18n-tooltip="reader.previousPage" disabled>
+              <svg class="lucide lucide-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"></path></svg>
             </button>
-            <button class="icon-button" id="next-page" type="button" aria-label="下一页" title="下一页" data-i18n-aria-label="reader.nextPage" data-i18n-title="reader.nextPage" disabled>
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4.5 6.5 5.5 5 5.5-5"></path><path d="M10 13.5v-8"></path></svg>
-            </button>
-            <span class="toolbar-separator" aria-hidden="true"></span>
-            <button class="icon-button" id="go-back" type="button" aria-label="后退" title="后退" data-i18n-aria-label="reader.back" data-i18n-title="reader.back" disabled>
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5 5.5 5 5.5"></path></svg>
-            </button>
-            <button class="icon-button" id="go-forward" type="button" aria-label="前进" title="前进" data-i18n-aria-label="reader.forward" data-i18n-title="reader.forward" disabled>
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4.5 5 5.5-5 5.5"></path></svg>
+            <button class="icon-button reader-tooltip" id="next-page" type="button" aria-label="下一页" data-tooltip="下一页" data-i18n-aria-label="reader.nextPage" data-i18n-tooltip="reader.nextPage" disabled>
+              <svg class="lucide lucide-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
             </button>
             <span class="toolbar-separator" aria-hidden="true"></span>
-            <button class="text-button" id="zoom-out" type="button" aria-label="缩小正文" title="缩小正文" data-i18n-aria-label="reader.zoomOut" data-i18n-title="reader.zoomOut">A−</button>
-            <button class="text-button" id="zoom-reset" type="button" aria-label="重置正文缩放" title="重置正文缩放" data-i18n-aria-label="reader.zoomReset" data-i18n-title="reader.zoomReset">100%</button>
-            <button class="text-button text-button-large" id="zoom-in" type="button" aria-label="放大正文" title="放大正文" data-i18n-aria-label="reader.zoomIn" data-i18n-title="reader.zoomIn">A+</button>
+            <button class="icon-button reader-tooltip" id="go-back" type="button" aria-label="后退" data-tooltip="后退" data-i18n-aria-label="reader.back" data-i18n-tooltip="reader.back" disabled>
+              <svg class="lucide lucide-arrow-left" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7M19 12H5"></path></svg>
+            </button>
+            <button class="icon-button reader-tooltip" id="go-forward" type="button" aria-label="前进" data-tooltip="前进" data-i18n-aria-label="reader.forward" data-i18n-tooltip="reader.forward" disabled>
+              <svg class="lucide lucide-arrow-right" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7"></path></svg>
+            </button>
             <span class="toolbar-separator" aria-hidden="true"></span>
-            <button class="icon-button settings-button" id="reader-settings" type="button" aria-label="打开设置" title="打开设置" data-i18n-aria-label="settings.open" data-i18n-title="settings.open">
+            <button class="text-button zoom-step-button reader-tooltip" id="zoom-out" type="button" aria-label="缩小正文" data-tooltip="缩小正文" data-i18n-aria-label="reader.zoomOut" data-i18n-tooltip="reader.zoomOut"><span aria-hidden="true">A</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6h7"></path></svg></button>
+            <button class="text-button reader-tooltip" id="zoom-reset" type="button" aria-label="重置正文缩放" data-tooltip="重置正文缩放" data-i18n-aria-label="reader.zoomReset" data-i18n-tooltip="reader.zoomReset">100%</button>
+            <button class="text-button zoom-step-button reader-tooltip" id="zoom-in" type="button" aria-label="放大正文" data-tooltip="放大正文" data-i18n-aria-label="reader.zoomIn" data-i18n-tooltip="reader.zoomIn"><span aria-hidden="true">A</span><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2.5v7M2.5 6h7"></path></svg></button>
+            <span class="toolbar-separator" aria-hidden="true"></span>
+            <button class="icon-button settings-button reader-tooltip" id="reader-settings" type="button" aria-label="打开设置" data-tooltip="打开设置" data-i18n-aria-label="settings.open" data-i18n-tooltip="settings.open">
               <svg class="lucide lucide-settings" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
             </button>
             <div class="encoding-picker">
@@ -269,6 +277,17 @@
               </select>
             </label>
           </section>
+          <section class="settings-section" aria-labelledby="document-close-heading">
+            <div class="settings-section-copy">
+              <h2 id="document-close-heading" data-i18n="settings.openLibraryOnDocumentClose">关闭文档后打开书架</h2>
+              <p data-i18n="settings.openLibraryOnDocumentCloseDescription">关闭正在阅读的文档时返回书库，而不是关闭窗口。</p>
+            </div>
+            <label class="settings-switch">
+              <input id="open-library-on-document-close" type="checkbox" role="switch" checked>
+              <span class="settings-switch-track" aria-hidden="true"></span>
+              <span class="sr-only" data-i18n="settings.openLibraryOnDocumentClose">关闭文档后打开书架</span>
+            </label>
+          </section>
         </div>
       </main>
 
@@ -361,6 +380,31 @@
     <div class="context-menu" id="collection-context-menu" role="menu" hidden>
       <button id="collection-rename" type="button" role="menuitem" data-i18n="collection.renameAction">重命名</button>
       <button id="collection-delete" type="button" role="menuitem" data-i18n="collection.deleteAction">删除</button>
+    </div>
+    <div class="context-menu book-context-menu" id="book-context-menu" role="menu" hidden>
+      <button id="book-context-open" type="button" role="menuitem" data-i18n="library.openAction">打开</button>
+      <button id="book-context-reveal" type="button" role="menuitem" data-i18n="library.reveal">在 Finder 中显示</button>
+      <button id="book-context-rename" type="button" role="menuitem" data-i18n="library.renameAction">修改名称</button>
+      <button class="context-submenu-trigger" id="book-context-move" type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false">
+        <span data-i18n="library.moveTo">移动到</span>
+        <span class="context-submenu-arrow" aria-hidden="true">›</span>
+      </button>
+      <div class="context-menu-separator" role="separator"></div>
+      <button id="book-context-delete" class="context-menu-danger" type="button" role="menuitem" data-i18n="library.remove">从书库移除</button>
+    </div>
+    <div class="context-menu context-submenu" id="book-move-menu" role="menu" hidden></div>
+    <div class="modal-backdrop" id="book-rename-dialog" hidden>
+      <form class="modal" id="book-rename-form" role="dialog" aria-modal="true" aria-labelledby="book-rename-dialog-title">
+        <h2 id="book-rename-dialog-title" data-i18n="library.renameTitle">修改书籍名称</h2>
+        <label for="book-display-name" data-i18n="library.displayName">显示名称</label>
+        <input id="book-display-name" type="text" maxlength="512" autocomplete="off" aria-errormessage="book-rename-error" required>
+        <p class="modal-help" data-i18n="library.renameDescription">只修改书库中的显示名称，不会修改源文件名。</p>
+        <p class="modal-error" id="book-rename-error" role="alert" hidden></p>
+        <div class="modal-actions">
+          <button class="text-button" id="book-rename-cancel" type="button" data-i18n="common.cancel">取消</button>
+          <button class="primary-button" id="book-rename-save" type="submit" data-i18n="common.save">保存</button>
+        </div>
+      </form>
     </div>
     <script type="module" src="./renderer.js"></script>
   </body>

@@ -139,10 +139,10 @@ function main() {
 
   if (errors.length === 0) {
     requireContent('README.md', /!\[CHMReaderLight 实际空书库界面\]\(\.\/docs\/assets\/app-preview\.png\)/, 'README real-app screenshot reference', errors);
-    requireContent('README.en.md', /!\[Actual CHMReaderLight empty library\]\(\.\/docs\/assets\/app-preview\.png\)/, 'English README real-app screenshot reference', errors);
+    requireContent('docs/readme/README.en.md', /!\[Actual CHMReaderLight empty library\]\(\.\.\/assets\/app-preview\.png\)/, 'English README real-app screenshot reference', errors);
     requireContent('docs/repository-listing.md', /docs\/assets\/social-preview\.png/, 'GitHub social preview PNG guidance', errors);
     requireContent('docs/repository-listing.md', /1280 x 640/, 'GitHub social preview dimensions', errors);
-    requirePngDimensions('docs/assets/app-preview.png', 1280, 760, errors);
+    requirePngDimensions('docs/assets/app-preview.png', 2504, 1600, errors);
     requireSvgViewBox('docs/assets/social-preview.svg', '0 0 1280 640', errors);
     requirePngDimensions('docs/assets/social-preview.png', 1280, 640, errors);
     requireSocialPreviewSafeLayout('docs/assets/social-preview.svg', errors);

@@ -10,10 +10,12 @@ const {
   getBookLocationLabel,
   getNextCollectionName,
   markBookOpenedInLibrary,
+  moveBookInLibrary,
   normalizeCollectionName,
   normalizeLibraryData,
   normalizeLibraryDataForWrite,
   relinkBookInLibrary,
+  renameBookInLibrary,
   renameCollectionInLibrary,
   sortBooksForDisplay,
 } = require('../src/library');
@@ -46,13 +48,17 @@ test('normalizeLibraryData filters malformed entries and preserves legacy arrays
     books: [{
       id: 'guide',
       name: 'Guide',
+      displayName: 'Guide',
       filePath: '/docs/Guide.chm',
+      sourcePath: '/docs/Guide.chm',
+      sourceFileName: 'Guide.chm',
       addedAt: 1,
       lastOpenedAt: 2,
       collectionId: 'docs',
     }, {
       id: 'bad-path',
       name: 'Bad path',
+      displayName: 'Bad path',
       collectionId: null,
     }],
   });
@@ -63,7 +69,7 @@ test('normalizeLibraryData filters malformed entries and preserves legacy arrays
     storedName: 'legacy.chm',
   }]), {
     collections: [],
-    books: [{ id: 'legacy', name: 'Legacy', storedName: 'legacy.chm', collectionId: null }],
+    books: [{ id: 'legacy', name: 'Legacy', displayName: 'Legacy', storedName: 'legacy.chm', collectionId: null }],
   });
 });
 
@@ -130,7 +136,10 @@ test('normalizeLibraryDataForWrite strips transient fields from valid state', ()
     books: [{
       id: 'guide',
       name: 'Guide',
+      displayName: 'Guide',
       filePath: '/docs/Guide.chm',
+      sourcePath: '/docs/Guide.chm',
+      sourceFileName: 'Guide.chm',
       collectionId: 'docs',
       sourceMissing: false,
     }],
@@ -139,7 +148,10 @@ test('normalizeLibraryDataForWrite strips transient fields from valid state', ()
     books: [{
       id: 'guide',
       name: 'Guide',
+      displayName: 'Guide',
       filePath: '/docs/Guide.chm',
+      sourcePath: '/docs/Guide.chm',
+      sourceFileName: 'Guide.chm',
       collectionId: 'docs',
     }],
   });
@@ -210,12 +222,65 @@ test('addBooksToLibrary skips duplicate CHM file paths', () => {
       {
         id: 'new-id',
         name: 'API',
+        displayName: 'API',
         filePath: '/docs/API.CHM',
+        sourcePath: '/docs/API.CHM',
+        sourceFileName: 'API.CHM',
         addedAt: 2,
         collectionId: 'docs',
       },
     ],
   });
+});
+
+test('renameBookInLibrary changes only the persisted display name', () => {
+  const library = {
+    collections: [{ id: 'docs', name: '文档' }],
+    books: [{
+      id: 'book-1',
+      name: 'Effective-Go',
+      displayName: 'Effective-Go',
+      filePath: '/Users/me/Books/Effective-Go.chm',
+      sourcePath: '/Users/me/Books/Effective-Go.chm',
+      sourceFileName: 'Effective-Go.chm',
+      collectionId: 'docs',
+    }],
+  };
+
+  assert.deepEqual(renameBookInLibrary(library, 'book-1', '  Go 编程实践  '), {
+    collections: library.collections,
+    books: [{
+      ...library.books[0],
+      displayName: 'Go 编程实践',
+    }],
+  });
+  assert.equal(library.books[0].sourcePath, '/Users/me/Books/Effective-Go.chm');
+  assert.equal(library.books[0].sourceFileName, 'Effective-Go.chm');
+});
+
+test('moveBookInLibrary changes only collection membership and validates the target', () => {
+  const library = {
+    collections: [{ id: 'docs', name: '文档' }, { id: 'archive', name: '归档' }],
+    books: [{
+      id: 'book-1',
+      name: 'Guide',
+      displayName: 'Guide',
+      sourcePath: '/docs/Guide.chm',
+      sourceFileName: 'Guide.chm',
+      collectionId: 'docs',
+    }],
+  };
+
+  assert.deepEqual(moveBookInLibrary(library, 'book-1', 'archive'), {
+    collections: library.collections,
+    books: [{ ...library.books[0], collectionId: 'archive' }],
+  });
+  assert.deepEqual(moveBookInLibrary(library, 'book-1', null), {
+    collections: library.collections,
+    books: [{ ...library.books[0], collectionId: null }],
+  });
+  assert.throws(() => moveBookInLibrary(library, 'book-1', 'missing'), /target library does not exist/i);
+  assert.throws(() => moveBookInLibrary(library, 'missing', 'archive'), /book is no longer in the library/i);
 });
 
 test('addBooksToLibrary treats macOS path aliases as the same CHM file', () => {
@@ -331,7 +396,10 @@ test('relinkBookInLibrary updates a saved CHM path without persisting transient 
     books: [{
       id: 'book-1',
       name: 'Old Guide',
+      displayName: '自定义指南',
       filePath: '/missing/Old Guide.chm',
+      sourcePath: '/missing/Old Guide.chm',
+      sourceFileName: 'Old Guide.chm',
       collectionId: 'docs',
       sourceMissing: true,
     }],
@@ -342,7 +410,10 @@ test('relinkBookInLibrary updates a saved CHM path without persisting transient 
     books: [{
       id: 'book-1',
       name: 'New Guide',
+      displayName: '自定义指南',
       filePath: '/docs/New Guide.chm',
+      sourcePath: '/docs/New Guide.chm',
+      sourceFileName: 'New Guide.chm',
       collectionId: 'docs',
     }],
   });
