@@ -138,7 +138,7 @@ function main() {
   }
 
   if (errors.length === 0) {
-    requireContent('README.md', /!\[CHMReaderLight 实际空书库界面\]\(\.\/docs\/assets\/app-preview\.png\)/, 'README real-app screenshot reference', errors);
+    requireContent('README.md', /!\[Actual CHMReaderLight empty library\]\(\.\/docs\/assets\/app-preview\.png\)/, 'README real-app screenshot reference', errors);
     requireContent('docs/readme/README.en.md', /!\[Actual CHMReaderLight empty library\]\(\.\.\/assets\/app-preview\.png\)/, 'English README real-app screenshot reference', errors);
     requireContent('docs/repository-listing.md', /docs\/assets\/social-preview\.png/, 'GitHub social preview PNG guidance', errors);
     requireContent('docs/repository-listing.md', /1280 x 640/, 'GitHub social preview dimensions', errors);

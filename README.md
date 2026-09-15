@@ -1,97 +1,97 @@
 # CHMReaderLight - macOS CHM Reader
 
-[English](./docs/readme/README.en.md) | **简体中文** | [繁體中文](./docs/readme/README.zh-TW.md) | [日本語](./docs/readme/README.ja.md) | [한국어](./docs/readme/README.ko.md) | [Español](./docs/readme/README.es.md) | [Français](./docs/readme/README.fr.md) | [Deutsch](./docs/readme/README.de.md) | [Português](./docs/readme/README.pt.md) | [Italiano](./docs/readme/README.it.md) | [Русский](./docs/readme/README.ru.md) | [العربية](./docs/readme/README.ar.md)
+**English** | [简体中文](./docs/readme/README.zh-CN.md) | [繁體中文](./docs/readme/README.zh-TW.md) | [日本語](./docs/readme/README.ja.md) | [한국어](./docs/readme/README.ko.md) | [Español](./docs/readme/README.es.md) | [Français](./docs/readme/README.fr.md) | [Deutsch](./docs/readme/README.de.md) | [Português](./docs/readme/README.pt.md) | [Italiano](./docs/readme/README.it.md) | [Русский](./docs/readme/README.ru.md) | [العربية](./docs/readme/README.ar.md)
 
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/badge/CodeQL-analysis-2088FF?logo=github&logoColor=white)](https://github.com/zhongdiandaoda/chm-reader-light/actions/workflows/codeql.yml)
 [![GitHub stars](https://img.shields.io/github/stars/zhongdiandaoda/chm-reader-light?style=social)](https://github.com/zhongdiandaoda/chm-reader-light/stargazers)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![Platform: macOS](https://img.shields.io/badge/platform-macOS-111111.svg)](#系统要求)
+[![Platform: macOS](https://img.shields.io/badge/platform-macOS-111111.svg)](#requirements)
 
-一个轻量、离线的 macOS CHM 阅读器。用书库管理本地手册，支持目录与正文搜索，不上传文档，也不需要账号。
+A lightweight, offline CHM reader for macOS. Organize local manuals in a library, search their contents, and read without uploading documents or creating an account.
 
-**[下载 macOS 版本](https://github.com/zhongdiandaoda/chm-reader-light/releases)** · **[从源码运行](#从源码运行)** · **[Star 项目](https://github.com/zhongdiandaoda/chm-reader-light)**
+**[Download for macOS](https://github.com/zhongdiandaoda/chm-reader-light/releases)** · **[Run from source](#run-from-source)** · **[Star the project](https://github.com/zhongdiandaoda/chm-reader-light)**
 
-![CHMReaderLight 实际空书库界面](./docs/assets/app-preview.png)
+![Actual CHMReaderLight empty library](./docs/assets/app-preview.png)
 
-> 截图来自当前 Electron 应用的真实空书库状态，不包含私人 CHM、文件名或本地路径。
+> This screenshot is captured from the current Electron app with an empty, isolated library. It contains no private CHM names or local paths.
 
-## 核心功能
+## Features
 
-- 书库分组、拖拽导入、书名或路径搜索，以及最近阅读状态。
-- 多级目录、目录搜索、正文搜索、上一章/下一章和历史前进/后退。
-- 保存缩放、文本编码、侧栏状态、搜索范围和每本书的阅读位置。
-- 在 Finder 中定位源文件；源文件移动后可重新定位，移除条目不会删除原文件。
-- 默认阻止 CHM 内脚本、表单、弹窗、嵌套 frame 和网络连接。
-- 专注支持 Apple Silicon Mac，应用界面不提供遥测、账号或云同步。
+- Collections, drag-and-drop import, library search, and recent-reading state.
+- Nested contents, contents search, full-text search, topic navigation, and history.
+- Persistent zoom, text encoding, sidebar, search scope, and per-book reading position.
+- Finder reveal and relink support without moving or deleting source CHM files.
+- CHM-authored scripts, forms, popups, nested frames, and network access are blocked.
+- Focused Apple Silicon support with no telemetry, accounts, or cloud sync.
 
-## 下载与安装
+## Download and Install
 
-从 [GitHub Releases](https://github.com/zhongdiandaoda/chm-reader-light/releases) 下载 `CHMReaderLight-mac-arm64.zip`。
+Download `CHMReaderLight-mac-arm64.zip` from [GitHub Releases](https://github.com/zhongdiandaoda/chm-reader-light/releases).
 
-每个 zip 都配有 `.zip.sha256`。下载到同一目录后运行：
+Each archive has a matching `.zip.sha256` file. Verify both files from the same directory:
 
 ```bash
 shasum -a 256 -c CHMReaderLight-mac-arm64.zip.sha256
 ```
 
-当前构建尚未完成 Apple notarization。首次启动如被拦截，请在 **系统设置 > 隐私与安全性** 中确认打开。完整步骤见 [安装指南](./docs/install-macos.md)。
+Current builds are not Apple-notarized. If macOS blocks the first launch, review the app under **System Settings > Privacy & Security**. See the [install guide](./docs/install-macos.md) for complete steps.
 
-## 基本使用
+## Basic Use
 
-1. 点击“添加 CHM”或把 `.chm` 文件拖入书库。
-2. 使用左侧分组整理手册，顶部搜索框可按书名或路径筛选。
-3. 打开文档后使用目录或正文搜索；乱码时切换文本编码。
-4. 用 `Command+O` 添加文件、`Command+F` 搜索、`Command+L` 返回书库。
+1. Choose **Add CHM** or drag `.chm` files into the library.
+2. Organize manuals with collections and filter by title or path.
+3. Open a document, then search its contents or body; change text encoding if needed.
+4. Use `Command+O` to add files, `Command+F` to search, and `Command+L` to return to the library.
 
-应用只记录源文件路径和阅读偏好。数据边界见 [隐私说明](./docs/privacy.md)，格式限制见 [兼容性说明](./docs/compatibility.md)，常见问题见 [故障排查](./docs/troubleshooting.md)。
+The app stores source paths and reading preferences only. See [Privacy](./docs/privacy.md), [Compatibility](./docs/compatibility.md), and [Troubleshooting](./docs/troubleshooting.md).
 
-## 系统要求
+## Requirements
 
-- macOS 12 或更高版本
+- macOS 12 or newer
 - Apple Silicon Mac
-- 从源码运行需要 Node.js 22 或更高版本
+- Node.js 22 or newer for source builds
 
-## 从源码运行
+## Run from Source
 
 ```bash
 npm install
 npm run run
 ```
 
-常用检查：
+Run the quality gates with:
 
 ```bash
 npm test
 npm run check
 ```
 
-打包当前架构：
+Package the current architecture with:
 
 ```bash
 npm run package:mac
 ```
 
-## 文档
+## Documentation
 
-| 主题 | 文档 |
+| Topic | Guide |
 | --- | --- |
-| 安装与首次启动 | [macOS Install Guide](./docs/install-macos.md) |
-| CHM 支持范围 | [Compatibility](./docs/compatibility.md) |
-| 隐私与本地数据 | [Privacy](./docs/privacy.md) |
-| 安全边界 | [Security Model](./docs/security-model.md) |
-| 故障排查 | [Troubleshooting](./docs/troubleshooting.md) |
-| 代码结构 | [Architecture](./docs/architecture.md) |
-| 测试 | [Testing](./docs/testing.md) |
-| 发布 | [Release Guide](./docs/release.md) |
+| Installation | [macOS Install Guide](./docs/install-macos.md) |
+| Supported CHM behavior | [Compatibility](./docs/compatibility.md) |
+| Local data | [Privacy](./docs/privacy.md) |
+| Trust boundaries | [Security Model](./docs/security-model.md) |
+| Common problems | [Troubleshooting](./docs/troubleshooting.md) |
+| Code structure | [Architecture](./docs/architecture.md) |
+| Verification | [Testing](./docs/testing.md) |
+| Publishing | [Release Guide](./docs/release.md) |
 
-## 支持与贡献
+## Support and Contributing
 
-- 使用问题和 bug: [SUPPORT.md](./SUPPORT.md) 或 [Issues](https://github.com/zhongdiandaoda/chm-reader-light/issues/new/choose)
-- 安全问题: [SECURITY.md](./SECURITY.md)
-- 贡献代码: [CONTRIBUTING.md](./CONTRIBUTING.md)
-- 行为规范: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+- Usage and bugs: [SUPPORT.md](./SUPPORT.md) or [Issues](https://github.com/zhongdiandaoda/chm-reader-light/issues/new/choose)
+- Security reports: [SECURITY.md](./SECURITY.md)
+- Contributions: [CONTRIBUTING.md](./CONTRIBUTING.md)
+- Community conduct: [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
 
-如果 CHMReaderLight 解决了你的离线文档阅读问题，欢迎 [Star 项目](https://github.com/zhongdiandaoda/chm-reader-light)。
+If CHMReaderLight improves your offline documentation workflow, please [star the project](https://github.com/zhongdiandaoda/chm-reader-light).
 
-[MIT License](./LICENSE) · [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
+[MIT License](./LICENSE) · [Third-Party Notices](./THIRD_PARTY_NOTICES.md)

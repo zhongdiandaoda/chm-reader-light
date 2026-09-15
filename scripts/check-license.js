@@ -34,7 +34,7 @@ function verifyLicenseMetadata() {
   requireIncludes(citation, 'license: MIT', 'CITATION license metadata', errors);
   requireIncludes(readme, '[MIT License](./LICENSE)', 'README license link', errors);
   requireIncludes(englishReadme, '[MIT License](../../LICENSE)', 'English README license link', errors);
-  requireIncludes(readme, '[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)', 'README third-party notices link', errors);
+  requireIncludes(readme, '[Third-Party Notices](./THIRD_PARTY_NOTICES.md)', 'README third-party notices link', errors);
   requireIncludes(englishReadme, '[Third-Party Notices](../../THIRD_PARTY_NOTICES.md)', 'English README third-party notices link', errors);
   requireIncludes(thirdPartyNotices, 'LGPL-2.1-or-later', 'CHMLib license identifier', errors);
   requireIncludes(thirdPartyNotices, '2bef8d063ec7d88a8de6fd9f0513ea42ac0fa21f', 'CHMLib source commit', errors);

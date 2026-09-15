@@ -147,7 +147,7 @@ function verifyReleaseTemplate() {
   if (/List benchmark-backed|List keyboard, VoiceOver/.test(renderedReleaseBody)) {
     errors.push('Rendered release body still contains optional-section editing instructions.');
   }
-  requireIncludes(readme, '尚未完成 Apple notarization', 'README notarization caveat', errors);
+  requireIncludes(readme, 'not Apple-notarized', 'README notarization caveat', errors);
   requireIncludes(englishReadme, 'not Apple-notarized', 'English README notarization caveat', errors);
   requireIncludes(releaseTemplate, 'check:release-artifacts', 'release artifact verification command reference', errors);
   requireIncludes(releaseTemplate, 'npm run stage:release-artifacts -- --input-dir <actions-artifacts-dir>', 'release template artifact staging command', errors);
