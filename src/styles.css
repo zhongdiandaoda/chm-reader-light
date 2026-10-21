@@ -415,6 +415,10 @@ button {
   font-weight: 510;
 }
 
+#add-book {
+  -webkit-app-region: no-drag;
+}
+
 .text-button {
   min-width: 30px;
   padding: 0 7px;

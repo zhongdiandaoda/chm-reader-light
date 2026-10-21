@@ -820,6 +820,12 @@ test('library mutation requests report IPC failures without unhandled event prom
   assert.match(renderer, /elements\.collectionDelete\.addEventListener\('click', \(\) => \{[\s\S]*void confirmAndRemoveCollection\(collection, count\)/);
 });
 
+test('add CHM button opts out of Electron draggable regions', () => {
+  const css = fs.readFileSync(path.join(projectRoot, 'src', 'styles.css'), 'utf-8');
+
+  assert.match(css, /#add-book\s*\{[\s\S]*?-webkit-app-region:\s*no-drag;/);
+});
+
 test('reader search and topic navigation recover when IPC requests reject', () => {
   const renderer = fs.readFileSync(path.join(projectRoot, 'src', 'renderer.ts'), 'utf-8');
   const navigationStart = renderer.indexOf('async function navigateTo(');
